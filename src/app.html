@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Служебные записки по стандартам</title>
+<style>
+  :root{
+    --ink:#16324F; --seal:#9E2B25; --border:#d7dee8; --gray:#64748b;
+    --bg:#F2F4F7; --ok:#166534; --okbg:#dcfce7; --accent:#365F91;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;font-size:14px}
+  .wrap{max-width:1120px;margin:0 auto;padding:22px 20px 60px}
+  h1{font-size:22px;margin:0;letter-spacing:.2px}
+  .sub{color:var(--gray);font-size:13px;margin:6px 0 0;max-width:78ch}
+  .tabs{display:flex;gap:2px;margin-top:18px;border-bottom:1px solid var(--border);flex-wrap:wrap;position:sticky;top:0;background:var(--bg);z-index:5}
+  .tab{background:none;border:none;border-bottom:2px solid transparent;padding:9px 13px;font-size:13.5px;font-weight:700;color:#7c8ba1;cursor:pointer}
+  .tab.on{color:var(--ink);border-bottom-color:var(--seal)}
+  .card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:16px}
+  .card h2{font-size:15px;margin:0 0 4px}
+  .card h3{font-size:13px;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.4px;color:#5b6b81}
+  .hint{color:var(--gray);font-size:12.5px;margin:2px 0 10px;line-height:1.5}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .grid.two{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  label.f{display:block;font-size:12.5px;font-weight:600;color:#334155}
+  label.cb{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:500;color:#334155;padding:4px 0;cursor:pointer}
+  label.cb input{margin-top:3px}
+  input[type=text],input[type=date],select,textarea{width:100%;border:1px solid var(--border);border-radius:7px;padding:8px 10px;font:inherit;font-size:13.5px;background:#fff;margin-top:4px}
+  textarea{resize:vertical;line-height:1.5}
+  .btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:8px;padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:#fff;color:var(--ink)}
+  .btn.seal{background:var(--seal);border-color:var(--seal)}
+  .btn.mini{padding:4px 10px;font-size:12px;border-radius:6px}
+  .btn.del{background:#fff;color:var(--seal);border-color:#f1c6c4}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row.end{justify-content:flex-end}
+  .drop{border:2px dashed #c8d3e2;border-radius:10px;background:#fff;padding:22px;text-align:center}
+  .item{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid #eef2f8}
+  .item:last-child{border-bottom:none}
+  .name{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .meta{color:var(--gray);font-size:11.5px}
+  .msg{margin-top:14px;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.5}
+  .msg.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+  .msg.ok{background:var(--okbg);border:1px solid #bbf7d0;color:var(--ok)}
+  .msg.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+  .msg.info{background:#eef2f8}
+  .sheet{width:100%;min-height:52vh;border:1px solid var(--border);border-radius:8px;padding:14px;font-family:Consolas,"SF Mono",monospace;font-size:13px;line-height:1.65}
+  .found label{display:flex;gap:9px;align-items:flex-start;padding:9px 2px;border-bottom:1px solid #eef2f8;font-size:12.5px;line-height:1.5}
+  .found input{margin-top:3px}
+  .pill{display:inline-block;background:#eef2f8;border-radius:5px;padding:1px 7px;margin-right:6px;font-size:11px;font-weight:700}
+  .thumbs{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));margin-top:12px}
+  .thumb{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+  .thumb img{width:100%;height:130px;object-fit:cover;display:block;cursor:zoom-in}
+  .thumb .cap{padding:8px}
+  .thumb .cap input{font-size:12px;padding:5px 7px}
+  .lightbox{display:none;position:fixed;inset:0;background:rgba(10,20,35,.85);align-items:center;justify-content:center;z-index:50;padding:24px}
+  .lightbox img{max-width:100%;max-height:100%;border-radius:6px}
+  .logo-box{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .logo-box img{max-height:70px;border:1px solid var(--border);border-radius:6px;background:#fff;padding:4px}
+  .dirlist{border:1px solid var(--border);border-radius:8px;margin-top:8px}
+  .dirlist .item{padding:9px 12px}
+  .split{display:grid;gap:16px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  @media (max-width:900px){ .split{grid-template-columns:minmax(0,1fr)} }
+  /* лист предпросмотра — имитация страницы Word A4 */
+  .page{background:#fff;border:1px solid var(--border);border-radius:4px;padding:24px 20px 30px;box-shadow:0 1px 3px rgba(20,40,70,.08);
+        font-family:Calibri,"Carlito","Segoe UI",sans-serif;font-size:13px;line-height:1.45;color:#000}
+  .page .hdr{display:flex;gap:12px;align-items:flex-end;padding-bottom:3px}
+  .page .hdr img{height:44px}
+  .page .hdr .lines{flex:1;text-align:right}
+  .page .hdr .l1{font-weight:700;color:var(--accent);font-size:11px;border-bottom:2px solid var(--accent);padding-bottom:3px}
+  .page .hdr .l2{font-weight:700;color:var(--accent);font-size:11px;padding-top:3px}
+  .page .to{text-align:right;margin-top:14px;white-space:pre-line}
+  .page .ttl{text-align:center;font-weight:700;margin:16px 0 10px}
+  .page p.b{text-align:justify;text-indent:26px;margin:0 0 9px}
+  .page p.li{text-align:justify;margin:0 0 5px;padding-left:26px;text-indent:-13px}
+  .page p.h{font-weight:700;margin:12px 0 6px}
+  .page .sig{display:flex;justify-content:space-between;margin-top:26px}
+  .page .att{margin-top:18px}
+  .page .att img{max-width:100%;border:1px solid #ddd;margin-top:8px}
+  .badge{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700}
+  .badge.on{background:var(--okbg);color:var(--ok)}
+  .badge.off{background:#fef2f2;color:#991b1b}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Служебные записки по стандартам</h1>
+  <p class="sub">Приложение собирает служебную и докладную записку в настоящем формате Word (.docx) с шапкой организации, блоком адресата и ссылками на пункты ваших стандартов. ИИ пишет текст официально-деловым языком строго по загруженным документам.</p>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="org">Организация</button>
+    <button class="tab" data-tab="form">Записка</button>
+    <button class="tab" data-tab="docs">Стандарты <span id="docCount"></span></button>
+    <button class="tab" data-tab="photos">Фото <span id="photoCount"></span></button>
+    <button class="tab" data-tab="result">Готовый документ</button>
+    <button class="tab" data-tab="tpl">Образцы <span id="tplCount"></span></button>
+    <button class="tab" data-tab="ai">ИИ</button>
+  </div>
+
+  <div id="msg"></div>
+
+  <!-- ===================== ОРГАНИЗАЦИЯ ===================== -->
+  <section data-panel="org">
+    <div class="card">
+      <h2>Шапка документа</h2>
+      <p class="hint">Заполняется один раз. Эти данные попадают в колонтитул каждой записки — так же, как в ваших образцах: логотип слева, название организации справа синим с линией и вторая строка под ней.</p>
+      <div class="grid two">
+        <label class="f">Название организации (первая строка шапки)
+          <input type="text" id="orgName" placeholder="АО «Усть-Каменогорская Птицефабрика»">
+        </label>
+        <label class="f">Вторая строка шапки
+          <input type="text" id="orgSub" placeholder="Нормативная база">
+        </label>
+      </div>
+      <h3>Логотип</h3>
+      <div class="logo-box">
+        <img id="logoPrev" alt="логотип">
+        <div class="row">
+          <button class="btn ghost mini" id="logoPick">Загрузить свой</button>
+          <button class="btn ghost mini" id="logoReset">Вернуть логотип УКПФ</button>
+          <button class="btn del mini" id="logoOff">Без логотипа</button>
+        </div>
+        <input type="file" id="logoInput" accept="image/*" hidden>
+      </div>
+
+      <h3>Оформление текста</h3>
+      <div class="grid">
+        <label class="f">Шрифт
+          <select id="fontName">
+            <option value="Calibri">Calibri (как в ваших образцах)</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Arial">Arial</option>
+          </select>
+        </label>
+        <label class="f">Размер
+          <select id="fontSize">
+            <option value="28">14 пт (как в образцах)</option>
+            <option value="24">12 пт</option>
+            <option value="26">13 пт</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>От кого — ваши данные</h2>
+      <p class="hint">Подставляются в шапку каждой записки: «От: <i>должность</i>» и строкой ниже фамилия.</p>
+      <div class="grid two">
+        <label class="f">Должность в родительном падеже
+          <input type="text" id="authPost" placeholder="специалиста по биобезопасности">
+        </label>
+        <label class="f">Фамилия и инициалы
+          <input type="text" id="authName" placeholder="Турсынгалиева Б.">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Справочник адресатов — кому пишем</h2>
+      <p class="hint">Заполните один раз, дальше выбирайте из списка: должность, организация и фамилия подставятся в шапку сами. Фамилию пишите в дательном падеже — «Лейбовичу В.», «Аскербек Е.».</p>
+      <div class="grid">
+        <label class="f">Должность (кому)
+          <input type="text" id="adPost" placeholder="Генеральному директору">
+        </label>
+        <label class="f">Подразделение (необязательно)
+          <input type="text" id="adDept" placeholder="Ветеринарная служба">
+        </label>
+        <label class="f">Организация
+          <input type="text" id="adOrg" placeholder="А.О. «Усть-Каменогорская птицефабрика»">
+        </label>
+        <label class="f">Фамилия и инициалы (дательный падеж)
+          <input type="text" id="adName" placeholder="Лейбовичу В.">
+        </label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="adAdd">Добавить адресата</button>
+      </div>
+      <div class="dirlist" id="adList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Справочник сотрудников и подрядных организаций</h2>
+      <p class="hint">Нарушителя тоже удобнее выбирать из списка. Для работника подрядчика отдельно укажите организацию — ИИ будет писать «Сотрудником ТОО «…» Ивановым И.И., занимающим должность электромонтёра, допущено нарушение…».</p>
+      <div class="grid">
+        <label class="f">Фамилия, имя, отчество
+          <input type="text" id="stName" placeholder="Мухтарбеков Е.А.">
+        </label>
+        <label class="f">Должность (именительный падеж)
+          <input type="text" id="stPost" placeholder="ветеринарный санитар по вакцинации">
+        </label>
+        <label class="f">Подразделение
+          <input type="text" id="stDept" placeholder="ветеринарный отдел">
+        </label>
+        <label class="f">Подрядная организация (если сторонняя)
+          <input type="text" id="stOrg" placeholder="ТОО «Айтас Энерго» — или оставьте пустым">
+        </label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="stAdd">Добавить в справочник</button>
+      </div>
+      <div class="dirlist" id="stList"></div>
+    </div>
+  </section>
+
+  <!-- ===================== ЗАПИСКА ===================== -->
+  <section data-panel="form" hidden>
+    <div class="card">
+      <h2>Шапка записки</h2>
+      <div class="grid">
+        <label class="f">Вид документа
+          <select id="kind">
+            <option>Служебная записка</option>
+            <option>Докладная записка</option>
+            <option>Объяснительная записка</option>
+          </select>
+        </label>
+        <label class="f">Структура текста
+          <select id="struct">
+            <option value="sample">Как в ваших образцах — сплошной текст</option>
+            <option value="full">Расширенная — корневая причина и мероприятия</option>
+          </select>
+        </label>
+        <label class="f">Дата документа
+          <input type="text" id="date" placeholder="16.09.2026">
+        </label>
+      </div>
+
+      <h3>Кому</h3>
+      <div class="grid">
+        <label class="f">Выбрать из справочника
+          <select id="toPick"></select>
+        </label>
+        <label class="f">Должность
+          <input type="text" id="toPost" placeholder="Генеральному директору">
+        </label>
+        <label class="f">Подразделение (необязательно)
+          <input type="text" id="toDept" placeholder="Ветеринарная служба">
+        </label>
+        <label class="f">Организация
+          <input type="text" id="toOrg" placeholder="А.О. «Усть-Каменогорская птицефабрика»">
+        </label>
+        <label class="f">Фамилия и инициалы
+          <input type="text" id="toName" placeholder="Лейбовичу В.">
+        </label>
+      </div>
+
+      <h3>От кого</h3>
+      <div class="grid two">
+        <label class="f">Должность в родительном падеже
+          <input type="text" id="fromPost" placeholder="специалиста по биобезопасности">
+        </label>
+        <label class="f">Фамилия и инициалы
+          <input type="text" id="fromName" placeholder="Турсынгалиева Б.">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Нарушение</h2>
+      <div class="grid">
+        <label class="f">Нарушитель из справочника
+          <select id="prPick"></select>
+        </label>
+        <label class="f">Фамилия, имя, отчество
+          <input type="text" id="prName" placeholder="Мухтарбеков Е.А.">
+        </label>
+        <label class="f">Должность
+          <input type="text" id="prPost" placeholder="ветеринарный санитар по вакцинации">
+        </label>
+        <label class="f">Подразделение
+          <input type="text" id="prDept" placeholder="ветеринарный отдел">
+        </label>
+        <label class="f">Подрядная организация
+          <input type="text" id="prOrg" placeholder="если сотрудник сторонней организации">
+        </label>
+        <label class="f">Дата нарушения
+          <input type="text" id="factDate" placeholder="16.09.2026">
+        </label>
+        <label class="f">Место нарушения
+          <input type="text" id="place" placeholder="площадка В, корпус В9">
+        </label>
+        <label class="f">Тема документа
+          <input type="text" id="subject" placeholder="О выявленном нарушении требований биобезопасности">
+        </label>
+      </div>
+
+      <label class="f" style="margin-top:12px">Суть нарушения — пишите как есть, ИИ приведёт в деловой вид
+        <textarea id="facts" rows="6" placeholder="не сменил обувь закрепленную за корпусом В10 и в ней зашел в корпус В9. видел лично при обходе в 10:20"></textarea>
+      </label>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost mini" id="tidyBtn">Привести в деловой вид</button>
+        <span class="meta">исправит стиль и падежи, фактов не добавит</span>
+      </div>
+
+      <label class="f" style="margin-top:14px">Перечень выявленного — по одному в строке (необязательно)
+        <textarea id="items" rows="3" placeholder="мясо отварное с тестом домашнего приготовления&#10;майонез"></textarea>
+      </label>
+
+      <h3>Обстоятельства</h3>
+      <label class="cb"><input type="checkbox" id="repeat"> Нарушение повторное — отразить это в тексте</label>
+      <label class="cb"><input type="checkbox" id="brief"> Работник ознакомлен с требованиями (проведён инструктаж ранее)</label>
+      <label class="cb"><input type="checkbox" id="doneExpl"> Получена объяснительная</label>
+      <label class="cb"><input type="checkbox" id="doneInstr"> Проведён повторный инструктаж</label>
+      <label class="cb"><input type="checkbox" id="doneStudy"> Сотрудник направлен на обучение</label>
+      <label class="cb"><input type="checkbox" id="doneTalk"> Проведена беседа</label>
+      <label class="f" style="margin-top:8px">Другие уже выполненные мероприятия
+        <input type="text" id="doneOther" placeholder="например: работник отстранён от работ до повторного инструктажа">
+      </label>
+    </div>
+
+    <div class="card">
+      <h2>Пункты стандартов</h2>
+      <p class="hint">Поиск идёт по документам с вкладки «Стандарты». Отмеченные фрагменты ИИ процитирует дословно; выдумывать номера пунктов ему запрещено.</p>
+      <div class="row">
+        <button class="btn ghost" id="findBtn">Найти пункты</button>
+        <span class="meta" id="findMeta"></span>
+      </div>
+      <div id="found"></div>
+    </div>
+
+    <div class="card">
+      <h2>Что просим</h2>
+      <div class="grid two">
+        <label class="f">Просьба / предлагаемые меры
+          <input type="text" id="ask" placeholder="принять строгие меры в отношении сотрудника">
+        </label>
+        <label class="f">Срок обратной связи (для расширенной структуры)
+          <input type="text" id="feedback" placeholder="30.09.2026">
+        </label>
+      </div>
+      <label class="f" style="margin-top:12px">Корректирующие мероприятия — по одному в строке (для расширенной структуры)
+        <textarea id="capa" rows="3" placeholder="провести внеплановый инструктаж работников корпуса В9&#10;усилить контроль смены обуви на входе"></textarea>
+      </label>
+      <label class="f" style="margin-top:12px">Приложения — по одному в строке
+        <textarea id="apps" rows="2" placeholder="Выписка из СТ-УК, БиС-01 на 1 л."></textarea>
+      </label>
+      <label class="f" style="margin-top:12px">Образец оформления для ИИ
+        <select id="tplSel"></select>
+      </label>
+      <div class="row" style="margin-top:14px">
+        <button class="btn seal" id="buildBtn">Составить записку</button>
+        <button class="btn ghost" id="buildLocalBtn">Собрать без ИИ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== СТАНДАРТЫ ===================== -->
+  <section data-panel="docs" hidden>
+    <div class="card">
+      <h2>Стандарты, инструкции, положения</h2>
+      <p class="hint">Формат Word (.docx), а также .txt и .md. Файлы .doc сначала пересохраните в Word как .docx. Документы хранятся только в этом браузере и никуда не отправляются, кроме выбранных фрагментов, которые уходят в запрос к ИИ.</p>
+      <div class="drop" id="docDrop">
+        <p class="hint" style="margin:0 0 10px">Перетащите файлы сюда</p>
+        <button class="btn ghost" id="docPick">Выбрать файлы</button>
+        <input type="file" id="docInput" accept=".docx,.txt,.md" multiple hidden>
+      </div>
+      <div id="docList"></div>
+    </div>
+  </section>
+
+  <!-- ===================== ФОТО ===================== -->
+  <section data-panel="photos" hidden>
+    <div class="card">
+      <h2>Фотофиксация нарушения</h2>
+      <p class="hint">Снимки уходят отдельным приложением в конец документа Word, каждый с подписью.</p>
+      <div class="drop" id="photoDrop">
+        <p class="hint" style="margin:0 0 10px">Перетащите снимки сюда</p>
+        <button class="btn ghost" id="photoBtn">Выбрать фото</button>
+        <button class="btn del mini" id="photoClear">Очистить все</button>
+        <input type="file" id="photoInput" accept="image/*" multiple hidden>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+  </section>
+
+  <!-- ===================== ГОТОВЫЙ ДОКУМЕНТ ===================== -->
+  <section data-panel="result" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Готовый документ</h2>
+        <div class="row">
+          <button class="btn seal" id="docxBtn">Скачать Word (.docx)</button>
+          <button class="btn ghost" id="printBtn">Печать / PDF</button>
+          <button class="btn ghost" id="copyBtn">Копировать текст</button>
+        </div>
+      </div>
+      <p class="hint">Слева — текст записки, его можно править вручную. Строка «- » становится пунктом перечня, строка «## » — подзаголовком. Шапка, блок адресата и подпись добавляются в Word автоматически.</p>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn ghost mini" id="proofBtn">Вычитать текст ИИ</button>
+        <span class="meta" id="usedMeta"></span>
+      </div>
+      <div class="split">
+        <textarea class="sheet" id="sheet" placeholder="Заполните вкладку «Записка» и нажмите «Составить записку»."></textarea>
+        <div class="page" id="preview"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ОБРАЗЦЫ ===================== -->
+  <section data-panel="tpl" hidden>
+    <div class="card">
+      <h2>Образцы оформления</h2>
+      <p class="hint">ИИ держит образец перед глазами и повторяет его обороты и порядок абзацев. Загрузите свои удачные записки — качество текста заметно вырастет.</p>
+      <div class="row">
+        <button class="btn ghost" id="tplPick">Загрузить образец (.docx, .txt)</button>
+        <input type="file" id="tplInput" accept=".docx,.txt,.md" hidden>
+      </div>
+      <div id="tplList"></div>
+      <h3>Добавить вручную</h3>
+      <div class="grid two">
+        <label class="f">Название
+          <input type="text" id="tplName" placeholder="Пронос запрещённых продуктов">
+        </label>
+      </div>
+      <label class="f" style="margin-top:10px">Текст образца
+        <textarea id="tplText" rows="6"></textarea>
+      </label>
+      <div class="row" style="margin-top:10px"><button class="btn ghost" id="tplSave">Сохранить образец</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== ИИ ===================== -->
+  <section data-panel="ai" hidden>
+    <div class="card">
+      <h2>Доступ к ИИ</h2>
+      <div id="aiAccess"></div>
+    </div>
+    <div class="card">
+      <h2>Правила, по которым ИИ пишет текст</h2>
+      <p class="hint">Это инструкция, которую приложение отправляет ИИ перед каждым запросом. Можно править — изменения сохраняются в браузере.</p>
+      <textarea id="sysPrompt" rows="18" style="font-family:Consolas,monospace;font-size:12.5px"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="sysSave">Сохранить правила</button>
+        <button class="btn del mini" id="sysReset">Вернуть исходные</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt=""></div>
+
+<!--{{VENDOR}}-->
+<script>
+/* ============ хранилище ============ */
+const LS = {
+  get(k, def){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }catch(e){ return def; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+/* тексты стандартов держим в IndexedDB — стандартов бывает много, в localStorage они не помещаются */
+const IDB = {
+  db:null,
+  open(){
+    return new Promise((res, rej)=>{
+      if (IDB.db) return res(IDB.db);
+      if (!window.indexedDB) return rej(new Error('нет IndexedDB'));
+      const r = indexedDB.open('sluzhebki', 1);
+      r.onupgradeneeded = () => { if(!r.result.objectStoreNames.contains('kv')) r.result.createObjectStore('kv'); };
+      r.onsuccess = () => { IDB.db = r.result; res(r.result); };
+      r.onerror = () => rej(r.error || new Error('IndexedDB недоступна'));
+    });
+  },
+  async tx(mode, fn){
+    const db = await IDB.open();
+    return new Promise((res, rej)=>{
+      const t = db.transaction('kv', mode), s = t.objectStore('kv');
+      const req = fn(s);
+      t.onerror = () => rej(t.error);
+      t.oncomplete = () => res(req && req.result);
+    });
+  },
+  get(k){ return IDB.tx('readonly', s=>s.get(k)); },
+  set(k, v){ return IDB.tx('readwrite', s=>s.put(v, k)); },
+  del(k){ return IDB.tx('readwrite', s=>s.delete(k)); },
+  keys(){ return IDB.tx('readonly', s=>s.getAllKeys()); }
+};
+
+/* ============ значения по умолчанию ============ */
+const DEFAULT_LOGO = { url:'data:image/jpeg;base64,{{LOGO}}', w:632, h:541 };
+
+const DEFAULT_SYS = `Ты помощник специалиста отдела биобезопасности птицеводческого предприятия. Твоя задача — на основании загруженных пользователем стандартов, инструкций, положений и приложений составлять текст служебных и докладных записок.
+
+ОСНОВНОЕ ПРАВИЛО
+1. Опирайся в первую очередь на приведённые фрагменты внутренних документов.
+2. Не придумывай пункты стандартов, требования, номера разделов и приложений. Если фрагменты не приведены или не подтверждают формулировку, напиши прямо: «В предоставленных документах не найдено прямого основания для данной формулировки».
+3. Не изменяй смысл выявленного нарушения, не усиливай и не смягчай факты.
+4. Если для корректного оформления не хватает сведений, первой строкой ответа напиши «НЕ ХВАТАЕТ ДАННЫХ:» и перечисли, чего именно недостаёт, а затем составь текст из того, что есть.
+
+ССЫЛКИ НА ДОКУМЕНТЫ
+Название стандарта, его номер, пункт, подпункт и приложение переноси дословно, без изменений: «Согласно СТ-УК, БиС-01, п. 19.5…». Если точный пункт не найден — номер не выдумывай.
+
+ФИО, ДОЛЖНОСТИ, ОРГАНИЗАЦИИ
+Фамилии и должности склоняй грамматически правильно, но не заменяй их другими словами. Если нарушитель — работник сторонней организации, обязательно отделяй наименование организации от ФИО и должности: «Сотрудником ТОО «Айтас Энерго» Ивановым И.И., занимающим должность электромонтёра, допущено нарушение требований биобезопасности…».
+
+СТИЛЬ
+Официальный, деловой, строгий, нейтральный, юридически аккуратный. Никаких разговорных оборотов: не «человек нарушил», «не послушался», «опять нарушил», а «выявлено нарушение», «допущено несоблюдение требований», «установлен факт нарушения», «не выполнены установленные требования».
+
+ПОВТОРНОСТЬ И ВЫПОЛНЕННЫЕ МЕРОПРИЯТИЯ
+Называй нарушение повторным, только если об этом сказано во входных данных. Полученную объяснительную, проведённый инструктаж, направление на обучение и беседу отражай как уже выполненные мероприятия, а не как планируемые.
+
+ФОРМАТ ОТВЕТА
+Возвращай только текст записки без шапки, без блока адресата, без строки подписи и без markdown — они добавляются приложением автоматически. Разметка: строка «- » — пункт перечня, строка «## » — подзаголовок блока.`;
+
+const SEED_TPL = {
+  id:'seed', name:'Образец УКПФ — нарушение порядка смены спецобуви',
+  text:`Довожу до Вашего сведения о том, что 09.09.2026 г. при проведении контроля соблюдения требований биобезопасности на площадке В был выявлен факт нарушения порядка смены специальной обуви работником ветеринарного отдела, ветеринарным санитаром по вакцинации Мухтарбековым Е.А.: не сменив обувь, закреплённую за корпусом В10, он прошёл в ней в корпус В9.
+
+Проверкой установлено нарушение следующих требований стандарта СТ-УК, БиС-01:
+- п. 1.158 — должно применяться разделение и использование обуви по назначению;
+- п. 1.159 — для каждого птичника предусматривается отдельный комплект спецобуви с видимой маркировкой, пронумерованный номером закреплённого за ним птичника;
+- п. 1.160 — запрещён вход в птицеводческое помещение без смены обуви на закреплённую за данным помещением.
+
+Данный факт является нарушением установленного порядка и требований биобезопасности предприятия в части дифференциации специальной обуви по птицеводческим помещениям и порядка её смены при переходе между корпусами.
+
+В связи с выявленным нарушением требований биобезопасности прошу принять строгие меры в отношении сотрудника Мухтарбекова Е.А., поскольку работник ознакомлен с установленными требованиями биобезопасности.`
+};
+
+const DEFAULT_SET = {
+  orgName:'АО «Усть-Каменогорская Птицефабрика»',
+  orgSub:'Нормативная база',
+  logo: DEFAULT_LOGO,
+  fontName:'Calibri',
+  fontSize:'28',
+  authPost:'специалиста по биобезопасности',
+  authName:'',
+  sys: DEFAULT_SYS
+};
+
+/* ============ состояние ============ */
+let SET   = Object.assign({}, DEFAULT_SET, LS.get('sz2:set', {}));
+let ADDR  = LS.get('sz2:addr', []);
+let STAFF = LS.get('sz2:staff', []);
+let DOCS  = LS.get('sz2:docs', []);
+let TPLS  = LS.get('sz2:tpls', [SEED_TPL]);
+const DOCTEXT = new Map();
+let PHOTOS = [];
+let FOUND = [], USED = [];
+
+/* ============ утилиты ============ */
+const $ = (id) => document.getElementById(id);
+const val = (id) => ($(id).value || '').trim();
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function msg(text, cls){
+  $('msg').innerHTML = text ? `<div class="msg ${cls||'info'}">${text}</div>` : '';
+  if (text && cls === 'ok') setTimeout(()=>{ if($('msg').textContent===text) $('msg').innerHTML=''; }, 4500);
+}
+function today(){ const d=new Date(); return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; }
+const norm = (s) => (s||'').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9\s.\-]/g,' ');
+const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const lines = (id) => val(id).split('\n').map(s=>s.trim()).filter(Boolean);
+
+/* ============ вкладки ============ */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    document.querySelectorAll('[data-panel]').forEach(p=>{ p.hidden = p.dataset.panel !== t.dataset.tab; });
+  };
+});
+const goTab = (name) => document.querySelector(`.tab[data-tab="${name}"]`).click();
+
+/* ============ настройки организации ============ */
+function saveSet(){ LS.set('sz2:set', SET); }
+function fillSet(){
+  $('orgName').value = SET.orgName; $('orgSub').value = SET.orgSub;
+  $('fontName').value = SET.fontName; $('fontSize').value = SET.fontSize;
+  $('authPost').value = SET.authPost; $('authName').value = SET.authName;
+  $('sysPrompt').value = SET.sys;
+  renderLogo();
+}
+function renderLogo(){
+  const img = $('logoPrev');
+  if (SET.logo && SET.logo.url){ img.src = SET.logo.url; img.style.display=''; }
+  else { img.removeAttribute('src'); img.style.display='none'; }
+}
+['orgName','orgSub','fontName','fontSize','authPost','authName'].forEach(id=>{
+  $(id).oninput = $(id).onchange = () => { SET[id] = $(id).value; saveSet(); renderPreview(); };
+});
+$('logoPick').onclick = () => $('logoInput').click();
+$('logoInput').onchange = (e) => {
+  const f = e.target.files[0]; e.target.value='';
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 900/Math.max(im.width, im.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(im.width*k); cv.height = Math.round(im.height*k);
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+      const png = /png/i.test(f.type);
+      SET.logo = { url: cv.toDataURL(png?'image/png':'image/jpeg', 0.9), w:cv.width, h:cv.height };
+      if (!saveSet()) msg('Логотип не поместился в память браузера — возьмите файл поменьше.', 'err');
+      renderLogo(); renderPreview(); msg('Логотип обновлён.', 'ok');
+    };
+    im.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+};
+$('logoReset').onclick = () => { SET.logo = DEFAULT_LOGO; saveSet(); renderLogo(); renderPreview(); };
+$('logoOff').onclick   = () => { SET.logo = null; saveSet(); renderLogo(); renderPreview(); };
+$('sysSave').onclick = () => { SET.sys = $('sysPrompt').value; saveSet(); msg('Правила сохранены.', 'ok'); };
+$('sysReset').onclick = () => { SET.sys = DEFAULT_SYS; $('sysPrompt').value = DEFAULT_SYS; saveSet(); msg('Правила возвращены к исходным.', 'ok'); };
+
+/* ============ справочники ============ */
+function renderAddr(){
+  $('adList').innerHTML = ADDR.length ? ADDR.map(a=>`
+    <div class="item">
+      <div style="flex:1;min-width:0">
+        <div class="name">${esc(a.post)}${a.dept?' • '+esc(a.dept):''} — ${esc(a.name)}</div>
+        <div class="meta">${esc(a.org)}</div>
+      </div>
+      <button class="btn del mini" data-adel="${a.id}">Убрать</button>
+    </div>`).join('') : '<div class="item"><span class="meta">Список пуст.</span></div>';
+  $('adList').querySelectorAll('[data-adel]').forEach(b=>{
+    b.onclick = () => { ADDR = ADDR.filter(x=>x.id!==b.dataset.adel); LS.set('sz2:addr', ADDR); renderAddr(); };
+  });
+  const cur = $('toPick').value;
+  $('toPick').innerHTML = '<option value="">— вписать вручную —</option>' +
+    ADDR.map(a=>`<option value="${a.id}">${esc(a.post)} — ${esc(a.name)}</option>`).join('');
+  if (cur) $('toPick').value = cur;
+}
+$('adAdd').onclick = () => {
+  const a = { id:uid('a'), post:val('adPost'), dept:val('adDept'), org:val('adOrg')||SET.orgName, name:val('adName') };
+  if (!a.post || !a.name){ msg('Для адресата нужны должность и фамилия.', 'err'); return; }
+  ADDR.push(a); LS.set('sz2:addr', ADDR);
+  ['adPost','adDept','adOrg','adName'].forEach(id=>$(id).value='');
+  renderAddr(); msg('Адресат добавлен.', 'ok');
+};
+$('toPick').onchange = () => {
+  const a = ADDR.find(x=>x.id===$('toPick').value);
+  if (!a) return;
+  $('toPost').value = a.post; $('toDept').value = a.dept||''; $('toOrg').value = a.org; $('toName').value = a.name;
+  renderPreview();
+};
+
+function renderStaff(){
+  $('stList').innerHTML = STAFF.length ? STAFF.map(s=>`
+    <div class="item">
+      <div style="flex:1;min-width:0">
+        <div class="name">${esc(s.name)} — ${esc(s.post)}</div>
+        <div class="meta">${esc(s.org || s.dept || '')}</div>
+      </div>
+      <button class="btn del mini" data-sdel="${s.id}">Убрать</button>
+    </div>`).join('') : '<div class="item"><span class="meta">Список пуст.</span></div>';
+  $('stList').querySelectorAll('[data-sdel]').forEach(b=>{
+    b.onclick = () => { STAFF = STAFF.filter(x=>x.id!==b.dataset.sdel); LS.set('sz2:staff', STAFF); renderStaff(); };
+  });
+  const cur = $('prPick').value;
+  $('prPick').innerHTML = '<option value="">— вписать вручную —</option>' +
+    STAFF.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.post)}</option>`).join('');
+  if (cur) $('prPick').value = cur;
+}
+$('stAdd').onclick = () => {
+  const s = { id:uid('s'), name:val('stName'), post:val('stPost'), dept:val('stDept'), org:val('stOrg') };
+  if (!s.name){ msg('Нужна как минимум фамилия сотрудника.', 'err'); return; }
+  STAFF.push(s); LS.set('sz2:staff', STAFF);
+  ['stName','stPost','stDept','stOrg'].forEach(id=>$(id).value='');
+  renderStaff(); msg('Сотрудник добавлен в справочник.', 'ok');
+};
+$('prPick').onchange = () => {
+  const s = STAFF.find(x=>x.id===$('prPick').value);
+  if (!s) return;
+  $('prName').value = s.name; $('prPost').value = s.post||''; $('prDept').value = s.dept||''; $('prOrg').value = s.org||'';
+};
+
+/* ============ стандарты ============ */
+async function readAnyFile(file){
+  const low = file.name.toLowerCase();
+  if (low.endsWith('.docx')){
+    const buf = await file.arrayBuffer();
+    const res = await mammoth.extractRawText({arrayBuffer: buf});
+    return res.value;
+  }
+  if (low.endsWith('.txt') || low.endsWith('.md')) return await file.text();
+  if (low.endsWith('.doc')) throw new Error('формат .doc не читается — пересохраните в Word как .docx');
+  throw new Error('подходят .docx, .txt и .md');
+}
+
+async function putText(id, text){
+  try{ await IDB.set('doc:'+id, text); return 'idb'; }
+  catch(e){
+    if (!LS.set('sz2:doc:'+id, text)) throw new Error('не хватило места в памяти браузера');
+    return 'ls';
+  }
+}
+async function getText(id){
+  try{ const t = await IDB.get('doc:'+id); if (t) return t; }catch(e){}
+  return LS.get('sz2:doc:'+id, '');
+}
+
+async function addDocs(files){
+  for (const f of files){
+    msg('Читаю ' + esc(f.name) + '…');
+    try{
+      const text = (await readAnyFile(f)).replace(/ /g,' ').trim();
+      if (!text) throw new Error('в файле нет текста');
+      const at = DOCS.findIndex(d=>d.name===f.name);
+      const id = at>=0 ? DOCS[at].id : uid('d');
+      await putText(id, text);
+      DOCTEXT.set(id, text);
+      const entry = {id, name:f.name, chars:text.length};
+      if (at>=0) DOCS[at]=entry; else DOCS.push(entry);
+    }catch(e){ msg(esc(f.name)+': '+esc(e.message), 'err'); return renderDocs(); }
+  }
+  LS.set('sz2:docs', DOCS);
+  msg('Загружено документов: '+DOCS.length, 'ok');
+  renderDocs();
+}
+
+function renderDocs(){
+  $('docCount').textContent = DOCS.length ? '('+DOCS.length+')' : '';
+  $('docList').innerHTML = DOCS.length ? DOCS.map(d=>`
+    <div class="item">
+      <div style="flex:1;min-width:0"><div class="name">${esc(d.name)}</div>
+      <div class="meta">${(d.chars/1000).toFixed(1)} тыс. знаков</div></div>
+      <button class="btn del mini" data-del="${d.id}">Убрать</button>
+    </div>`).join('') :
+    '<p class="hint" style="margin-top:12px">Пока пусто. Начните со стандартов СТ-УК, БиС-01 и СТ-УК, БиС-02.</p>';
+  $('docList').querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = async () => {
+      const id = b.dataset.del;
+      try{ await IDB.del('doc:'+id); }catch(e){}
+      LS.del('sz2:doc:'+id); DOCTEXT.delete(id);
+      DOCS = DOCS.filter(d=>d.id!==id); LS.set('sz2:docs', DOCS);
+      renderDocs();
+    };
+  });
+}
+
+/* ============ образцы ============ */
+function renderTpls(){
+  $('tplCount').textContent = '('+TPLS.length+')';
+  $('tplSel').innerHTML = TPLS.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  $('tplList').innerHTML = TPLS.map(t=>`
+    <div class="item" style="align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="name">${esc(t.name)}</div>
+        <div class="meta" style="white-space:pre-wrap;max-height:3.4em;overflow:hidden">${esc(t.text.slice(0,200))}…</div>
+      </div>
+      ${TPLS.length>1?`<button class="btn del mini" data-tdel="${t.id}">Убрать</button>`:''}
+    </div>`).join('');
+  $('tplList').querySelectorAll('[data-tdel]').forEach(b=>{
+    b.onclick = () => { TPLS = TPLS.filter(t=>t.id!==b.dataset.tdel); LS.set('sz2:tpls', TPLS); renderTpls(); };
+  });
+}
+
+/* ============ фото ============ */
+function addPhotos(files){
+  Array.from(files).forEach(file=>{
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1400;
+        const k = Math.min(1, max/Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        PHOTOS.push({ id:uid('p'), url: cv.toDataURL('image/jpeg', 0.72), w:cv.width, h:cv.height,
+                      caption: file.name.replace(/\.[^.]+$/,'') });
+        renderPhotos(); renderPreview(); savePhotos();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function savePhotos(){
+  try{ await IDB.set('photos', PHOTOS); }catch(e){}
+}
+function renderPhotos(){
+  $('photoCount').textContent = PHOTOS.length ? '('+PHOTOS.length+')' : '';
+  $('thumbs').innerHTML = PHOTOS.map((p,i)=>`
+    <div class="thumb">
+      <img src="${p.url}" alt="">
+      <div class="cap">
+        <input type="text" value="${esc(p.caption)}" data-cap="${p.id}" placeholder="Подпись к фото">
+        <div class="row" style="margin-top:6px;justify-content:space-between">
+          <span class="meta">Фото ${i+1}</span>
+          <button class="btn del mini" data-pdel="${p.id}">Убрать</button>
+        </div>
+      </div>
+    </div>`).join('');
+  $('thumbs').querySelectorAll('[data-cap]').forEach(inp=>{
+    inp.oninput = () => { const p = PHOTOS.find(x=>x.id===inp.dataset.cap); if(p){ p.caption = inp.value; renderPreview(); savePhotos(); } };
+  });
+  $('thumbs').querySelectorAll('[data-pdel]').forEach(b=>{
+    b.onclick = () => { PHOTOS = PHOTOS.filter(x=>x.id!==b.dataset.pdel); renderPhotos(); renderPreview(); savePhotos(); };
+  });
+  $('thumbs').querySelectorAll('img').forEach(im=>{
+    im.onclick = () => { $('lightboxImg').src = im.src; $('lightbox').style.display='flex'; };
+  });
+}
+$('lightbox').onclick = () => { $('lightbox').style.display='none'; };
+
+/* ============ поиск пунктов ============ */
+/* Режем документ на фрагменты. Пронумерованный пункт — всегда отдельный фрагмент,
+   чтобы в записку попадала ссылка на конкретный пункт, а не полстраницы стандарта. */
+const CLAUSE_RE = /^\s*(?:п\.?\s*)?\d+(?:\.\d+)+\.?\s/;
+function chunkText(text){
+  const paras = String(text||'').split(/\n+/).map(p=>p.trim()).filter(Boolean);
+  const out = [];
+  let buf = '';
+  const flush = () => { if (buf) out.push(buf); buf = ''; };
+  paras.forEach(p=>{
+    if (CLAUSE_RE.test(p)){ flush(); out.push(p.length > 1200 ? p.slice(0,1200) : p); return; }
+    if (out.length && !buf && CLAUSE_RE.test(out[out.length-1]) && (out[out.length-1].length + p.length) < 900){
+      out[out.length-1] += ' ' + p;   // продолжение пункта без своего номера
+      return;
+    }
+    if ((buf + ' ' + p).length > 900) flush();
+    buf = buf ? buf + ' ' + p : p;
+  });
+  flush();
+  return out;
+}
+
+function findClauses(){
+  const terms = norm([val('facts'), val('subject'), val('items'), val('place')].join(' '))
+    .split(/\s+/).filter(t=>t.length>3);
+  const hits = [];
+  DOCS.forEach(d=>{
+    const text = DOCTEXT.get(d.id) || '';
+    if (!text) return;
+    chunkText(text).forEach(c=>{
+      const n = norm(c);
+      let score = 0;
+      terms.forEach(t=>{ const stem = t.slice(0, Math.max(4, t.length-2)); if (n.includes(stem)) score++; });
+      if (CLAUSE_RE.test(c)) score += 2;
+      if (score > 1) hits.push({doc:d.name, text:c.replace(/\s+/g,' ').trim(), score});
+    });
+  });
+  hits.sort((a,b)=>b.score-a.score);
+  FOUND = hits.slice(0,12);
+  $('findMeta').textContent = FOUND.length ? 'найдено фрагментов: '+FOUND.length+' — отметьте подходящие'
+    : (DOCS.length ? 'подходящих пунктов не нашлось' : 'сначала загрузите стандарты на вкладке «Стандарты»');
+  $('found').innerHTML = FOUND.length ? '<div class="found">' + FOUND.map((f,i)=>`
+      <label><input type="checkbox" data-clause="${i}" ${i<3?'checked':''}>
+      <span><span class="pill">${esc(f.doc.replace(/\.(docx|txt|md)$/i,''))}</span>${esc(f.text.slice(0,400))}${f.text.length>400?'…':''}</span></label>
+    `).join('') + '</div>' : '';
+}
+function selectedClauses(){
+  return Array.from(document.querySelectorAll('[data-clause]'))
+    .filter(c=>c.checked).map(c=>FOUND[+c.dataset.clause]);
+}
+
+/* ================= упаковщик ZIP (store, без зависимостей) ================= */
+const ZIP = (function(){
+  const TBL = (function(){
+    const t = new Uint32Array(256);
+    for (let n=0; n<256; n++){ let c=n; for (let k=0; k<8; k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); t[n]=c>>>0; }
+    return t;
+  })();
+  function crc32(buf){
+    let c = 0 ^ (-1);
+    for (let i=0; i<buf.length; i++) c = (c>>>8) ^ TBL[(c ^ buf[i]) & 0xFF];
+    return (c ^ (-1)) >>> 0;
+  }
+  const enc = new TextEncoder();
+  function fromBase64(b64){
+    const bin = atob(b64);
+    const a = new Uint8Array(bin.length);
+    for (let i=0; i<bin.length; i++) a[i] = bin.charCodeAt(i);
+    return a;
+  }
+  function dosStamp(d){
+    const time = (d.getHours()<<11) | (d.getMinutes()<<5) | (d.getSeconds()>>1);
+    const date = ((d.getFullYear()-1980)<<9) | ((d.getMonth()+1)<<5) | d.getDate();
+    return { time, date };
+  }
+  /* entries: [{name, text}] или [{name, base64}] */
+  function make(entries){
+    const now = dosStamp(new Date());
+    const items = entries.map(e=>{
+      const name = enc.encode(e.name);
+      const data = e.base64 != null ? fromBase64(e.base64) : enc.encode(e.text || '');
+      return { name, data, crc: crc32(data) };
+    });
+    let size = 0;
+    items.forEach(it=>{ size += 30 + it.name.length + it.data.length + 46 + it.name.length; });
+    size += 22;
+    const buf = new Uint8Array(size);
+    const dv = new DataView(buf.buffer);
+    let off = 0;
+    items.forEach(it=>{
+      it.offset = off;
+      dv.setUint32(off, 0x04034b50, true);
+      dv.setUint16(off+4, 20, true);      // версия
+      dv.setUint16(off+6, 0x0800, true);  // имена в UTF-8
+      dv.setUint16(off+8, 0, true);       // без сжатия
+      dv.setUint16(off+10, now.time, true);
+      dv.setUint16(off+12, now.date, true);
+      dv.setUint32(off+14, it.crc, true);
+      dv.setUint32(off+18, it.data.length, true);
+      dv.setUint32(off+22, it.data.length, true);
+      dv.setUint16(off+26, it.name.length, true);
+      dv.setUint16(off+28, 0, true);
+      off += 30;
+      buf.set(it.name, off); off += it.name.length;
+      buf.set(it.data, off); off += it.data.length;
+    });
+    const cdStart = off;
+    items.forEach(it=>{
+      dv.setUint32(off, 0x02014b50, true);
+      dv.setUint16(off+4, 20, true);
+      dv.setUint16(off+6, 20, true);
+      dv.setUint16(off+8, 0x0800, true);
+      dv.setUint16(off+10, 0, true);
+      dv.setUint16(off+12, now.time, true);
+      dv.setUint16(off+14, now.date, true);
+      dv.setUint32(off+16, it.crc, true);
+      dv.setUint32(off+20, it.data.length, true);
+      dv.setUint32(off+24, it.data.length, true);
+      dv.setUint16(off+28, it.name.length, true);
+      dv.setUint16(off+30, 0, true);      // extra
+      dv.setUint16(off+32, 0, true);      // comment
+      dv.setUint16(off+34, 0, true);      // диск
+      dv.setUint16(off+36, 0, true);      // внутренние атрибуты
+      dv.setUint32(off+38, 0, true);      // внешние атрибуты
+      dv.setUint32(off+42, it.offset, true);
+      off += 46;
+      buf.set(it.name, off); off += it.name.length;
+    });
+    dv.setUint32(off, 0x06054b50, true);
+    dv.setUint16(off+4, 0, true);
+    dv.setUint16(off+6, 0, true);
+    dv.setUint16(off+8, items.length, true);
+    dv.setUint16(off+10, items.length, true);
+    dv.setUint32(off+12, off - cdStart, true);
+    dv.setUint32(off+16, cdStart, true);
+    dv.setUint16(off+20, 0, true);
+    return buf;
+  }
+  return { make, crc32 };
+})();
+
+/* ================= генератор настоящего .docx ================= */
+const DOCX = (function(){
+  const TW_CONTENT = 10346;              // ширина текста в твипах (A4 минус поля)
+  const EMU_IN = 914400;
+  const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
+             'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
+             'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
+             'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
+             'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const x = (s) => String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  function rPr(o){
+    o = o || {};
+    let s = '';
+    if (o.font) s += `<w:rFonts w:ascii="${x(o.font)}" w:hAnsi="${x(o.font)}" w:cs="${x(o.font)}"/>`;
+    if (o.b) s += '<w:b/><w:bCs/>';
+    if (o.i) s += '<w:i/>';
+    if (o.color) s += `<w:color w:val="${o.color}"/>`;
+    if (o.sz) s += `<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`;
+    return s ? `<w:rPr>${s}</w:rPr>` : '';
+  }
+  function run(text, o){
+    const parts = String(text==null?'':text).split('\t');
+    const body = parts.map(p=>`<w:t xml:space="preserve">${x(p)}</w:t>`).join('<w:tab/>');
+    return `<w:r>${rPr(o)}${body}</w:r>`;
+  }
+  function para(inner, o){
+    o = o || {};
+    let p = '';
+    if (o.tabs) p += `<w:tabs>${o.tabs.map(t=>`<w:tab w:val="${t.val}" w:pos="${t.pos}"/>`).join('')}</w:tabs>`;
+    if (o.spacing) p += `<w:spacing ${o.spacing}/>`;
+    if (o.ind) p += `<w:ind ${o.ind}/>`;
+    if (o.jc) p += `<w:jc w:val="${o.jc}"/>`;
+    const pr = (p || o.rPr) ? `<w:pPr>${p}${o.rPr ? `<w:rPr>${o.rPr}</w:rPr>` : ''}</w:pPr>` : '';
+    return `<w:p>${pr}${inner||''}</w:p>`;
+  }
+  function pageBreak(){ return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'; }
+  function drawing(rid, cx, cy, id, name){
+    return `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">` +
+      `<wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/>` +
+      `<wp:docPr id="${id}" name="${x(name)}"/>` +
+      `<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
+      `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+      `<pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="${x(name)}"/><pic:cNvPicPr/></pic:nvPicPr>` +
+      `<pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+      `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
+      `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>` +
+      `</a:graphicData></a:graphic></wp:inline></w:drawing>`;
+  }
+  function dataParts(url){
+    const m = /^data:([^;]+);base64,(.*)$/.exec(url || '');
+    if (!m) return null;
+    return { mime:m[1], b64:m[2], ext: /png/i.test(m[1]) ? 'png' : 'jpeg' };
+  }
+
+  /* колонтитул: таблица — логотип слева, название организации справа с синей линией */
+  function headerXml(set, hasLogo, logoCx, logoCy){
+    const blue = '365F91';
+    const line = (pos) => `<w:${pos} w:val="single" w:sz="12" w:space="0" w:color="${blue}"/>`;
+    const nil = (pos) => `<w:${pos} w:val="nil"/>`;
+    const txt = (t) => para(run(t, {b:true, color:blue, sz:'20', font:'Calibri'}),
+                            {jc:'right', spacing:'w:after="0" w:line="240" w:lineRule="auto"'});
+    const logoCell = hasLogo
+      ? `<w:tc><w:tcPr><w:tcW w:w="1356" w:type="dxa"/><w:vMerge w:val="restart"/><w:tcBorders>${nil('top')}${nil('left')}${nil('bottom')}${nil('right')}</w:tcBorders><w:vAlign w:val="center"/></w:tcPr>` +
+        para(`<w:r>${drawing('rId1', logoCx, logoCy, 100, 'Логотип')}</w:r>`, {spacing:'w:after="0"'}) + '</w:tc>'
+      : '';
+    const logoCell2 = hasLogo
+      ? `<w:tc><w:tcPr><w:tcW w:w="1356" w:type="dxa"/><w:vMerge/><w:tcBorders>${nil('top')}${nil('left')}${nil('bottom')}${nil('right')}</w:tcBorders></w:tcPr><w:p/></w:tc>`
+      : '';
+    const textW = hasLogo ? 8992 : TW_CONTENT;
+    const grid = hasLogo ? '<w:gridCol w:w="1356"/><w:gridCol w:w="8992"/>' : `<w:gridCol w:w="${TW_CONTENT}"/>`;
+    const row1 = `<w:tr><w:trPr><w:trHeight w:val="426"/></w:trPr>${logoCell}` +
+      `<w:tc><w:tcPr><w:tcW w:w="${textW}" w:type="dxa"/><w:tcBorders>${nil('top')}${nil('left')}${line('bottom')}${nil('right')}</w:tcBorders><w:vAlign w:val="bottom"/></w:tcPr>` +
+      txt(set.orgName) + '</w:tc></w:tr>';
+    const row2 = set.orgSub ? `<w:tr>${logoCell2}` +
+      `<w:tc><w:tcPr><w:tcW w:w="${textW}" w:type="dxa"/><w:tcBorders>${line('top')}${nil('left')}${nil('bottom')}${nil('right')}</w:tcBorders></w:tcPr>` +
+      txt(set.orgSub) + '</w:tc></w:tr>' : '';
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<w:hdr ${NS}><w:tbl><w:tblPr><w:tblW w:w="${TW_CONTENT}" w:type="dxa"/>` +
+      `<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>` +
+      `<w:tblGrid>${grid}</w:tblGrid>${row1}${row2}</w:tbl>` +
+      para('', {rPr:'<w:sz w:val="2"/><w:szCs w:val="2"/>', spacing:'w:after="0"'}) + `</w:hdr>`;
+  }
+
+  function stylesXml(font, sz){
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<w:styles ${NS}><w:docDefaults><w:rPrDefault><w:rPr>` +
+      `<w:rFonts w:ascii="${x(font)}" w:hAnsi="${x(font)}" w:cs="${x(font)}" w:eastAsia="${x(font)}"/>` +
+      `<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:lang w:val="ru-RU"/></w:rPr></w:rPrDefault>` +
+      `<w:pPrDefault><w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault>` +
+      `</w:docDefaults>` +
+      `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>` +
+      `</w:styles>`;
+  }
+
+  /* model: {set, to:[...], title, subject, blocks:[{t,text}], date, sign, photos:[], apps:[]} */
+  function build(model){
+    const set = model.set, sz = set.fontSize || '28', font = set.fontName || 'Calibri';
+    const parts = [], rels = [];
+    const put = (name, text) => parts.push({name, text});
+    const putB64 = (name, base64) => parts.push({name, base64});
+    let ridN = 10, docPrN = 200;
+
+    /* логотип */
+    const logo = set.logo && dataParts(set.logo.url);
+    let logoCx = 715645, logoCy = 483870;
+    if (logo){
+      if (set.logo.w && set.logo.h){
+        logoCy = 483870;
+        logoCx = Math.round(logoCy * (set.logo.w / set.logo.h));
+        if (logoCx > 1100000){ logoCx = 1100000; logoCy = Math.round(logoCx * (set.logo.h / set.logo.w)); }
+      }
+      putB64('word/media/logo.' + logo.ext, logo.b64);
+    }
+
+    const body = [];
+    /* блок адресата — по правому краю, как в образцах */
+    model.to.filter(Boolean).forEach(l=>{
+      body.push(para(run(l, {sz}), {jc:'right', spacing:'w:after="0" w:line="276" w:lineRule="auto"'}));
+    });
+    body.push(para('', {spacing:'w:after="0"', rPr:`<w:sz w:val="${sz}"/>`}));
+    body.push(para(run(model.title, {b:true, sz}), {jc:'center', spacing:'w:before="240" w:after="240"'}));
+    if (model.subject){
+      body.push(para(run('Тема: ' + model.subject, {sz}), {jc:'both', spacing:'w:after="160"'}));
+    }
+
+    model.blocks.forEach(b=>{
+      if (b.t === 'h') body.push(para(run(b.text, {b:true, sz}), {jc:'both', spacing:'w:before="160" w:after="80"'}));
+      else if (b.t === 'li') body.push(para(run((b.num ? '' : '– ') + b.text, {sz}),
+                 {jc:'both', ind:'w:left="720" w:hanging="360"', spacing:'w:after="60"'}));
+      else body.push(para(run(b.text, {sz}), {jc:'both', ind:'w:firstLine="547"', spacing:'w:after="120"'}));
+    });
+
+    if (model.apps && model.apps.length){
+      body.push(para(run('Приложение:', {b:true, sz}), {spacing:'w:before="200" w:after="60"'}));
+      model.apps.forEach((a,i)=> body.push(para(run((i+1) + '. ' + a, {sz}),
+        {ind:'w:left="720" w:hanging="360"', spacing:'w:after="60"'})));
+    }
+
+    /* дата и подпись */
+    body.push(para('', {spacing:'w:after="0"', rPr:`<w:sz w:val="${sz}"/>`}));
+    body.push(para(run('Дата: ' + model.date + '\tПодпись ________________', {sz}),
+      {tabs:[{val:'right', pos:TW_CONTENT}], spacing:'w:before="360" w:after="0"'}));
+    if (model.sign){
+      body.push(para(run(model.sign, {sz}), {tabs:[{val:'right', pos:TW_CONTENT}], spacing:'w:before="120"'}));
+    }
+
+    /* приложение с фотографиями */
+    (model.photos || []).forEach((p,i)=>{
+      if (i === 0){
+        body.push(pageBreak());
+        body.push(para(run('Приложение. Фотофиксация нарушения', {b:true, sz}), {jc:'center', spacing:'w:after="240"'}));
+      }
+      const img = dataParts(p.url);
+      if (!img) return;
+      const rid = 'rId' + (ridN++);
+      const name = 'media/photo' + (i+1) + '.' + img.ext;
+      putB64('word/' + name, img.b64);
+      rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${name}"/>`);
+      const maxCx = Math.round(5.4 * EMU_IN);
+      let cx = maxCx, cy = Math.round(maxCx * (p.h / p.w));
+      const maxCy = Math.round(6.2 * EMU_IN);
+      if (cy > maxCy){ cy = maxCy; cx = Math.round(maxCy * (p.w / p.h)); }
+      body.push(para(`<w:r>${drawing(rid, cx, cy, docPrN++, 'Фото ' + (i+1))}</w:r>`, {jc:'center', spacing:'w:after="60"'}));
+      body.push(para(run('Фото ' + (i+1) + (p.caption ? '. ' + p.caption : ''), {sz:'22', i:true}),
+        {jc:'center', spacing:'w:after="240"'}));
+    });
+
+    const sectPr = '<w:sectPr><w:headerReference w:type="default" r:id="rId2"/>' +
+      '<w:pgSz w:w="11906" w:h="16838"/>' +
+      '<w:pgMar w:top="567" w:right="567" w:bottom="993" w:left="993" w:header="284" w:footer="389" w:gutter="0"/>' +
+      '<w:cols w:space="708"/><w:docGrid w:linePitch="360"/></w:sectPr>';
+
+    put('[Content_Types].xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+      `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+      `<Default Extension="xml" ContentType="application/xml"/>` +
+      `<Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/>` +
+      `<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>` +
+      `<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>` +
+      `<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>` +
+      `<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>` +
+      `</Types>`);
+
+    put('_rels/.rels',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>` +
+      `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>` +
+      `</Relationships>`);
+
+    const now = new Date().toISOString().replace(/\.\d+Z$/,'Z');
+    put('docProps/core.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" ` +
+      `xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">` +
+      `<dc:title>${x(model.title)}</dc:title><dc:creator>${x(model.author||'')}</dc:creator>` +
+      `<cp:lastModifiedBy>${x(model.author||'')}</cp:lastModifiedBy>` +
+      `<dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>` +
+      `<dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified></cp:coreProperties>`);
+
+    put('word/styles.xml', stylesXml(font, sz));
+    put('word/header1.xml', headerXml(set, !!logo, logoCx, logoCy));
+    put('word/_rels/header1.xml.rels',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      (logo ? `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.${logo.ext}"/>` : '') +
+      `</Relationships>`);
+
+    put('word/_rels/document.xml.rels',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
+      `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>` +
+      rels.join('') + `</Relationships>`);
+
+    put('word/document.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<w:document ${NS}><w:body>${body.join('')}${sectPr}</w:body></w:document>`);
+
+    /* [Content_Types].xml обязан идти первым — кладём части в нужном порядке */
+    const order = ['[Content_Types].xml', '_rels/.rels', 'docProps/core.xml',
+                   'word/document.xml', 'word/_rels/document.xml.rels',
+                   'word/styles.xml', 'word/header1.xml', 'word/_rels/header1.xml.rels'];
+    parts.sort((a,b)=>{
+      const ia = order.indexOf(a.name), ib = order.indexOf(b.name);
+      return (ia<0?order.length:ia) - (ib<0?order.length:ib);
+    });
+    return new Blob([ZIP.make(parts)],
+      {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  }
+
+  return { build, parseBody: null };
+})();
+
+/* ================= модель документа из полей ================= */
+function parseBlocks(text){
+  const out = [];
+  String(text||'').split(/\n/).forEach(ln=>{
+    const t = ln.trim();
+    if (!t) return;
+    if (/^##\s+/.test(t)) out.push({t:'h', text:t.replace(/^##\s+/,'')});
+    else if (/^[-–—•]\s+/.test(t)) out.push({t:'li', text:t.replace(/^[-–—•]\s+/,'')});
+    else if (/^\d+[.)]\s+/.test(t)) out.push({t:'li', text:t, num:true});
+    else out.push({t:'p', text:t});
+  });
+  return out;
+}
+function addresseeLines(){
+  const post = val('toPost'), dept = val('toDept');
+  return [
+    post + (dept ? ' • ' + dept : ''),
+    val('toOrg'),
+    val('toName'),
+    'От: ' + val('fromPost'),
+    val('fromName')
+  ].filter(s=>s && s !== 'От: ');
+}
+function docModel(){
+  return {
+    set: SET,
+    to: addresseeLines(),
+    title: val('kind') + '.',
+    subject: $('struct').value === 'full' ? val('subject') : '',
+    blocks: parseBlocks($('sheet').value),
+    date: val('date') || today(),
+    sign: '',
+    author: val('fromName'),
+    apps: lines('apps'),
+    photos: PHOTOS
+  };
+}
+
+/* ================= предпросмотр ================= */
+function renderPreview(){
+  const m = docModel();
+  const logo = SET.logo && SET.logo.url ? `<img src="${SET.logo.url}" alt="">` : '';
+  const blocks = m.blocks.map(b=>{
+    if (b.t === 'h')  return `<p class="h">${esc(b.text)}</p>`;
+    if (b.t === 'li') return `<p class="li">${b.num ? '' : '– '}${esc(b.text)}</p>`;
+    return `<p class="b">${esc(b.text)}</p>`;
+  }).join('');
+  const apps = m.apps.length ? `<p class="h">Приложение:</p>` +
+    m.apps.map((a,i)=>`<p class="li">${i+1}. ${esc(a)}</p>`).join('') : '';
+  const photos = m.photos.length ? `<div class="att"><p class="h" style="text-align:center">Приложение. Фотофиксация нарушения</p>` +
+    m.photos.map((p,i)=>`<div style="text-align:center"><img src="${p.url}"><div style="font-size:11px;font-style:italic">Фото ${i+1}${p.caption?'. '+esc(p.caption):''}</div></div>`).join('') + '</div>' : '';
+  $('preview').innerHTML =
+    `<div class="hdr">${logo}<div class="lines"><div class="l1">${esc(SET.orgName)}</div>${SET.orgSub?`<div class="l2">${esc(SET.orgSub)}</div>`:''}</div></div>` +
+    `<div class="to">${esc(m.to.join('\n'))}</div>` +
+    `<div class="ttl">${esc(m.title)}</div>` +
+    (m.subject ? `<p class="b" style="text-indent:0"><b>Тема:</b> ${esc(m.subject)}</p>` : '') +
+    blocks + apps +
+    `<div class="sig"><span>Дата: ${esc(m.date)}</span><span>Подпись ________________</span></div>` +
+    photos;
+  $('preview').style.fontFamily = SET.fontName + ', sans-serif';
+}
+
+/* ================= сборка текста без ИИ ================= */
+function plural(n, one, few, many){
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+function sentence(s){
+  s = (s||'').trim().replace(/\s+/g,' ');
+  if (!s) return '';
+  s = s.charAt(0).toUpperCase() + s.slice(1);
+  return /[.!?;:]$/.test(s) ? s : s + '.';
+}
+/* без ИИ падежи не подобрать — перечисляем данные нарушителя списком, это грамматически безопасно */
+function personBlock(){
+  const name = val('prName'), post = val('prPost'), dept = val('prDept'), org = val('prOrg');
+  if (!name) return '';
+  const bits = [];
+  if (org)  bits.push('организация — ' + org);
+  if (post) bits.push('должность — ' + post);
+  if (dept) bits.push('подразделение — ' + dept);
+  return `Нарушение допущено работником: ${name}${bits.length ? ' (' + bits.join(', ') + ')' : ''}.`;
+}
+function buildLocal(){
+  const date = val('factDate') || val('date') || today();
+  const place = val('place');
+  const items = lines('items');
+  const clauses = selectedClauses();
+  USED = Array.from(new Set(clauses.map(c=>c.doc)));
+  const full = $('struct').value === 'full';
+  const out = [];
+
+  let intro = `Довожу до Вашего сведения о том, что ${date} г. при проведении контроля соблюдения требований биобезопасности`;
+  if (place) intro += ` на объекте «${place}»`;
+  intro += ' выявлен факт нарушения установленных требований.';
+  out.push(intro);
+
+  const who = personBlock();
+  if (who) out.push(who);
+  if (val('facts')) out.push(sentence(val('facts')));
+
+  if (items.length){
+    out.push('', 'При проверке выявлено следующее:');
+    items.forEach((it,i)=> out.push('- ' + it.replace(/[;.]\s*$/,'') + (i===items.length-1 ? '.' : ';')));
+  }
+
+  if (clauses.length){
+    out.push('', 'Проверкой установлено нарушение следующих требований:');
+    clauses.forEach(c=> out.push('- ' + c.doc.replace(/\.(docx|txt|md)$/i,'') + ', ' + c.text));
+  } else {
+    out.push('', 'В предоставленных документах не найдено прямого основания для данной формулировки — отметьте нужные пункты на вкладке «Записка» или впишите их вручную.');
+  }
+
+  out.push('', 'Данный факт является нарушением установленного порядка и требований биобезопасности предприятия.');
+  if ($('repeat').checked) out.push('Выявленное нарушение носит повторный характер.');
+
+  const done = [];
+  if ($('doneExpl').checked)  done.push('от работника получена объяснительная');
+  if ($('doneInstr').checked) done.push('проведён повторный инструктаж по требованиям биобезопасности');
+  if ($('doneStudy').checked) done.push('работник направлен на обучение');
+  if ($('doneTalk').checked)  done.push('с работником проведена беседа');
+  if (val('doneOther')) done.push(val('doneOther').replace(/\.$/,''));
+  if (done.length) out.push('', 'Выполненные мероприятия: ' + done.join('; ') + '.');
+
+  if (full){
+    out.push('', '## Корневая причина', 'Указать корневую причину нарушения.');
+    const capa = lines('capa');
+    if (capa.length){
+      out.push('', '## Корректирующие мероприятия');
+      capa.forEach((c,i)=> out.push((i+1) + '. ' + c.replace(/[;.]\s*$/,'') + '.'));
+    }
+    out.push('', '## Предлагаемые меры');
+  }
+
+  const ask = val('ask').replace(/^прошу\s+/i,'').replace(/[.;]\s*$/,'') || 'принять соответствующие меры';
+  let tail = `В связи с выявленным нарушением требований биобезопасности прошу ${ask}`;
+  if ($('brief').checked) tail += ', поскольку работник ознакомлен с установленными требованиями биобезопасности';
+  out.push('', tail + '.');
+  if (PHOTOS.length) out.push('', `Фотофиксация нарушения прилагается — ${PHOTOS.length} ${plural(PHOTOS.length,'снимок','снимка','снимков')}.`);
+  if (full && val('feedback')) out.push('', `Обратную связь о принятых решениях прошу предоставить до ${val('feedback')} г.`);
+
+  return out.join('\n');
+}
+
+/* ================= запрос к ИИ ================= */
+function factsContext(){
+  const done = [];
+  if ($('doneExpl').checked)  done.push('получена объяснительная');
+  if ($('doneInstr').checked) done.push('проведён повторный инструктаж');
+  if ($('doneStudy').checked) done.push('работник направлен на обучение');
+  if ($('doneTalk').checked)  done.push('проведена беседа');
+  if (val('doneOther')) done.push(val('doneOther'));
+  const items = lines('items');
+  const capa = lines('capa');
+  const rows = [
+    ['Вид документа', val('kind')],
+    ['Дата документа', val('date') || today()],
+    ['Кому', [val('toPost'), val('toDept'), val('toOrg'), val('toName')].filter(Boolean).join(', ')],
+    ['От кого', [val('fromPost'), val('fromName')].filter(Boolean).join(' ')],
+    ['Нарушитель — ФИО', val('prName')],
+    ['Нарушитель — должность', val('prPost')],
+    ['Нарушитель — подразделение', val('prDept')],
+    ['Нарушитель — подрядная организация', val('prOrg')],
+    ['Дата нарушения', val('factDate')],
+    ['Место нарушения', val('place')],
+    ['Тема', val('subject')],
+    ['Суть нарушения (со слов специалиста)', val('facts')],
+    ['Перечень выявленного', items.join('; ')],
+    ['Нарушение повторное', $('repeat').checked ? 'да' : 'нет'],
+    ['Работник ранее ознакомлен с требованиями', $('brief').checked ? 'да' : 'не указано'],
+    ['Уже выполненные мероприятия', done.join('; ')],
+    ['Просьба / предлагаемые меры', val('ask')],
+    ['Корректирующие мероприятия', capa.join('; ')],
+    ['Срок обратной связи', val('feedback')],
+    ['Фотофиксация', PHOTOS.length ? PHOTOS.length + ' снимок(ов) прилагается' : '']
+  ].filter(r=>r[1]);
+  return rows.map(r=>r[0] + ': ' + r[1]).join('\n');
+}
+function clausesContext(){
+  const cl = selectedClauses();
+  USED = Array.from(new Set(cl.map(c=>c.doc)));
+  if (!cl.length) return '(фрагменты не отмечены — ссылки на пункты не приводи, вместо них напиши, что прямого основания в предоставленных документах не найдено)';
+  return cl.map(c=>`[Документ: ${c.doc.replace(/\.(docx|txt|md)$/i,'')}]\n${c.text}`).join('\n\n');
+}
+function structRules(){
+  if ($('struct').value === 'full'){
+    return `Структура текста:
+1. Абзац о выявленном нарушении: когда, где, кем, что именно нарушено.
+2. Ссылка на требование: «В соответствии с <название документа>, пунктом <номер>, установлено требование: <цитата>». Только по приведённым фрагментам.
+3. Вывод: «Выявленное нарушение не соответствует установленным требованиям биобезопасности».
+4. Подзаголовок «## Корневая причина» и абзац под ним — только если причину обоснованно видно из входных данных, иначе напиши, что для её определения сведений недостаточно.
+5. Подзаголовок «## Корректирующие мероприятия» и нумерованный перечень.
+6. Подзаголовок «## Предлагаемые меры» и абзац с просьбой.
+7. Последним абзацем — срок обратной связи, если он указан.`;
+  }
+  return `Структура текста — как в образце, сплошным текстом без подзаголовков:
+1. «Довожу до Вашего сведения о том, что <дата> г. <при каких обстоятельствах и где> был выявлен факт <что именно> <кем именно>».
+2. При наличии перечня выявленного — перечень строками «- ».
+3. «Проверкой установлено нарушение следующих требований <название стандарта>:» и пункты строками «- п. X.Y — <формулировка требования>;».
+4. Абзац «Данный факт является нарушением установленного порядка и требований биобезопасности предприятия в части <существо нарушения>».
+5. Заключительный абзац «В связи с выявленным нарушением требований биобезопасности прошу <просьба>».`;
+}
+function composePrompt(){
+  const tpl = TPLS.find(t=>t.id===$('tplSel').value) || TPLS[0];
+  return `Составь текст ${val('kind').toLowerCase()} по данным ниже.
+
+ДАННЫЕ
+${factsContext()}
+
+ФРАГМЕНТЫ ВНУТРЕННИХ ДОКУМЕНТОВ — цитируй только их, номера пунктов переноси дословно
+"""
+${clausesContext()}
+"""
+
+ОБРАЗЕЦ ОФОРМЛЕНИЯ — повтори его обороты и порядок изложения
+"""
+${tpl ? tpl.text : ''}
+"""
+
+${structRules()}
+
+Верни только текст записки: без шапки организации, без блока «Кому/От кого», без строки даты и подписи.`;
+}
+
+/*{{AI_ADAPTER}}*/
+
+/* ================= действия ================= */
+function splitWarning(text){
+  const m = /^\s*НЕ ХВАТАЕТ ДАННЫХ:?(.*)$/im.exec(text);
+  if (!m) return { text, warn:'' };
+  const line = m[0];
+  return { text: text.replace(line, '').replace(/^\s+/, ''), warn: line.trim() };
+}
+
+async function compose(useAI){
+  const draft = buildLocal();
+  $('sheet').value = draft;
+  saveForm();
+  $('usedMeta').textContent = USED.length ? 'использованы документы: ' + USED.join(', ') : '';
+  renderPreview();
+  goTab('result');
+  if (!useAI){ msg('Текст собран из ваших полей, без ИИ.', 'ok'); return; }
+  if (!AI.available()){ msg('Текст собран из полей. Для обработки ИИ откройте вкладку «ИИ» и включите доступ.', 'warn'); return; }
+  msg('ИИ составляет текст…');
+  try{
+    const raw = await AI.ask(SET.sys, composePrompt(), 2000);
+    const { text, warn } = splitWarning(raw);
+    $('sheet').value = text.trim();
+    saveForm();
+    renderPreview();
+    msg(warn ? 'Текст готов, но ' + esc(warn.toLowerCase()) : 'Текст составлен ИИ по загруженным документам.', warn ? 'warn' : 'ok');
+  }catch(e){
+    msg('ИИ не ответил (' + esc(e.message) + '). В окне остался текст, собранный из ваших полей.', 'err');
+  }
+}
+
+async function proofread(){
+  if (!$('sheet').value.trim()){ msg('Сначала составьте записку.', 'err'); return; }
+  if (!AI.available()){ msg('Нет доступа к ИИ — вкладка «ИИ».', 'err'); return; }
+  msg('Вычитываю текст…');
+  try{
+    const text = await AI.ask(SET.sys,
+`Вычитай текст служебной записки: орфография, падежи, согласование, пунктуация, официально-деловой стиль.
+Факты, фамилии, должности, даты, числа, названия документов и номера пунктов не меняй и новых не добавляй.
+Разметку сохрани: строки «- » и «## ». Верни только исправленный текст.
+
+Текст:
+"""
+${$('sheet').value}
+"""`, 2000);
+    $('sheet').value = text.trim();
+    saveForm();
+    renderPreview();
+    msg('Текст вычитан.', 'ok');
+  }catch(e){ msg('Не получилось: ' + esc(e.message), 'err'); }
+}
+
+async function tidyFacts(){
+  if (!val('facts')){ msg('Сначала опишите суть нарушения.', 'err'); return; }
+  if (!AI.available()){ msg('Нет доступа к ИИ — вкладка «ИИ».', 'err'); return; }
+  msg('Правлю формулировку…');
+  try{
+    const text = await AI.ask(SET.sys,
+`Перепиши описание нарушения официально-деловым языком: орфография, падежи, согласование, пунктуация, раскрытие сокращений.
+Ничего не добавляй: ни фактов, ни дат, ни фамилий, ни ссылок на документы и пункты. Верни только исправленный текст одним абзацем.
+
+Описание:
+"""
+${val('facts')}
+"""`, 800);
+    $('facts').value = text.trim();
+    saveForm();
+    msg('Формулировка приведена в деловой вид.', 'ok');
+  }catch(e){ msg('Не получилось: ' + esc(e.message), 'err'); }
+}
+
+/* ================= выгрузка ================= */
+const TRANSLIT = {а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',
+  м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'shch',
+  ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
+function translit(s){
+  return String(s||'').split('').map(ch=>{
+    const low = ch.toLowerCase();
+    const t = TRANSLIT[low];
+    if (t == null) return /[a-z0-9]/i.test(ch) ? ch : '_';
+    return ch === low ? t : (t.charAt(0).toUpperCase() + t.slice(1));
+  }).join('').replace(/_+/g,'_').replace(/^_|_$/g,'');
+}
+/* имя файла латиницей: браузеры теряют кириллицу в атрибуте download и сохраняют файл без расширения */
+function fileName(){
+  const kind = translit(val('kind'));
+  const who = val('prName') ? '_' + translit(val('prName').split(/\s+/)[0]) : '';
+  const d = (val('date') || today()).replace(/\./g,'-');
+  return `${kind}${who}_${d}.docx`;
+}
+async function downloadDocx(){
+  if (!$('sheet').value.trim()){ msg('Сначала составьте записку.', 'err'); return; }
+  try{
+    msg('Собираю файл Word…');
+    const blob = await DOCX.build(docModel());
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    msg('Файл Word сохранён: ' + esc(fileName()), 'ok');
+  }catch(e){ msg('Не удалось собрать файл: ' + esc(e.message), 'err'); }
+}
+function printDoc(){
+  const w = window.open('', '_blank');
+  if (!w){ msg('Браузер заблокировал окно печати.', 'err'); return; }
+  const css = document.querySelector('style').textContent;
+  w.document.write(`<html><head><meta charset="utf-8"><title>${esc(val('kind'))}</title><style>${css}
+    body{background:#fff}.page{border:none;box-shadow:none;max-width:700px;margin:0 auto;padding:0}
+    @page{size:A4;margin:14mm 10mm 18mm 17mm}</style></head><body>
+    <div class="page">${$('preview').innerHTML}</div></body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 500);
+}
+
+/* ================= сохранение полей формы ================= */
+const FORM_IDS = ['kind','struct','date','toPost','toDept','toOrg','toName','fromPost','fromName',
+  'prName','prPost','prDept','prOrg','factDate','place','subject','facts','items','doneOther',
+  'ask','feedback','capa','apps'];
+const FORM_CB = ['repeat','brief','doneExpl','doneInstr','doneStudy','doneTalk'];
+function saveForm(){
+  const o = {};
+  FORM_IDS.forEach(id=>o[id]=$(id).value);
+  FORM_CB.forEach(id=>o[id]=$(id).checked);
+  o.sheet = $('sheet').value;
+  LS.set('sz2:form', o);
+}
+function loadForm(){
+  const o = LS.get('sz2:form', null);
+  if (!o) return false;
+  FORM_IDS.forEach(id=>{ if (o[id] != null) $(id).value = o[id]; });
+  FORM_CB.forEach(id=>{ if (o[id] != null) $(id).checked = o[id]; });
+  if (o.sheet) $('sheet').value = o.sheet;
+  return true;
+}
+
+/* ================= проводка ================= */
+$('docPick').onclick = () => $('docInput').click();
+$('docInput').onchange = (e) => { addDocs(Array.from(e.target.files)); e.target.value=''; };
+$('docDrop').ondragover = (e)=>e.preventDefault();
+$('docDrop').ondrop = (e)=>{ e.preventDefault(); addDocs(Array.from(e.dataTransfer.files)); };
+
+$('photoBtn').onclick = () => $('photoInput').click();
+$('photoClear').onclick = () => { PHOTOS = []; renderPhotos(); renderPreview(); savePhotos(); };
+$('photoInput').onchange = (e) => { addPhotos(e.target.files); e.target.value=''; };
+$('photoDrop').ondragover = (e)=>e.preventDefault();
+$('photoDrop').ondrop = (e)=>{ e.preventDefault(); addPhotos(e.dataTransfer.files); };
+
+$('tplPick').onclick = () => $('tplInput').click();
+$('tplInput').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value='';
+  if (!f) return;
+  try{
+    const text = (await readAnyFile(f)).trim();
+    TPLS.push({id:uid('t'), name:f.name.replace(/\.(docx|txt|md)$/i,''), text});
+    LS.set('sz2:tpls', TPLS); renderTpls(); msg('Образец добавлен.', 'ok');
+  }catch(err){ msg(esc(f.name)+': '+esc(err.message), 'err'); }
+};
+$('tplSave').onclick = () => {
+  const n = val('tplName'), t = val('tplText');
+  if (!n || !t){ msg('Нужны название и текст образца.', 'err'); return; }
+  TPLS.push({id:uid('t'), name:n, text:t});
+  LS.set('sz2:tpls', TPLS); $('tplName').value=''; $('tplText').value='';
+  renderTpls(); msg('Образец сохранён.', 'ok');
+};
+
+$('findBtn').onclick = findClauses;
+$('buildBtn').onclick = () => compose(true);
+$('buildLocalBtn').onclick = () => compose(false);
+$('tidyBtn').onclick = tidyFacts;
+$('proofBtn').onclick = proofread;
+$('docxBtn').onclick = downloadDocx;
+$('printBtn').onclick = printDoc;
+$('copyBtn').onclick = async () => {
+  try{ await navigator.clipboard.writeText($('sheet').value); msg('Текст скопирован.', 'ok'); }
+  catch(e){ msg('Буфер недоступен — выделите текст и скопируйте вручную.', 'err'); }
+};
+$('sheet').oninput = () => { renderPreview(); saveForm(); };
+FORM_IDS.forEach(id=>{ $(id).oninput = $(id).onchange = () => { renderPreview(); saveForm(); }; });
+FORM_CB.forEach(id=>{ $(id).onchange = saveForm; });
+
+/* ================= старт ================= */
+(async function init(){
+  fillSet();
+  try{ const saved = await IDB.get('photos'); if (Array.isArray(saved)) PHOTOS = saved; }catch(e){}
+  renderAddr(); renderStaff(); renderTpls(); renderDocs(); renderPhotos();
+  if (!loadForm()){
+    $('date').value = today();
+    $('factDate').value = today();
+    $('toOrg').value = SET.orgName;
+    $('subject').value = 'О выявленном нарушении требований биобезопасности';
+  }
+  if (!val('fromPost')) $('fromPost').value = SET.authPost;
+  if (!val('fromName')) $('fromName').value = SET.authName;
+  AI.renderAccess($('aiAccess'));
+  for (const d of DOCS){
+    try{ const t = await getText(d.id); if (t) DOCTEXT.set(d.id, t); }catch(e){}
+  }
+  renderDocs();
+  renderPreview();
+})();
+</script>
+</body>
+</html>
