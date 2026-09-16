@@ -11,6 +11,7 @@ const AI = (function(){
   }
 
   return {
+    hint: 'Чтобы текст писал ИИ, укажите ключ Anthropic API на вкладке «ИИ».',
     available: () => !!getKey(),
     renderAccess(el){
       el.innerHTML = `
@@ -71,3 +72,13 @@ const AI = (function(){
     }
   };
 })();
+
+/* сохранение файла обычной ссылкой */
+async function saveFile(name, blob){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  return true;
+}

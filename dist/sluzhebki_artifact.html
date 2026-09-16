@@ -1,8 +1,3 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Служебные записки по стандартам</title>
 <style id="appcss">
   /* Светлая палитра — полный набор токенов; тёмная переопределяет только их. */
@@ -131,8 +126,6 @@
   .page .att img{max-width:100%;border:1px solid var(--paper-bd);margin-top:8px}
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style>
-</head>
-<body>
 <div class="wrap">
   <h1>Служебные записки по стандартам</h1>
   <p class="sub">Приложение собирает служебную и докладную записку в настоящем формате Word (.docx) с шапкой организации, блоком адресата и ссылками на пункты ваших стандартов. ИИ пишет текст официально-деловым языком строго по загруженным документам.</p>
@@ -1478,83 +1471,84 @@ ${structRules()}
 Верни только текст записки: без шапки организации, без блока «Кому/От кого», без строки даты и подписи.`;
 }
 
-/* ===== доступ к ИИ: прямые запросы к Anthropic API с ключом пользователя ===== */
+/* ===== доступ к ИИ: среда выполнения артефакта, ключ не нужен ===== */
 const AI = (function(){
-  const getKey   = () => LS.get('sz2:key', '');
-  const getModel = () => LS.get('sz2:model', 'claude-sonnet-5');
+  let box = null;                       // куда рисовать состояние
+  let ready = false;                    // среда ответила
+  let absent = false;                   // среда ответила, что ИИ здесь нет
+  const resolved = (async () => {
+    try{
+      if (typeof claude === 'undefined' || !claude.use) return null;
+      return await claude.use('sample');
+    }catch(e){ return null; }
+  })().then(s=>{ ready = true; absent = !s; if (box) draw(); return s; });
 
-  function state(el){
-    const k = getKey();
-    el.querySelector('#keyState').innerHTML = k
-      ? '<span class="badge on">ключ сохранён</span>'
-      : '<span class="badge off">ключа нет</span>';
+  function draw(){
+    if (!box) return;
+    resolved.then(s=>{
+      box.innerHTML = s
+        ? `<p class="hint">Ключ не нужен: приложение обращается к Claude через среду, в которой открыта эта страница. Первый запрос спросит у вас разрешение, дальше работает без вопросов. Запросы расходуют ваш лимит Claude.</p>
+           <p><span class="badge on">ИИ доступен</span></p>`
+        : `<p class="hint">Эта копия страницы открыта вне Claude, поэтому обработка текста ИИ недоступна. Приложение продолжает работать: текст собирается из ваших полей, документ Word выгружается как обычно. Чтобы вернуть ИИ, откройте страницу по ссылке на claude.ai — или возьмите версию приложения с ключом Anthropic API.</p>
+           <p><span class="badge off">ИИ недоступен</span></p>`;
+    });
   }
 
+  const COPY = {
+    not_granted:'вы не разрешили этой странице обращаться к Claude',
+    sampling_disabled:'в этой учётной записи Claude недоступен',
+    not_declared:'страница больше не объявляет доступ к ИИ',
+    capability_disabled:'доступ к ИИ отключён в этом окне',
+    capability_removed:'окно просмотра слишком старое для этого вызова',
+    rate_limited:'слишком много запросов подряд либо исчерпан лимит — попробуйте позже',
+    session_expired:'нужно заново войти в Claude',
+    refused:'Claude отказался обрабатывать этот запрос — измените формулировку',
+    empty_completion:'ответ пришёл пустым — упростите запрос',
+    prompt_too_large:'слишком много текста в запросе — снимите часть отмеченных фрагментов',
+    invalid_request:'запрос составлен неверно',
+    cancelled:'запрос отменён',
+    upstream_error:'служба временно недоступна'
+  };
+
   return {
-    hint: 'Чтобы текст писал ИИ, укажите ключ Anthropic API на вкладке «ИИ».',
-    available: () => !!getKey(),
-    renderAccess(el){
-      el.innerHTML = `
-        <p class="hint">Приложение обращается к ИИ напрямую из браузера. Нужен ключ Anthropic API — он хранится только в этом браузере и не уходит никуда, кроме api.anthropic.com. Без ключа приложение работает, но текст собирается только из ваших полей.</p>
-        <div class="grid two">
-          <label class="f">Ключ Anthropic API
-            <input type="text" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
-          </label>
-          <label class="f">Модель
-            <input type="text" id="apiModel" placeholder="claude-sonnet-5">
-          </label>
-        </div>
-        <div class="row" style="margin-top:12px">
-          <button class="btn" id="keySave">Сохранить ключ</button>
-          <button class="btn del" id="keyClear">Удалить ключ</button>
-          <span id="keyState"></span>
-        </div>
-        <p class="hint" style="margin-top:12px">Ключ получают в консоли Anthropic. Не вводите его на чужом компьютере: любой, кто сядет за этот браузер, сможет им пользоваться.</p>`;
-      el.querySelector('#apiKey').value = getKey();
-      el.querySelector('#apiModel').value = getModel();
-      el.querySelector('#keySave').onclick = () => {
-        LS.set('sz2:key', el.querySelector('#apiKey').value.trim());
-        LS.set('sz2:model', el.querySelector('#apiModel').value.trim() || 'claude-sonnet-5');
-        state(el); msg('Ключ сохранён в этом браузере.', 'ok');
-      };
-      el.querySelector('#keyClear').onclick = () => {
-        LS.del('sz2:key'); el.querySelector('#apiKey').value = '';
-        state(el); msg('Ключ удалён.', 'ok');
-      };
-      state(el);
-    },
+    hint: 'Обработка текста ИИ работает, когда страница открыта по ссылке через claude.ai.',
+    available: () => !absent,            // пока среда не ответила — считаем доступным
+    renderAccess(el){ box = el; el.innerHTML = '<p class="hint">Проверяю доступ к ИИ…</p>'; draw(); },
     async ask(system, prompt, maxTokens){
-      const key = getKey();
-      if (!key) throw new Error('не указан ключ Anthropic API');
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method:'POST',
-        headers:{
-          'content-type':'application/json',
-          'x-api-key': key,
-          'anthropic-version':'2023-06-01',
-          'anthropic-dangerous-direct-browser-access':'true'
-        },
-        body: JSON.stringify({
-          model: getModel(),
-          max_tokens: maxTokens || 1500,
-          system: system,
-          messages: [{role:'user', content: prompt}]
-        })
-      });
-      if (!r.ok){
-        const t = await r.text();
-        throw new Error('ответ сервера ' + r.status + ': ' + t.slice(0,200));
+      const sample = await resolved;
+      if (!sample) throw new Error('ИИ доступен только при открытии страницы через Claude');
+      try{
+        /* в этой среде нет системной роли — правила идут первым сообщением пользователя */
+        const res = await sample(
+          [{role:'user', content: system}, {role:'user', content: prompt}],
+          { modelTier: 'default', cache: false }
+        );
+        const text = (res && res.text || '').trim();
+        if (!text) throw new Error('пустой ответ');
+        if (res.truncated) msg('Ответ оказался длинным и оборван — проверьте конец текста.', 'warn');
+        return text;
+      }catch(e){
+        if (e && e.code) throw new Error(COPY[e.code] || e.message || 'ошибка обращения к ИИ');
+        throw e;
       }
-      const data = await r.json();
-      const text = (data.content||[]).map(i=>i.type==='text'?i.text:'').join('\n').trim();
-      if (!text) throw new Error('пустой ответ');
-      return text;
     }
   };
 })();
 
-/* сохранение файла обычной ссылкой */
+/* сохранение файла через среду выполнения артефакта, иначе обычной ссылкой */
 async function saveFile(name, blob){
+  try{
+    if (typeof claude !== 'undefined' && claude.use){
+      const downloads = await claude.use('downloads');
+      if (downloads){
+        await downloads.save({ filename: name, data: blob });
+        return true;
+      }
+    }
+  }catch(e){
+    if (e && e.code === 'declined') return false;
+    if (e && e.code) msg('Скачивание через Claude не удалось (' + esc(e.code) + '), пробую обычной ссылкой.', 'warn');
+  }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
@@ -1667,10 +1661,9 @@ function printDoc(){
   const w = window.open('', '_blank');
   if (!w){ msg('Браузер заблокировал окно печати.', 'err'); return; }
   const css = document.getElementById('appcss').textContent;
-  w.document.write(`<html><head><meta charset="utf-8"><title>${esc(val('kind'))}</title><style>${css}
+  w.document.write(`<html><title>${esc(val('kind'))}</title><style>${css}
     body{background:#fff}.page{border:none;box-shadow:none;max-width:700px;margin:0 auto;padding:0}
-    @page{size:A4;margin:14mm 10mm 18mm 17mm}</style></head><body>
-    <div class="page">${$('preview').innerHTML}</div></body></html>`);
+    @page{size:A4;margin:14mm 10mm 18mm 17mm}</style>    <div class="page">${$('preview').innerHTML}</div>`);
   w.document.close();
   setTimeout(()=>w.print(), 500);
 }
@@ -1762,5 +1755,3 @@ FORM_CB.forEach(id=>{ $(id).onchange = saveForm; });
   renderPreview();
 })();
 </script>
-</body>
-</html>
