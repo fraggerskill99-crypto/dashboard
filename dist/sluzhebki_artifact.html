@@ -131,24 +131,256 @@
   <p class="sub">Приложение собирает служебную и докладную записку в настоящем формате Word (.docx) с шапкой организации, блоком адресата и ссылками на пункты ваших стандартов. ИИ пишет текст официально-деловым языком строго по загруженным документам.</p>
 
   <div class="tabs">
-    <button class="tab on" data-tab="org">Организация</button>
-    <button class="tab" data-tab="form">Записка</button>
+    <button class="tab on" data-tab="form">Записка</button>
     <button class="tab" data-tab="docs">Стандарты <span id="docCount"></span></button>
-    <button class="tab" data-tab="photos">Фото <span id="photoCount"></span></button>
     <button class="tab" data-tab="result">Готовый документ</button>
-    <button class="tab" data-tab="tpl">Образцы <span id="tplCount"></span></button>
-    <button class="tab" data-tab="ai">ИИ</button>
+    <button class="tab" data-tab="set">Настройки</button>
   </div>
 
   <div id="msg"></div>
 
-  <!-- ===================== ОРГАНИЗАЦИЯ ===================== -->
-  <section data-panel="org">
+  <!-- ===================== ЗАПИСКА ===================== -->
+  <section data-panel="form">
     <div class="card">
-      <h2>Шапка документа</h2>
-      <p class="hint">Заполняется один раз. Эти данные попадают в колонтитул каждой записки — так же, как в ваших образцах: логотип слева, название организации справа синим с линией и вторая строка под ней.</p>
+      <h2>Что произошло</h2>
+      <p class="hint">Шесть полей. Остальное приложение подставит само: шапку, ссылки на пункты стандартов, дату документа и подпись.</p>
+
+      <div class="grid">
+        <label class="f">Кому
+          <select id="toPick"></select>
+        </label>
+        <label class="f">Кто нарушил — фамилия и инициалы
+          <input type="text" id="prName" placeholder="Мухтарбеков Е.А." list="staffNames">
+          <datalist id="staffNames"></datalist>
+        </label>
+        <label class="f">Его должность
+          <input type="text" id="prPost" placeholder="ветеринарный санитар по вакцинации">
+        </label>
+        <label class="f">Когда
+          <input type="text" id="factDate" placeholder="16.09.2026">
+        </label>
+        <label class="f">Где
+          <input type="text" id="place" placeholder="площадка В, корпус В9">
+        </label>
+      </div>
+
+      <label class="f" style="margin-top:14px">Что случилось — своими словами
+        <textarea id="facts" rows="5" placeholder="не сменил обувь закрепленную за корпусом В10 и в ней зашел в корпус В9, видел при обходе в 10:20"></textarea>
+      </label>
+
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost mini" id="tidyBtn">Причесать текст</button>
+        <button class="btn ghost mini" id="photoBtn">Добавить фото</button>
+        <span class="meta" id="photoCount"></span>
+        <input type="file" id="photoInput" accept="image/*" multiple hidden>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+
+      <div class="row" style="margin-top:18px">
+        <button class="btn seal" id="buildBtn">Составить записку</button>
+        <button class="btn ghost" id="buildLocalBtn">Без ИИ</button>
+      </div>
+      <p class="hint" style="margin-top:10px">Приложение само найдёт подходящие пункты в загруженных стандартах и подставит их в текст.</p>
+    </div>
+
+    <details class="card" id="moreBox">
+      <summary style="cursor:pointer;font-weight:700;font-size:15px">Подробнее — если нужно уточнить</summary>
+
+      <h3>Документ</h3>
+      <div class="grid">
+        <label class="f">Вид документа
+          <select id="kind">
+            <option>Служебная записка</option>
+            <option>Докладная записка</option>
+            <option>Объяснительная записка</option>
+          </select>
+        </label>
+        <label class="f">Структура текста
+          <select id="struct">
+            <option value="sample">Как в ваших образцах</option>
+            <option value="full">Расширенная — причина и мероприятия</option>
+          </select>
+        </label>
+        <label class="f">Дата документа
+          <input type="text" id="date">
+        </label>
+        <label class="f">Тема
+          <input type="text" id="subject" placeholder="О выявленном нарушении требований биобезопасности">
+        </label>
+      </div>
+
+      <h3>Нарушитель — уточнения</h3>
+      <div class="grid">
+        <label class="f">Подразделение
+          <input type="text" id="prDept" placeholder="ветеринарный отдел">
+        </label>
+        <label class="f">Подрядная организация
+          <input type="text" id="prOrg" placeholder="ТОО «Айтас Энерго» — если сотрудник сторонней">
+        </label>
+      </div>
+
+      <h3>Шапка — кому и от кого</h3>
+      <div class="grid">
+        <label class="f">Должность адресата
+          <input type="text" id="toPost" placeholder="Генеральному директору">
+        </label>
+        <label class="f">Подразделение адресата
+          <input type="text" id="toDept" placeholder="Ветеринарная служба">
+        </label>
+        <label class="f">Организация
+          <input type="text" id="toOrg">
+        </label>
+        <label class="f">Фамилия адресата (дательный падеж)
+          <input type="text" id="toName" placeholder="Лейбовичу В.">
+        </label>
+        <label class="f">Ваша должность (родительный падеж)
+          <input type="text" id="fromPost" placeholder="специалиста по биобезопасности">
+        </label>
+        <label class="f">Ваша фамилия
+          <input type="text" id="fromName" placeholder="Турсынгалиева Б.">
+        </label>
+      </div>
+
+      <h3>Обстоятельства</h3>
+      <label class="cb"><input type="checkbox" id="repeat"> Нарушение повторное</label>
+      <label class="cb"><input type="checkbox" id="brief" checked> Работник ознакомлен с требованиями</label>
+      <label class="cb"><input type="checkbox" id="doneExpl"> Получена объяснительная</label>
+      <label class="cb"><input type="checkbox" id="doneInstr"> Проведён повторный инструктаж</label>
+      <label class="cb"><input type="checkbox" id="doneStudy"> Сотрудник направлен на обучение</label>
+      <label class="cb"><input type="checkbox" id="doneTalk"> Проведена беседа</label>
+      <label class="f" style="margin-top:8px">Другие выполненные мероприятия
+        <input type="text" id="doneOther" placeholder="работник отстранён до повторного инструктажа">
+      </label>
+
+      <h3>Перечень и просьба</h3>
+      <label class="f">Перечень выявленного — по одному в строке
+        <textarea id="items" rows="3" placeholder="мясо отварное с тестом домашнего приготовления&#10;майонез"></textarea>
+      </label>
+      <div class="grid two" style="margin-top:12px">
+        <label class="f">Просьба
+          <input type="text" id="ask" placeholder="принять строгие меры в отношении сотрудника">
+        </label>
+        <label class="f">Срок обратной связи (для расширенной структуры)
+          <input type="text" id="feedback" placeholder="30.09.2026">
+        </label>
+      </div>
+      <label class="f" style="margin-top:12px">Корректирующие мероприятия — по одному в строке
+        <textarea id="capa" rows="2" placeholder="провести внеплановый инструктаж работников корпуса В9"></textarea>
+      </label>
+      <label class="f" style="margin-top:12px">Приложения — по одному в строке
+        <textarea id="apps" rows="2" placeholder="Выписка из СТ-УК, БиС-01 на 1 л."></textarea>
+      </label>
+      <label class="f" style="margin-top:12px">Образец оформления для ИИ
+        <select id="tplSel"></select>
+      </label>
+
+      <h3>Пункты стандартов</h3>
+      <div class="row">
+        <button class="btn ghost mini" id="findBtn">Найти заново</button>
+        <span class="meta" id="findMeta">подбираются автоматически при составлении записки</span>
+      </div>
+      <div id="found"></div>
+    </details>
+  </section>
+
+  <!-- ===================== СТАНДАРТЫ ===================== -->
+  <section data-panel="docs" hidden>
+    <div class="card">
+      <h2>Стандарты, инструкции, положения</h2>
+      <p class="hint">Формат Word (.docx), а также .txt и .md. Файлы .doc сначала пересохраните в Word как .docx. Документы хранятся только в этом браузере; в запрос к ИИ уходят лишь фрагменты, попавшие в записку.</p>
+      <div class="drop" id="docDrop">
+        <p class="hint" style="margin:0 0 10px">Перетащите файлы сюда</p>
+        <button class="btn ghost" id="docPick">Выбрать файлы</button>
+        <input type="file" id="docInput" accept=".docx,.txt,.md" multiple hidden>
+      </div>
+      <div id="docList"></div>
+    </div>
+  </section>
+
+  <!-- ===================== ГОТОВЫЙ ДОКУМЕНТ ===================== -->
+  <section data-panel="result" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Готовый документ</h2>
+        <div class="row">
+          <button class="btn seal" id="docxBtn">Скачать Word (.docx)</button>
+          <button class="btn ghost" id="printBtn">Печать / PDF</button>
+          <button class="btn ghost" id="copyBtn">Копировать текст</button>
+        </div>
+      </div>
+      <p class="hint">Слева текст, его можно править. Строка «- » станет пунктом перечня, «## » — подзаголовком. Шапка, адресат и подпись добавляются в Word сами.</p>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn ghost mini" id="proofBtn">Вычитать текст ИИ</button>
+        <span class="meta" id="usedMeta"></span>
+      </div>
+      <div class="split">
+        <textarea class="sheet" id="sheet" placeholder="Заполните вкладку «Записка» и нажмите «Составить записку»."></textarea>
+        <div class="page" id="preview"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== НАСТРОЙКИ ===================== -->
+  <section data-panel="set" hidden>
+    <div class="card">
+      <h2>Ваши данные</h2>
+      <p class="hint">Подставляются в шапку каждой записки строкой «От:».</p>
       <div class="grid two">
-        <label class="f">Название организации (первая строка шапки)
+        <label class="f">Должность в родительном падеже
+          <input type="text" id="authPost" placeholder="специалиста по биобезопасности">
+        </label>
+        <label class="f">Фамилия и инициалы
+          <input type="text" id="authName" placeholder="Турсынгалиева Б.">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Кому пишете</h2>
+      <p class="hint">Этот список появляется в поле «Кому». Фамилию пишите в дательном падеже — «Лейбовичу В.», «Аскербек Е.».</p>
+      <div class="grid">
+        <label class="f">Должность
+          <input type="text" id="adPost" placeholder="Генеральному директору">
+        </label>
+        <label class="f">Подразделение (необязательно)
+          <input type="text" id="adDept" placeholder="Ветеринарная служба">
+        </label>
+        <label class="f">Организация
+          <input type="text" id="adOrg">
+        </label>
+        <label class="f">Фамилия (дательный падеж)
+          <input type="text" id="adName" placeholder="Лейбовичу В.">
+        </label>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="btn ghost" id="adAdd">Добавить</button></div>
+      <div class="dirlist" id="adList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Сотрудники и подрядные организации</h2>
+      <p class="hint">Кого добавите — тот будет подсказываться в поле «Кто нарушил» вместе с должностью.</p>
+      <div class="grid">
+        <label class="f">Фамилия и инициалы
+          <input type="text" id="stName" placeholder="Мухтарбеков Е.А.">
+        </label>
+        <label class="f">Должность
+          <input type="text" id="stPost" placeholder="ветеринарный санитар по вакцинации">
+        </label>
+        <label class="f">Подразделение
+          <input type="text" id="stDept" placeholder="ветеринарный отдел">
+        </label>
+        <label class="f">Подрядная организация
+          <input type="text" id="stOrg" placeholder="если сотрудник сторонней">
+        </label>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="btn ghost" id="stAdd">Добавить</button></div>
+      <div class="dirlist" id="stList"></div>
+    </div>
+
+    <details class="card">
+      <summary style="cursor:pointer;font-weight:700;font-size:15px">Шапка документа и оформление</summary>
+      <div class="grid two" style="margin-top:12px">
+        <label class="f">Название организации
           <input type="text" id="orgName" placeholder="АО «Усть-Каменогорская Птицефабрика»">
         </label>
         <label class="f">Вторая строка шапки
@@ -165,10 +397,9 @@
         </div>
         <input type="file" id="logoInput" accept="image/*" hidden>
       </div>
-
-      <h3>Оформление текста</h3>
+      <h3>Шрифт</h3>
       <div class="grid">
-        <label class="f">Шрифт
+        <label class="f">Гарнитура
           <select id="fontName">
             <option value="Calibri">Calibri (как в ваших образцах)</option>
             <option value="Times New Roman">Times New Roman</option>
@@ -183,300 +414,38 @@
           </select>
         </label>
       </div>
-    </div>
+    </details>
 
-    <div class="card">
-      <h2>От кого — ваши данные</h2>
-      <p class="hint">Подставляются в шапку каждой записки: «От: <i>должность</i>» и строкой ниже фамилия.</p>
-      <div class="grid two">
-        <label class="f">Должность в родительном падеже
-          <input type="text" id="authPost" placeholder="специалиста по биобезопасности">
-        </label>
-        <label class="f">Фамилия и инициалы
-          <input type="text" id="authName" placeholder="Турсынгалиева Б.">
-        </label>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Справочник адресатов — кому пишем</h2>
-      <p class="hint">Заполните один раз, дальше выбирайте из списка: должность, организация и фамилия подставятся в шапку сами. Фамилию пишите в дательном падеже — «Лейбовичу В.», «Аскербек Е.».</p>
-      <div class="grid">
-        <label class="f">Должность (кому)
-          <input type="text" id="adPost" placeholder="Генеральному директору">
-        </label>
-        <label class="f">Подразделение (необязательно)
-          <input type="text" id="adDept" placeholder="Ветеринарная служба">
-        </label>
-        <label class="f">Организация
-          <input type="text" id="adOrg" placeholder="А.О. «Усть-Каменогорская птицефабрика»">
-        </label>
-        <label class="f">Фамилия и инициалы (дательный падеж)
-          <input type="text" id="adName" placeholder="Лейбовичу В.">
-        </label>
-      </div>
-      <div class="row" style="margin-top:10px">
-        <button class="btn ghost" id="adAdd">Добавить адресата</button>
-      </div>
-      <div class="dirlist" id="adList"></div>
-    </div>
-
-    <div class="card">
-      <h2>Справочник сотрудников и подрядных организаций</h2>
-      <p class="hint">Нарушителя тоже удобнее выбирать из списка. Для работника подрядчика отдельно укажите организацию — ИИ будет писать «Сотрудником ТОО «…» Ивановым И.И., занимающим должность электромонтёра, допущено нарушение…».</p>
-      <div class="grid">
-        <label class="f">Фамилия, имя, отчество
-          <input type="text" id="stName" placeholder="Мухтарбеков Е.А.">
-        </label>
-        <label class="f">Должность (именительный падеж)
-          <input type="text" id="stPost" placeholder="ветеринарный санитар по вакцинации">
-        </label>
-        <label class="f">Подразделение
-          <input type="text" id="stDept" placeholder="ветеринарный отдел">
-        </label>
-        <label class="f">Подрядная организация (если сторонняя)
-          <input type="text" id="stOrg" placeholder="ТОО «Айтас Энерго» — или оставьте пустым">
-        </label>
-      </div>
-      <div class="row" style="margin-top:10px">
-        <button class="btn ghost" id="stAdd">Добавить в справочник</button>
-      </div>
-      <div class="dirlist" id="stList"></div>
-    </div>
-  </section>
-
-  <!-- ===================== ЗАПИСКА ===================== -->
-  <section data-panel="form" hidden>
-    <div class="card">
-      <h2>Шапка записки</h2>
-      <div class="grid">
-        <label class="f">Вид документа
-          <select id="kind">
-            <option>Служебная записка</option>
-            <option>Докладная записка</option>
-            <option>Объяснительная записка</option>
-          </select>
-        </label>
-        <label class="f">Структура текста
-          <select id="struct">
-            <option value="sample">Как в ваших образцах — сплошной текст</option>
-            <option value="full">Расширенная — корневая причина и мероприятия</option>
-          </select>
-        </label>
-        <label class="f">Дата документа
-          <input type="text" id="date" placeholder="16.09.2026">
-        </label>
-      </div>
-
-      <h3>Кому</h3>
-      <div class="grid">
-        <label class="f">Выбрать из справочника
-          <select id="toPick"></select>
-        </label>
-        <label class="f">Должность
-          <input type="text" id="toPost" placeholder="Генеральному директору">
-        </label>
-        <label class="f">Подразделение (необязательно)
-          <input type="text" id="toDept" placeholder="Ветеринарная служба">
-        </label>
-        <label class="f">Организация
-          <input type="text" id="toOrg" placeholder="А.О. «Усть-Каменогорская птицефабрика»">
-        </label>
-        <label class="f">Фамилия и инициалы
-          <input type="text" id="toName" placeholder="Лейбовичу В.">
-        </label>
-      </div>
-
-      <h3>От кого</h3>
-      <div class="grid two">
-        <label class="f">Должность в родительном падеже
-          <input type="text" id="fromPost" placeholder="специалиста по биобезопасности">
-        </label>
-        <label class="f">Фамилия и инициалы
-          <input type="text" id="fromName" placeholder="Турсынгалиева Б.">
-        </label>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Нарушение</h2>
-      <div class="grid">
-        <label class="f">Нарушитель из справочника
-          <select id="prPick"></select>
-        </label>
-        <label class="f">Фамилия, имя, отчество
-          <input type="text" id="prName" placeholder="Мухтарбеков Е.А.">
-        </label>
-        <label class="f">Должность
-          <input type="text" id="prPost" placeholder="ветеринарный санитар по вакцинации">
-        </label>
-        <label class="f">Подразделение
-          <input type="text" id="prDept" placeholder="ветеринарный отдел">
-        </label>
-        <label class="f">Подрядная организация
-          <input type="text" id="prOrg" placeholder="если сотрудник сторонней организации">
-        </label>
-        <label class="f">Дата нарушения
-          <input type="text" id="factDate" placeholder="16.09.2026">
-        </label>
-        <label class="f">Место нарушения
-          <input type="text" id="place" placeholder="площадка В, корпус В9">
-        </label>
-        <label class="f">Тема документа
-          <input type="text" id="subject" placeholder="О выявленном нарушении требований биобезопасности">
-        </label>
-      </div>
-
-      <label class="f" style="margin-top:12px">Суть нарушения — пишите как есть, ИИ приведёт в деловой вид
-        <textarea id="facts" rows="6" placeholder="не сменил обувь закрепленную за корпусом В10 и в ней зашел в корпус В9. видел лично при обходе в 10:20"></textarea>
-      </label>
-      <div class="row" style="margin-top:8px">
-        <button class="btn ghost mini" id="tidyBtn">Привести в деловой вид</button>
-        <span class="meta">исправит стиль и падежи, фактов не добавит</span>
-      </div>
-
-      <label class="f" style="margin-top:14px">Перечень выявленного — по одному в строке (необязательно)
-        <textarea id="items" rows="3" placeholder="мясо отварное с тестом домашнего приготовления&#10;майонез"></textarea>
-      </label>
-
-      <h3>Обстоятельства</h3>
-      <label class="cb"><input type="checkbox" id="repeat"> Нарушение повторное — отразить это в тексте</label>
-      <label class="cb"><input type="checkbox" id="brief"> Работник ознакомлен с требованиями (проведён инструктаж ранее)</label>
-      <label class="cb"><input type="checkbox" id="doneExpl"> Получена объяснительная</label>
-      <label class="cb"><input type="checkbox" id="doneInstr"> Проведён повторный инструктаж</label>
-      <label class="cb"><input type="checkbox" id="doneStudy"> Сотрудник направлен на обучение</label>
-      <label class="cb"><input type="checkbox" id="doneTalk"> Проведена беседа</label>
-      <label class="f" style="margin-top:8px">Другие уже выполненные мероприятия
-        <input type="text" id="doneOther" placeholder="например: работник отстранён от работ до повторного инструктажа">
-      </label>
-    </div>
-
-    <div class="card">
-      <h2>Пункты стандартов</h2>
-      <p class="hint">Поиск идёт по документам с вкладки «Стандарты». Отмеченные фрагменты ИИ процитирует дословно; выдумывать номера пунктов ему запрещено.</p>
-      <div class="row">
-        <button class="btn ghost" id="findBtn">Найти пункты</button>
-        <span class="meta" id="findMeta"></span>
-      </div>
-      <div id="found"></div>
-    </div>
-
-    <div class="card">
-      <h2>Что просим</h2>
-      <div class="grid two">
-        <label class="f">Просьба / предлагаемые меры
-          <input type="text" id="ask" placeholder="принять строгие меры в отношении сотрудника">
-        </label>
-        <label class="f">Срок обратной связи (для расширенной структуры)
-          <input type="text" id="feedback" placeholder="30.09.2026">
-        </label>
-      </div>
-      <label class="f" style="margin-top:12px">Корректирующие мероприятия — по одному в строке (для расширенной структуры)
-        <textarea id="capa" rows="3" placeholder="провести внеплановый инструктаж работников корпуса В9&#10;усилить контроль смены обуви на входе"></textarea>
-      </label>
-      <label class="f" style="margin-top:12px">Приложения — по одному в строке
-        <textarea id="apps" rows="2" placeholder="Выписка из СТ-УК, БиС-01 на 1 л."></textarea>
-      </label>
-      <label class="f" style="margin-top:12px">Образец оформления для ИИ
-        <select id="tplSel"></select>
-      </label>
-      <div class="row" style="margin-top:14px">
-        <button class="btn seal" id="buildBtn">Составить записку</button>
-        <button class="btn ghost" id="buildLocalBtn">Собрать без ИИ</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== СТАНДАРТЫ ===================== -->
-  <section data-panel="docs" hidden>
-    <div class="card">
-      <h2>Стандарты, инструкции, положения</h2>
-      <p class="hint">Формат Word (.docx), а также .txt и .md. Файлы .doc сначала пересохраните в Word как .docx. Документы хранятся только в этом браузере и никуда не отправляются, кроме выбранных фрагментов, которые уходят в запрос к ИИ.</p>
-      <div class="drop" id="docDrop">
-        <p class="hint" style="margin:0 0 10px">Перетащите файлы сюда</p>
-        <button class="btn ghost" id="docPick">Выбрать файлы</button>
-        <input type="file" id="docInput" accept=".docx,.txt,.md" multiple hidden>
-      </div>
-      <div id="docList"></div>
-    </div>
-  </section>
-
-  <!-- ===================== ФОТО ===================== -->
-  <section data-panel="photos" hidden>
-    <div class="card">
-      <h2>Фотофиксация нарушения</h2>
-      <p class="hint">Снимки уходят отдельным приложением в конец документа Word, каждый с подписью.</p>
-      <div class="drop" id="photoDrop">
-        <p class="hint" style="margin:0 0 10px">Перетащите снимки сюда</p>
-        <button class="btn ghost" id="photoBtn">Выбрать фото</button>
-        <button class="btn del mini" id="photoClear">Очистить все</button>
-        <input type="file" id="photoInput" accept="image/*" multiple hidden>
-      </div>
-      <div class="thumbs" id="thumbs"></div>
-    </div>
-  </section>
-
-  <!-- ===================== ГОТОВЫЙ ДОКУМЕНТ ===================== -->
-  <section data-panel="result" hidden>
-    <div class="card">
-      <div class="row" style="justify-content:space-between">
-        <h2 style="margin:0">Готовый документ</h2>
-        <div class="row">
-          <button class="btn seal" id="docxBtn">Скачать Word (.docx)</button>
-          <button class="btn ghost" id="printBtn">Печать / PDF</button>
-          <button class="btn ghost" id="copyBtn">Копировать текст</button>
-        </div>
-      </div>
-      <p class="hint">Слева — текст записки, его можно править вручную. Строка «- » становится пунктом перечня, строка «## » — подзаголовком. Шапка, блок адресата и подпись добавляются в Word автоматически.</p>
-      <div class="row" style="margin-bottom:10px">
-        <button class="btn ghost mini" id="proofBtn">Вычитать текст ИИ</button>
-        <span class="meta" id="usedMeta"></span>
-      </div>
-      <div class="split">
-        <textarea class="sheet" id="sheet" placeholder="Заполните вкладку «Записка» и нажмите «Составить записку»."></textarea>
-        <div class="page" id="preview"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== ОБРАЗЦЫ ===================== -->
-  <section data-panel="tpl" hidden>
-    <div class="card">
-      <h2>Образцы оформления</h2>
-      <p class="hint">ИИ держит образец перед глазами и повторяет его обороты и порядок абзацев. Загрузите свои удачные записки — качество текста заметно вырастет.</p>
+    <details class="card">
+      <summary style="cursor:pointer;font-weight:700;font-size:15px">Образцы записок <span id="tplCount" class="meta"></span></summary>
+      <p class="hint" style="margin-top:12px">ИИ держит образец перед глазами и повторяет его обороты. Загрузите свои удачные записки — текст станет ближе к вашему стилю.</p>
       <div class="row">
         <button class="btn ghost" id="tplPick">Загрузить образец (.docx, .txt)</button>
         <input type="file" id="tplInput" accept=".docx,.txt,.md" hidden>
       </div>
       <div id="tplList"></div>
-      <h3>Добавить вручную</h3>
-      <div class="grid two">
+      <div class="grid two" style="margin-top:12px">
         <label class="f">Название
           <input type="text" id="tplName" placeholder="Пронос запрещённых продуктов">
         </label>
       </div>
       <label class="f" style="margin-top:10px">Текст образца
-        <textarea id="tplText" rows="6"></textarea>
+        <textarea id="tplText" rows="5"></textarea>
       </label>
       <div class="row" style="margin-top:10px"><button class="btn ghost" id="tplSave">Сохранить образец</button></div>
-    </div>
-  </section>
+    </details>
 
-  <!-- ===================== ИИ ===================== -->
-  <section data-panel="ai" hidden>
-    <div class="card">
-      <h2>Доступ к ИИ</h2>
-      <div id="aiAccess"></div>
-    </div>
-    <div class="card">
-      <h2>Правила, по которым ИИ пишет текст</h2>
-      <p class="hint">Это инструкция, которую приложение отправляет ИИ перед каждым запросом. Можно править — изменения сохраняются в браузере.</p>
-      <textarea id="sysPrompt" rows="18" style="font-family:Consolas,monospace;font-size:12.5px"></textarea>
+    <details class="card">
+      <summary style="cursor:pointer;font-weight:700;font-size:15px">Доступ к ИИ и правила написания</summary>
+      <div id="aiAccess" style="margin-top:12px"></div>
+      <h3>Правила, по которым ИИ пишет текст</h3>
+      <p class="hint">Эту инструкцию приложение отправляет ИИ перед каждым запросом. Можно править.</p>
+      <textarea id="sysPrompt" rows="12" style="font-family:Consolas,monospace;font-size:12.5px"></textarea>
       <div class="row" style="margin-top:10px">
         <button class="btn ghost" id="sysSave">Сохранить правила</button>
         <button class="btn del mini" id="sysReset">Вернуть исходные</button>
       </div>
-    </div>
+    </details>
   </section>
 </div>
 
@@ -581,6 +550,11 @@ const SEED_TPL = {
 В связи с выявленным нарушением требований биобезопасности прошу принять строгие меры в отношении сотрудника Мухтарбекова Е.А., поскольку работник ознакомлен с установленными требованиями биобезопасности.`
 };
 
+const SEED_ADDR = [
+  {id:'a-gd',  post:'Генеральному директору', dept:'', org:'АО «Усть-Каменогорская Птицефабрика»', name:'Лейбовичу В.'},
+  {id:'a-gvv', post:'Главный ветеринарный врач', dept:'Ветеринарная служба', org:'АО «Усть-Каменогорская Птицефабрика»', name:'Аскербек Е.'}
+];
+
 const DEFAULT_SET = {
   orgName:'АО «Усть-Каменогорская Птицефабрика»',
   orgSub:'Нормативная база',
@@ -588,13 +562,13 @@ const DEFAULT_SET = {
   fontName:'Calibri',
   fontSize:'28',
   authPost:'специалиста по биобезопасности',
-  authName:'',
+  authName:'Турсынгалиева Б.',
   sys: DEFAULT_SYS
 };
 
 /* ============ состояние ============ */
 let SET   = Object.assign({}, DEFAULT_SET, LS.get('sz2:set', {}));
-let ADDR  = LS.get('sz2:addr', []);
+let ADDR  = LS.get('sz2:addr', SEED_ADDR);
 let STAFF = LS.get('sz2:staff', []);
 let DOCS  = LS.get('sz2:docs', []);
 let TPLS  = LS.get('sz2:tpls', [SEED_TPL]);
@@ -682,9 +656,11 @@ function renderAddr(){
     b.onclick = () => { ADDR = ADDR.filter(x=>x.id!==b.dataset.adel); LS.set('sz2:addr', ADDR); renderAddr(); };
   });
   const cur = $('toPick').value;
-  $('toPick').innerHTML = '<option value="">— вписать вручную —</option>' +
-    ADDR.map(a=>`<option value="${a.id}">${esc(a.post)} — ${esc(a.name)}</option>`).join('');
+  $('toPick').innerHTML = (ADDR.length ? '' : '<option value="">список пуст — добавьте адресата в настройках</option>') +
+    ADDR.map(a=>`<option value="${a.id}">${esc(a.post)}${a.dept?' • '+esc(a.dept):''} — ${esc(a.name)}</option>`).join('') +
+    (ADDR.length ? '<option value="">— вписать вручную в «Подробнее» —</option>' : '');
   if (cur) $('toPick').value = cur;
+  else if (ADDR.length && !val('toName')) { $('toPick').value = ADDR[0].id; applyAddr(); }
 }
 $('adAdd').onclick = () => {
   const a = { id:uid('a'), post:val('adPost'), dept:val('adDept'), org:val('adOrg')||SET.orgName, name:val('adName') };
@@ -693,12 +669,12 @@ $('adAdd').onclick = () => {
   ['adPost','adDept','adOrg','adName'].forEach(id=>$(id).value='');
   renderAddr(); msg('Адресат добавлен.', 'ok');
 };
-$('toPick').onchange = () => {
+function applyAddr(){
   const a = ADDR.find(x=>x.id===$('toPick').value);
   if (!a) return;
   $('toPost').value = a.post; $('toDept').value = a.dept||''; $('toOrg').value = a.org; $('toName').value = a.name;
-  renderPreview();
-};
+}
+$('toPick').onchange = () => { applyAddr(); renderPreview(); saveForm(); };
 
 function renderStaff(){
   $('stList').innerHTML = STAFF.length ? STAFF.map(s=>`
@@ -712,10 +688,16 @@ function renderStaff(){
   $('stList').querySelectorAll('[data-sdel]').forEach(b=>{
     b.onclick = () => { STAFF = STAFF.filter(x=>x.id!==b.dataset.sdel); LS.set('sz2:staff', STAFF); renderStaff(); };
   });
-  const cur = $('prPick').value;
-  $('prPick').innerHTML = '<option value="">— вписать вручную —</option>' +
-    STAFF.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.post)}</option>`).join('');
-  if (cur) $('prPick').value = cur;
+  $('staffNames').innerHTML = STAFF.map(s=>`<option value="${esc(s.name)}">${esc(s.post||'')}</option>`).join('');
+}
+/* выбрали знакомую фамилию — подставляем должность и организацию */
+function fillFromStaff(){
+  const name = val('prName').toLowerCase();
+  const found = STAFF.find(s=>(s.name||'').toLowerCase() === name);
+  if (!found) return;
+  if (!val('prPost')) $('prPost').value = found.post || '';
+  if (!val('prDept')) $('prDept').value = found.dept || '';
+  if (!val('prOrg'))  $('prOrg').value  = found.org  || '';
 }
 $('stAdd').onclick = () => {
   const s = { id:uid('s'), name:val('stName'), post:val('stPost'), dept:val('stDept'), org:val('stOrg') };
@@ -724,11 +706,7 @@ $('stAdd').onclick = () => {
   ['stName','stPost','stDept','stOrg'].forEach(id=>$(id).value='');
   renderStaff(); msg('Сотрудник добавлен в справочник.', 'ok');
 };
-$('prPick').onchange = () => {
-  const s = STAFF.find(x=>x.id===$('prPick').value);
-  if (!s) return;
-  $('prName').value = s.name; $('prPost').value = s.post||''; $('prDept').value = s.dept||''; $('prOrg').value = s.org||'';
-};
+$('prName').addEventListener('change', () => { fillFromStaff(); saveForm(); });
 
 /* ============ стандарты ============ */
 async function readAnyFile(file){
@@ -837,7 +815,7 @@ async function savePhotos(){
   try{ await IDB.set('photos', PHOTOS); }catch(e){}
 }
 function renderPhotos(){
-  $('photoCount').textContent = PHOTOS.length ? '('+PHOTOS.length+')' : '';
+  $('photoCount').textContent = PHOTOS.length ? PHOTOS.length + ' ' + plural(PHOTOS.length,'снимок','снимка','снимков') + ' в приложении' : '';
   $('thumbs').innerHTML = PHOTOS.map((p,i)=>`
     <div class="thumb">
       <img src="${p.url}" alt="">
@@ -1349,8 +1327,22 @@ function buildLocal(){
   }
 
   if (clauses.length){
-    out.push('', 'Проверкой установлено нарушение следующих требований:');
-    clauses.forEach(c=> out.push('- ' + c.doc.replace(/\.(docx|txt|md)$/i,'') + ', ' + c.text));
+    /* группируем по документу и оформляем как в образцах: «п. 1.158 — требование;» */
+    const byDoc = new Map();
+    clauses.forEach(c=>{
+      const name = c.doc.replace(/\.(docx|txt|md)$/i,'');
+      if (!byDoc.has(name)) byDoc.set(name, []);
+      byDoc.get(name).push(c.text);
+    });
+    byDoc.forEach((texts, name)=>{
+      out.push('', `Проверкой установлено нарушение следующих требований документа «${name}»:`);
+      texts.forEach((t,i)=>{
+        const m = t.match(CLAUSE_RE);
+        const num = m ? m[0].trim().replace(/^п\.?\s*/i,'').replace(/\.$/,'') : '';
+        const body = (m ? t.slice(m[0].length) : t).trim().replace(/[;.]\s*$/,'');
+        out.push('- ' + (num ? 'п. ' + num + ' — ' : '') + body + (i === texts.length-1 ? '.' : ';'));
+      });
+    });
   } else {
     out.push('', 'В предоставленных документах не найдено прямого основания для данной формулировки — отметьте нужные пункты на вкладке «Записка» или впишите их вручную.');
   }
@@ -1567,6 +1559,7 @@ function splitWarning(text){
 }
 
 async function compose(useAI){
+  if (!selectedClauses().length && DOCS.length) findClauses();   // подбираем пункты сами
   const draft = buildLocal();
   $('sheet').value = draft;
   saveForm();
@@ -1669,7 +1662,7 @@ function printDoc(){
 }
 
 /* ================= сохранение полей формы ================= */
-const FORM_IDS = ['kind','struct','date','toPost','toDept','toOrg','toName','fromPost','fromName',
+const FORM_IDS = ['toPick','kind','struct','date','toPost','toDept','toOrg','toName','fromPost','fromName',
   'prName','prPost','prDept','prOrg','factDate','place','subject','facts','items','doneOther',
   'ask','feedback','capa','apps'];
 const FORM_CB = ['repeat','brief','doneExpl','doneInstr','doneStudy','doneTalk'];
@@ -1696,10 +1689,7 @@ $('docDrop').ondragover = (e)=>e.preventDefault();
 $('docDrop').ondrop = (e)=>{ e.preventDefault(); addDocs(Array.from(e.dataTransfer.files)); };
 
 $('photoBtn').onclick = () => $('photoInput').click();
-$('photoClear').onclick = () => { PHOTOS = []; renderPhotos(); renderPreview(); savePhotos(); };
 $('photoInput').onchange = (e) => { addPhotos(e.target.files); e.target.value=''; };
-$('photoDrop').ondragover = (e)=>e.preventDefault();
-$('photoDrop').ondrop = (e)=>{ e.preventDefault(); addPhotos(e.dataTransfer.files); };
 
 $('tplPick').onclick = () => $('tplInput').click();
 $('tplInput').onchange = async (e) => {
