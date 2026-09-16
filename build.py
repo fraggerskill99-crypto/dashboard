@@ -6,6 +6,7 @@ ROOT = pathlib.Path(__file__).parent
 SRC = (ROOT / 'src/app.html').read_text(encoding='utf-8')
 VENDOR = (ROOT / 'vendor/mammoth-jszip.html').read_text(encoding='utf-8')
 LOGO = (ROOT / 'assets/logo.b64').read_text(encoding='utf-8').strip()
+MORPH = (ROOT / 'src/js/morph.js').read_text(encoding='utf-8')
 
 # strip_skeleton: у артефакта обёртку документа добавляет платформа при публикации
 TARGETS = {
@@ -25,12 +26,13 @@ def build(out_name, ai_path, strip_skeleton=False):
         return
     html = SRC.replace('<!--{{VENDOR}}-->', VENDOR.strip())
     html = html.replace('{{LOGO}}', LOGO)
+    html = html.replace('/*{{MORPH}}*/', MORPH)
     html = html.replace('/*{{AI_ADAPTER}}*/', ai_file.read_text(encoding='utf-8'))
     if strip_skeleton:
         for tag in SKELETON:
             html = html.replace(tag + '\n', '').replace(tag, '')
         html = html.lstrip('\n')
-    for token in ('{{VENDOR}}', '{{LOGO}}', '{{AI_ADAPTER}}'):
+    for token in ('{{VENDOR}}', '{{LOGO}}', '{{AI_ADAPTER}}', '{{MORPH}}'):
         if token in html:
             sys.exit('в сборке остался незаменённый %s' % token)
     out = ROOT / 'dist' / out_name

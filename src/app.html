@@ -424,6 +424,17 @@
     </details>
 
     <details class="card">
+      <summary style="cursor:pointer;font-weight:700;font-size:15px">Шаблон текста записки</summary>
+      <p class="hint" style="margin-top:12px">По этому шаблону собирается текст. В фигурных скобках — подстановки, в квадратных — куски, которые исчезают целиком, если подставлять нечего. Фамилии и должности склоняются сами.</p>
+      <textarea id="tplBody" rows="12" style="font-family:Consolas,monospace;font-size:12.5px"></textarea>
+      <p class="hint">Доступные подстановки: <code>{дата}</code> <code>{место}</code> <code>{нарушитель}</code> <code>{суть}</code> <code>{перечень}</code> <code>{пункты}</code> <code>{повторность}</code> <code>{мероприятия}</code> <code>{фото}</code> <code>{просьба}</code> <code>{фамилия_род}</code> <code>{ознакомлен}</code> <code>{срок}</code></p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="tplBodySave">Сохранить шаблон</button>
+        <button class="btn del mini" id="tplBodyReset">Вернуть исходный</button>
+      </div>
+    </details>
+
+    <details class="card">
       <summary style="cursor:pointer;font-weight:700;font-size:15px">Образцы записок <span id="tplCount" class="meta"></span></summary>
       <p class="hint" style="margin-top:12px">ИИ держит образец перед глазами и повторяет его обороты. Загрузите свои удачные записки — текст станет ближе к вашему стилю.</p>
       <div class="row">
@@ -460,6 +471,8 @@
 
 <!--{{VENDOR}}-->
 <script>
+/*{{MORPH}}*/
+
 /* ============ хранилище ============ */
 const LS = {
   get(k, def){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }catch(e){ return def; } },
@@ -540,12 +553,28 @@ const SEED_ADDR = [
   {id:'a-gvv', post:'Главный ветеринарный врач', dept:'Ветеринарная служба', org:'АО «Усть-Каменогорская Птицефабрика»', name:'Аскербек Е.'}
 ];
 
+const DEFAULT_TPL = `Довожу до Вашего сведения о том, что {дата} г. при проведении контроля соблюдения требований биобезопасности[ на {место}] был выявлен факт нарушения требований биобезопасности[ {нарушитель}][: {суть}].
+
+{перечень}
+
+{пункты}
+
+Данный факт является нарушением установленного порядка и требований биобезопасности предприятия.
+{повторность}
+{мероприятия}
+{фото}
+
+В связи с выявленным нарушением требований биобезопасности прошу {просьба}[ в отношении сотрудника {фамилия_род}][, {ознакомлен}].
+
+{срок}`;
+
 const DEFAULT_SET = {
   orgName:'АО «Усть-Каменогорская Птицефабрика»',
   orgSub:'Нормативная база',
   logo: DEFAULT_LOGO,
   fontName:'Calibri',
   fontSize:'28',
+  tpl: DEFAULT_TPL,
   authPost:'специалиста по биобезопасности',
   authName:'Турсынгалиева Б.',
   sys: DEFAULT_SYS
@@ -591,6 +620,7 @@ function fillSet(){
   $('fontName').value = SET.fontName; $('fontSize').value = SET.fontSize;
   $('authPost').value = SET.authPost; $('authName').value = SET.authName;
   $('sysPrompt').value = SET.sys;
+  $('tplBody').value = SET.tpl || DEFAULT_TPL;
   renderLogo();
 }
 function renderLogo(){
@@ -624,6 +654,8 @@ $('logoInput').onchange = (e) => {
 };
 $('logoReset').onclick = () => { SET.logo = DEFAULT_LOGO; saveSet(); renderLogo(); renderPreview(); };
 $('logoOff').onclick   = () => { SET.logo = null; saveSet(); renderLogo(); renderPreview(); };
+$('tplBodySave').onclick = () => { SET.tpl = $('tplBody').value; saveSet(); msg('Шаблон сохранён.', 'ok'); };
+$('tplBodyReset').onclick = () => { SET.tpl = DEFAULT_TPL; $('tplBody').value = DEFAULT_TPL; saveSet(); msg('Шаблон возвращён к исходному.', 'ok'); };
 $('sysSave').onclick = () => { SET.sys = $('sysPrompt').value; saveSet(); msg('Правила сохранены.', 'ok'); };
 $('sysReset').onclick = () => { SET.sys = DEFAULT_SYS; $('sysPrompt').value = DEFAULT_SYS; saveSet(); msg('Правила возвращены к исходным.', 'ok'); };
 
@@ -1264,6 +1296,42 @@ function renderPreview(){
   $('preview').style.fontFamily = SET.fontName + ', sans-serif';
 }
 
+/* ================= шаблон текста ================= */
+/* {поле} — подстановка; [ ... ] — кусок, который исчезает целиком, если внутри пусто */
+function fillTemplate(tpl, vars){
+  const lines = [];
+  String(tpl||'').split('\n').forEach(line=>{
+    let out = line.replace(/\[([^\[\]]*)\]/g, (m, inner)=>{
+      let ok = true;
+      const filled = inner.replace(/\{([^{}]+)\}/g, (mm, k)=>{ const v = vars[k]; if (!v){ ok = false; return ''; } return v; });
+      return ok ? filled : '';
+    });
+    out = out.replace(/\{([^{}]+)\}/g, (m, k)=> vars[k] || '');
+    out = out.replace(/ +([,.;:])/g, '$1').replace(/ {2,}/g, ' ').trim();
+    lines.push(out);
+  });
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/* Как в образцах: «работником ветеринарного отдела, ветеринарным санитаром по вакцинации Мухтарбековым Е.А.» */
+function violatorPhrase(){
+  const name = val('prName'), post = val('prPost'), dept = val('prDept'), org = val('prOrg');
+  if (!name && !post) return '';
+  const who = name ? MORPH.surnameInstr(name) : '';
+  if (org){
+    const bits = ['сотрудником ' + org, who].filter(Boolean).join(' ');
+    return post ? bits + ', занимающим должность «' + post + '»' : bits;
+  }
+  let head = 'работником';
+  if (dept) head += ' ' + MORPH.phraseGen(dept);
+  if (post) head += ', ' + MORPH.phraseInstr(post);
+  return (head + (who ? ' ' + who : '')).trim();
+}
+function lowerFirst(s){
+  const t = String(s||'').trim().replace(/[.\s]+$/,'');
+  return t ? t.charAt(0).toLowerCase() + t.slice(1) : '';
+}
+
 /* ================= сборка текста без ИИ ================= */
 function plural(n, one, few, many){
   const a = Math.abs(n) % 100, b = a % 10;
@@ -1288,78 +1356,80 @@ function personBlock(){
   if (dept) bits.push('подразделение — ' + dept);
   return `Нарушение допущено работником: ${name}${bits.length ? ' (' + bits.join(', ') + ')' : ''}.`;
 }
-function buildLocal(){
-  const date = val('factDate') || val('date') || today();
-  const place = val('place');
-  const items = lines('items');
-  const clauses = selectedClauses();
-  USED = Array.from(new Set(clauses.map(c=>c.doc)));
-  const full = $('struct').value === 'full';
+function clauseBlock(clauses){
+  if (!clauses.length) return '';
+  const byDoc = new Map();
+  clauses.forEach(c=>{
+    const name = c.doc.replace(/\.(docx|txt|md)$/i,'');
+    if (!byDoc.has(name)) byDoc.set(name, []);
+    byDoc.get(name).push(c.text);
+  });
   const out = [];
-
-  let intro = `Довожу до Вашего сведения о том, что ${date} г. при проведении контроля соблюдения требований биобезопасности`;
-  if (place) intro += ` на объекте «${place}»`;
-  intro += ' выявлен факт нарушения установленных требований.';
-  out.push(intro);
-
-  const who = personBlock();
-  if (who) out.push(who);
-  if (val('facts')) out.push(sentence(val('facts')));
-
-  if (items.length){
-    out.push('', 'При проверке выявлено следующее:');
-    items.forEach((it,i)=> out.push('- ' + it.replace(/[;.]\s*$/,'') + (i===items.length-1 ? '.' : ';')));
-  }
-
-  if (clauses.length){
-    /* группируем по документу и оформляем как в образцах: «п. 1.158 — требование;» */
-    const byDoc = new Map();
-    clauses.forEach(c=>{
-      const name = c.doc.replace(/\.(docx|txt|md)$/i,'');
-      if (!byDoc.has(name)) byDoc.set(name, []);
-      byDoc.get(name).push(c.text);
+  byDoc.forEach((texts, name)=>{
+    const isStd = /^\s*(ст|стандарт)/i.test(name);
+    out.push(isStd ? `Проверкой установлено нарушение следующих требований стандарта ${name}:`
+                   : `Проверкой установлено нарушение следующих требований документа «${name}»:`);
+    texts.forEach((t,i)=>{
+      const m = t.match(CLAUSE_RE);
+      const num = m ? m[0].trim().replace(/^п\.?\s*/i,'').replace(/\.$/,'') : '';
+      let body = (m ? t.slice(m[0].length) : t).trim().replace(/[;.]\s*$/,'');
+      if (num && /^[А-ЯЁ][а-яё]/.test(body)) body = body.charAt(0).toLowerCase() + body.slice(1);
+      out.push('- ' + (num ? 'п. ' + num + ' — ' : '') + body + (i === texts.length-1 ? '.' : ';'));
     });
-    byDoc.forEach((texts, name)=>{
-      out.push('', `Проверкой установлено нарушение следующих требований документа «${name}»:`);
-      texts.forEach((t,i)=>{
-        const m = t.match(CLAUSE_RE);
-        const num = m ? m[0].trim().replace(/^п\.?\s*/i,'').replace(/\.$/,'') : '';
-        const body = (m ? t.slice(m[0].length) : t).trim().replace(/[;.]\s*$/,'');
-        out.push('- ' + (num ? 'п. ' + num + ' — ' : '') + body + (i === texts.length-1 ? '.' : ';'));
-      });
-    });
-  } else {
-    out.push('', 'В предоставленных документах не найдено прямого основания для данной формулировки — отметьте нужные пункты на вкладке «Записка» или впишите их вручную.');
-  }
-
-  out.push('', 'Данный факт является нарушением установленного порядка и требований биобезопасности предприятия.');
-  if ($('repeat').checked) out.push('Выявленное нарушение носит повторный характер.');
-
+  });
+  return out.join('\n');
+}
+function doneList(){
   const done = [];
   if ($('doneExpl').checked)  done.push('от работника получена объяснительная');
   if ($('doneInstr').checked) done.push('проведён повторный инструктаж по требованиям биобезопасности');
   if ($('doneStudy').checked) done.push('работник направлен на обучение');
   if ($('doneTalk').checked)  done.push('с работником проведена беседа');
-  if (val('doneOther')) done.push(val('doneOther').replace(/\.$/,''));
-  if (done.length) out.push('', 'Выполненные мероприятия: ' + done.join('; ') + '.');
+  if (val('doneOther')) done.push(lowerFirst(val('doneOther')));
+  return done;
+}
+function templateVars(){
+  const items = lines('items');
+  const clauses = selectedClauses();
+  USED = Array.from(new Set(clauses.map(c=>c.doc)));
+  const done = doneList();
+  return {
+    'дата': val('factDate') || val('date') || today(),
+    'место': val('place'),
+    'нарушитель': violatorPhrase(),
+    'суть': lowerFirst(val('facts')),
+    'перечень': items.length
+      ? 'При проверке выявлено следующее:\n' + items.map((it,i)=>'- ' + it.replace(/[;.]\s*$/,'') + (i===items.length-1 ? '.' : ';')).join('\n')
+      : '',
+    'пункты': clauses.length ? clauseBlock(clauses)
+      : 'В предоставленных документах не найдено прямого основания для данной формулировки.',
+    'повторность': $('repeat').checked ? 'Выявленное нарушение носит повторный характер.' : '',
+    'мероприятия': done.length ? 'Выполненные мероприятия: ' + done.join('; ') + '.' : '',
+    'фото': PHOTOS.length ? `Фотофиксация нарушения прилагается — ${PHOTOS.length} ${plural(PHOTOS.length,'снимок','снимка','снимков')}.` : '',
+    'просьба': val('ask').replace(/^прошу\s+/i,'').replace(/[.;]\s*$/,'') || 'принять соответствующие меры',
+    'фамилия_род': val('prName') ? MORPH.surnameGen(val('prName')) : '',
+    'ознакомлен': $('brief').checked ? 'поскольку работник ознакомлен с установленными требованиями биобезопасности' : '',
+    'срок': val('feedback') ? `Обратную связь о принятых решениях прошу предоставить до ${val('feedback')} г.` : ''
+  };
+}
+function buildLocal(){
+  const vars = templateVars();
+  if ($('struct').value !== 'full') return fillTemplate(SET.tpl || DEFAULT_TPL, vars);
 
-  if (full){
-    out.push('', '## Корневая причина', 'Указать корневую причину нарушения.');
-    const capa = lines('capa');
-    if (capa.length){
-      out.push('', '## Корректирующие мероприятия');
-      capa.forEach((c,i)=> out.push((i+1) + '. ' + c.replace(/[;.]\s*$/,'') + '.'));
-    }
-    out.push('', '## Предлагаемые меры');
+  /* расширенная структура — те же данные, но с подзаголовками */
+  const out = [fillTemplate(SET.tpl || DEFAULT_TPL, Object.assign({}, vars, {'просьба':'', 'фамилия_род':'', 'ознакомлен':'', 'срок':''}))
+                 .split('\nВ связи с выявленным')[0].trim()];
+  out.push('', '## Корневая причина', 'Указать корневую причину нарушения.');
+  const capa = lines('capa');
+  if (capa.length){
+    out.push('', '## Корректирующие мероприятия');
+    capa.forEach((c,i)=> out.push((i+1) + '. ' + c.replace(/[;.]\s*$/,'') + '.'));
   }
-
-  const ask = val('ask').replace(/^прошу\s+/i,'').replace(/[.;]\s*$/,'') || 'принять соответствующие меры';
-  let tail = `В связи с выявленным нарушением требований биобезопасности прошу ${ask}`;
-  if ($('brief').checked) tail += ', поскольку работник ознакомлен с установленными требованиями биобезопасности';
-  out.push('', tail + '.');
-  if (PHOTOS.length) out.push('', `Фотофиксация нарушения прилагается — ${PHOTOS.length} ${plural(PHOTOS.length,'снимок','снимка','снимков')}.`);
-  if (full && val('feedback')) out.push('', `Обратную связь о принятых решениях прошу предоставить до ${val('feedback')} г.`);
-
+  out.push('', '## Предлагаемые меры');
+  out.push(`В связи с выявленным нарушением требований биобезопасности прошу ${vars['просьба']}` +
+    (vars['фамилия_род'] ? ' в отношении сотрудника ' + vars['фамилия_род'] : '') +
+    (vars['ознакомлен'] ? ', ' + vars['ознакомлен'] : '') + '.');
+  if (vars['срок']) out.push('', vars['срок']);
   return out.join('\n');
 }
 
@@ -1414,12 +1484,12 @@ function structRules(){
 6. Подзаголовок «## Предлагаемые меры» и абзац с просьбой.
 7. Последним абзацем — срок обратной связи, если он указан.`;
   }
-  return `Структура текста — как в образце, сплошным текстом без подзаголовков:
-1. «Довожу до Вашего сведения о том, что <дата> г. <при каких обстоятельствах и где> был выявлен факт <что именно> <кем именно>».
-2. При наличии перечня выявленного — перечень строками «- ».
-3. «Проверкой установлено нарушение следующих требований <название стандарта>:» и пункты строками «- п. X.Y — <формулировка требования>;».
-4. Абзац «Данный факт является нарушением установленного порядка и требований биобезопасности предприятия в части <существо нарушения>».
-5. Заключительный абзац «В связи с выявленным нарушением требований биобезопасности прошу <просьба>».`;
+  return `ШАБЛОН ТЕКСТА — следуй ему дословно. Обороты шаблона не меняй, свои не добавляй,
+порядок абзацев сохрани. Подставленные данные уже стоят на местах; твоя работа —
+согласовать падежи, уточнить существо нарушения и убрать шероховатости речи.
+"""
+${clip(buildLocal(), 6000)}
+"""`;
 }
 /* у запроса есть предел объёма (64 КиБ), кириллица занимает по два байта на знак */
 function clip(text, maxChars){
