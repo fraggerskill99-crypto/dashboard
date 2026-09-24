@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aurum SMC</title>
+<meta name="description" content="Анализ золота: Smart Money Concepts, SNR, сигналы и бэктест">
+<meta name="theme-color" content="#0f1013">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aurum SMC">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600&display=swap">
+<style>
+:root {
+  color-scheme: dark;
+  --ground: #0f1013;
+  --surface: #17191e;
+  --surface-2: #1f2229;
+  --line: #2a2e37;
+  --text: #ebe7df;
+  --muted: #8d919b;
+  --gold: #d6ad4b;
+  --gold-soft: rgba(214, 173, 75, .14);
+  --bull: #2fb58c;
+  --bull-soft: rgba(47, 181, 140, .14);
+  --bear: #e5534b;
+  --bear-soft: rgba(229, 83, 75, .14);
+  --warn: #e0a33a;
+  --r: 10px;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --ground: #f5f3ee;
+    --surface: #ffffff;
+    --surface-2: #efece5;
+    --line: #dcd7cc;
+    --text: #1c1b18;
+    --muted: #6b6860;
+    --gold: #9a7314;
+    --gold-soft: rgba(154, 115, 20, .12);
+    --bull: #13875f;
+    --bull-soft: rgba(19, 135, 95, .12);
+    --bear: #c4362f;
+    --bear-soft: rgba(196, 54, 47, .1);
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--ground); color: var(--text);
+  font: 14px/1.45 var(--sans);
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.app { max-width: 1400px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 32px; display: grid; gap: 14px; }
+@media (min-width: 1000px) {
+  .app { grid-template-columns: minmax(0, 1fr) 400px; align-items: start; }
+  .col-main { grid-column: 1; }
+  .col-side { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 12px; }
+}
+
+/* шапка */
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mark { width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center;
+  background: linear-gradient(145deg, #f1d27c, #b8861f); color: #2a1d02; font: 600 17px var(--display); letter-spacing: -.02em; flex: none; }
+.ticker { display: grid; line-height: 1.15; }
+.ticker b { font: 600 18px var(--display); letter-spacing: .01em; }
+.ticker span { color: var(--muted); font-size: 12px; }
+.price { margin-left: auto; text-align: right; display: grid; line-height: 1.15; }
+.price b { font: 500 22px var(--mono); font-variant-numeric: tabular-nums; }
+.price span { font-size: 12px; color: var(--muted); }
+.up { color: var(--bull); } .down { color: var(--bear); }
+
+.bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chips { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.chips button { border: 0; background: none; padding: 5px 10px; border-radius: 6px; color: var(--muted); font: 500 12.5px var(--mono); }
+.chips button[aria-pressed="true"] { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.chips-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.icon-btn { margin-left: auto; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 10px; color: var(--text); font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.dot.live { background: var(--bull); box-shadow: 0 0 0 3px var(--bull-soft); }
+.dot.err { background: var(--bear); }
+
+/* график */
+.chart-wrap { position: relative; height: clamp(320px, 56vh, 640px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+#chart { position: absolute; inset: 0; }
+#chart { z-index: 1; }
+#overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.chart-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
+.layers { display: flex; gap: 6px; flex-wrap: wrap; }
+.layer { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.layer i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.layer[aria-pressed="true"] { color: var(--text); border-color: var(--muted); }
+.layer[aria-pressed="false"] i { opacity: .3; }
+
+/* карточка сигнала */
+.signal { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; gap: 12px; }
+.signal.long { border-color: color-mix(in srgb, var(--bull) 55%, var(--line)); }
+.signal.short { border-color: color-mix(in srgb, var(--bear) 55%, var(--line)); }
+.sig-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sig-head h2 { margin: 0; font: 600 24px/1.1 var(--display); letter-spacing: -.01em; }
+.sig-state { font-size: 12px; color: var(--muted); }
+.score { margin-left: auto; font: 500 13px var(--mono); padding: 3px 8px; border-radius: 6px; background: var(--gold-soft); color: var(--gold); }
+.levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-radius: 8px; overflow: hidden; }
+.levels div { background: var(--surface-2); padding: 8px 10px; display: grid; }
+.levels span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+.levels b { font: 500 15px var(--mono); font-variant-numeric: tabular-nums; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.checks li { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; align-items: baseline; font-size: 13px; }
+.checks li::before { content: "✕"; color: var(--muted); font-size: 12px; text-align: center; }
+.checks li.ok::before { content: "✓"; color: var(--bull); font-weight: 600; }
+.checks li:not(.ok) { color: var(--muted); }
+.checks li em { font: normal 12px var(--mono); color: var(--muted); }
+.plan { margin: 0; color: var(--text); }
+.plan-muted { margin: 0; color: var(--muted); font-size: 13px; }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+
+/* вкладки */
+.tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.tabs button { border: 0; background: none; padding: 9px 10px; font-size: 13.5px; color: var(--muted); font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--gold); }
+.panel { padding-top: 12px; display: grid; gap: 12px; }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }
+.kv dt { color: var(--muted); font-size: 13px; }
+.kv dd { margin: 0; text-align: right; font-size: 13px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+.pill.bull { background: var(--bull-soft); color: var(--bull); }
+.pill.bear { background: var(--bear-soft); color: var(--bear); }
+.pill.flat { background: var(--surface-2); color: var(--muted); }
+.pdbar { position: relative; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--bull-soft), var(--surface-2) 50%, var(--bear-soft)); margin-top: 6px; }
+.pdbar i { position: absolute; top: -3px; width: 3px; height: 14px; background: var(--text); border-radius: 2px; transform: translateX(-1px); }
+h3 { margin: 4px 0 0; font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.stat span { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.stat b { font: 500 18px var(--mono); font-variant-numeric: tabular-nums; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: right; font-weight: 500; color: var(--muted); padding: 5px 6px; border-bottom: 1px solid var(--line); }
+td { text-align: right; padding: 5px 6px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+tr.cur td { background: var(--gold-soft); }
+tr.pick { cursor: pointer; }
+.wr { display: inline-block; height: 6px; border-radius: 3px; background: var(--bull); vertical-align: middle; margin-right: 6px; }
+#equity { width: 100%; height: 120px; display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.btn { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 7px 12px; font-weight: 500; }
+.btn.primary { background: var(--gold); border-color: var(--gold); color: #1b1404; }
+
+.form { display: grid; gap: 12px; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 12.5px; color: var(--muted); }
+.field input[type="text"], .field input[type="password"], .field input[type="number"], .field select {
+  width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.field.row { grid-template-columns: 1fr auto; align-items: center; }
+.field small { color: var(--muted); font-size: 12px; }
+input[type="range"] { width: 100%; accent-color: var(--gold); }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold); }
+
+#tv { height: 520px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--surface); }
+pre.code { margin: 0; max-height: 360px; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 11.5px/1.5 var(--mono); white-space: pre; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.foot { font-size: 11.5px; color: var(--muted); }
+.foot a { color: inherit; }
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--surface-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 10; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: no-preference) { .signal { transition: border-color .3s; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="col-main" style="display:grid;gap:10px">
+    <header class="top">
+      <div class="mark" aria-hidden="true">Au</div>
+      <div class="ticker"><b>XAU / USD</b><span id="srcLabel">—</span></div>
+      <div class="price"><b id="lastPrice" class="num">—</b><span id="lastChange">загрузка…</span></div>
+    </header>
+    <div class="bar">
+      <span class="chips-label">Вход</span>
+      <div class="chips" id="ltfChips"></div>
+      <span class="chips-label">Старший</span>
+      <div class="chips" id="htfChips"></div>
+      <button class="icon-btn" id="refreshBtn" type="button"><span class="dot" id="statusDot"></span><span id="statusText">Обновить</span></button>
+    </div>
+    <div class="chart-wrap">
+      <div id="chart"></div>
+      <canvas id="overlay"></canvas>
+      <div class="chart-msg" id="chartMsg">Загружаю котировки…</div>
+    </div>
+    <div class="layers" id="layers"></div>
+  </div>
+
+  <aside class="col-side" style="display:grid;gap:12px">
+    <section class="signal" id="signal" aria-live="polite"></section>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-tab="analysis" aria-selected="true">Анализ</button>
+      <button role="tab" data-tab="backtest" aria-selected="false">Бэктест</button>
+      <button role="tab" data-tab="tv" aria-selected="false">TradingView</button>
+      <button role="tab" data-tab="pine" aria-selected="false">Pine</button>
+      <button role="tab" data-tab="settings" aria-selected="false" aria-label="Настройки" title="Настройки"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </nav>
+    <section class="panel" data-panel="analysis" id="analysis"></section>
+    <section class="panel" data-panel="backtest" id="backtest" hidden></section>
+    <section class="panel" data-panel="tv" hidden>
+      <div id="tv"></div>
+      <p class="note">Живой график TradingView по OANDA:XAUUSD — для сверки. Разметку SMC на нём рисует индикатор из вкладки «Индикатор».</p>
+    </section>
+    <section class="panel" data-panel="pine" hidden>
+      <p class="plan">Тот же анализ — прямо на графике TradingView (в том числе в приложении на телефоне).</p>
+      <ol class="steps">
+        <li>Откройте TradingView на компьютере или в браузере, график <b>XAUUSD</b>.</li>
+        <li>Внизу «Редактор Pine» → удалите шаблон → вставьте код ниже.</li>
+        <li>«Сохранить» → «Добавить на график». В приложении на телефоне индикатор появится в «Мои скрипты».</li>
+        <li>Правый клик на графике → «Добавить оповещение» → условие «Aurum SMC+SNR» — придут пуш-уведомления о сигналах.</li>
+      </ol>
+      <div class="bar"><button class="btn primary" id="copyPine" type="button">Скопировать код</button></div>
+      <pre class="code" id="pineCode">Загрузка…</pre>
+    </section>
+    <section class="panel" data-panel="settings" hidden>
+      <form class="form" id="settings" autocomplete="off"></form>
+    </section>
+    <p class="foot">Анализ — инструмент, а не гарантия прибыли. Графики: <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView Lightweight Charts</a>.</p>
+  </aside>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

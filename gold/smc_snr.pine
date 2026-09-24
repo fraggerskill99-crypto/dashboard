@@ -1,0 +1,438 @@
+//@version=5
+// Aurum SMC + SNR — Smart Money Concepts и Malaysian SNR для XAUUSD.
+// Модель сигнала: снятие ликвидности → слом структуры (CHoCH/BOS) → лимит в ордер-блок,
+// стоп за экстремум снятия, тейк = RR × риск. Оценка конфлюэнса 0–12, сигнал от порога.
+// Все расчёты по закрытым свечам, старший ТФ — без заглядывания в будущее.
+indicator("Aurum SMC + SNR", shorttitle = "Aurum SMC", overlay = true, max_boxes_count = 100, max_lines_count = 300, max_labels_count = 300, max_bars_back = 500)
+
+// ───── Настройки
+grpS = "Структура"
+swingLen = input.int(3, "Свинг: баров слева и справа", minval = 1, maxval = 10, group = grpS)
+htfTf = input.timeframe("240", "Старший ТФ (тренд, SNR, дискаунт)", group = grpS)
+
+grpT = "Сделка"
+rr = input.float(2.0, "Риск : прибыль", minval = 0.5, step = 0.5, group = grpT)
+entryMode = input.string("Середина OB", "Вход", options = ["Середина OB", "Край OB"], group = grpT)
+slBuf = input.float(0.1, "Запас за стопом, доли ATR", minval = 0, step = 0.05, group = grpT)
+sweepLookback = input.int(30, "Слом не позже N баров после снятия", minval = 5, group = grpT)
+minScore = input.int(8, "Порог сигнала A+ (из 12)", minval = 0, maxval = 12, group = grpT)
+strictBias = input.bool(true, "Только по тренду старшего ТФ", group = grpT)
+useKz = input.bool(true, "Учитывать killzone (Лондон 07–10, Нью-Йорк 12–15 UTC)", group = grpT)
+
+grpV = "Отображение"
+showOB = input.bool(true, "Ордер-блоки", group = grpV)
+showFVG = input.bool(true, "FVG", group = grpV)
+showStruct = input.bool(true, "BOS / CHoCH", group = grpV)
+showSNR = input.bool(true, "SNR старшего ТФ", group = grpV)
+showLiq = input.bool(true, "Снятия ликвидности", group = grpV)
+
+bullCol = #2fb58c
+bearCol = #e5534b
+goldCol = #d6ad4b
+fvgCol = #7c8cff
+liqCol = #e0a33a
+
+atr = ta.atr(14)
+
+f_kz(t) =>
+    h = hour(t, "UTC")
+    (h >= 7 and h < 10) or (h >= 12 and h < 15)
+
+// ───── Старший ТФ: тренд по структуре, диапазон, свежие SNR-уровни по закрытиям
+f_htf(len) =>
+    ph = ta.pivothigh(high, len, len)
+    pl = ta.pivotlow(low, len, len)
+    var float sh = na
+    var float sl = na
+    var bool shB = false
+    var bool slB = false
+    var int t = 0
+    if not na(ph)
+        sh := ph
+        shB := false
+    if not na(pl)
+        sl := pl
+        slB := false
+    if not na(sh) and not shB and close > sh
+        t := 1
+        shB := true
+    else if not na(sl) and not slB and close < sl
+        t := -1
+        slB := true
+
+    // Malaysian SNR: A — пик закрытий, V — впадина. Касание тенью гасит уровень,
+    // пробой закрытием — меняет роль (флип), повторное касание гасит флип.
+    var lvP = array.new_float()
+    var lvR = array.new_int()
+    var lvF = array.new_bool()
+    pa = ta.pivothigh(close, 2, 2)
+    pv = ta.pivotlow(close, 2, 2)
+    if not na(pa)
+        array.push(lvP, pa)
+        array.push(lvR, -1)
+        array.push(lvF, false)
+    if not na(pv)
+        array.push(lvP, pv)
+        array.push(lvR, 1)
+        array.push(lvF, false)
+    if array.size(lvP) > 60
+        array.shift(lvP)
+        array.shift(lvR)
+        array.shift(lvF)
+    n = array.size(lvP)
+    if n > 0
+        for k = n - 1 to 0
+            p = array.get(lvP, k)
+            r = array.get(lvR, k)
+            touched = r == 1 ? low <= p : high >= p
+            if touched
+                through = r == 1 ? close < p : close > p
+                if through and not array.get(lvF, k)
+                    array.set(lvR, k, -r)
+                    array.set(lvF, k, true)
+                else
+                    array.remove(lvP, k)
+                    array.remove(lvR, k)
+                    array.remove(lvF, k)
+    float sup = na
+    float res = na
+    m = array.size(lvP)
+    if m > 0
+        for k = 0 to m - 1
+            p = array.get(lvP, k)
+            r = array.get(lvR, k)
+            if r == 1 and p < close and (na(sup) or p > sup)
+                sup := p
+            if r == -1 and p > close and (na(res) or p < res)
+                res := p
+    [t, sh, sl, sup, res]
+
+f_htfClosed() =>
+    [t, sh, sl, sup, res] = f_htf(2)
+    [t[1], sh[1], sl[1], sup[1], res[1]]
+
+[hTrend, hHi, hLo, hSup, hRes] = request.security(syminfo.tickerid, htfTf, f_htfClosed(), lookahead = barmerge.lookahead_on)
+
+plot(showSNR ? hSup : na, "SNR поддержка", color.new(bullCol, 10), 2, plot.style_linebr)
+plot(showSNR ? hRes : na, "SNR сопротивление", color.new(bearCol, 10), 2, plot.style_linebr)
+
+// ───── Свинги младшего ТФ
+ph = ta.pivothigh(high, swingLen, swingLen)
+pl = ta.pivotlow(low, swingLen, swingLen)
+var float sH = na
+var int sHi = na
+var bool sHB = false
+var float sL = na
+var int sLi = na
+var bool sLB = false
+var int trend = 0
+var float prevPH = na
+var float prevPL = na
+
+// ───── Пулы ликвидности
+var poolP = array.new_float()
+var poolS = array.new_int()     // 1 — над ценой (buy-side), -1 — под ценой (sell-side)
+var poolW = array.new_int()     // сила: 1 свинг, 2 равные/дневные/азия
+var poolB = array.new_int()
+var poolT = array.new_string()
+
+f_pool(p, s, w, lbl) =>
+    array.push(poolP, p)
+    array.push(poolS, s)
+    array.push(poolW, w)
+    array.push(poolB, bar_index)
+    array.push(poolT, lbl)
+    if array.size(poolP) > 80
+        array.shift(poolP)
+        array.shift(poolS)
+        array.shift(poolW)
+        array.shift(poolB)
+        array.shift(poolT)
+
+if not na(ph)
+    eqH = not na(prevPH) and math.abs(ph - prevPH) <= 0.15 * atr
+    f_pool(ph, 1, eqH ? 2 : 1, eqH ? "EQH" : "Свинг")
+    prevPH := ph
+    sH := ph
+    sHi := bar_index - swingLen
+    sHB := false
+if not na(pl)
+    eqL = not na(prevPL) and math.abs(pl - prevPL) <= 0.15 * atr
+    f_pool(pl, -1, eqL ? 2 : 1, eqL ? "EQL" : "Свинг")
+    prevPL := pl
+    sL := pl
+    sLi := bar_index - swingLen
+    sLB := false
+
+pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
+pdl = request.security(syminfo.tickerid, "D", low[1], lookahead = barmerge.lookahead_on)
+newDay = ta.change(time("D")) != 0
+if newDay and not na(pdh)
+    f_pool(pdh, 1, 2, "PDH")
+    f_pool(pdl, -1, 2, "PDL")
+
+hrUtc = hour(time, "UTC")
+var float aH = na
+var float aL = na
+var bool aDone = false
+if newDay
+    aH := na
+    aL := na
+    aDone := false
+if hrUtc < 6
+    aH := na(aH) ? high : math.max(aH, high)
+    aL := na(aL) ? low : math.min(aL, low)
+else if not aDone and not na(aH)
+    f_pool(aH, 1, 2, "Азия high")
+    f_pool(aL, -1, 2, "Азия low")
+    aDone := true
+
+// ───── Снятие ликвидности: тень за уровень и возврат закрытием за 0–2 бара
+var float pBuP = na
+var float pBuX = na
+var int pBuB = na
+var int pBuW = 0
+var string pBuT = ""
+var bool pBuK = false
+var float pBeP = na
+var float pBeX = na
+var int pBeB = na
+var int pBeW = 0
+var string pBeT = ""
+var bool pBeK = false
+
+var int swBuBar = na
+var int swBuStart = na
+var int swBuW = 0
+var string swBuT = ""
+var bool swBuK = false
+var int swBeBar = na
+var int swBeStart = na
+var int swBeW = 0
+var string swBeT = ""
+var bool swBeK = false
+
+np = array.size(poolP)
+if np > 0
+    for k = np - 1 to 0
+        p = array.get(poolP, k)
+        s = array.get(poolS, k)
+        old = bar_index - array.get(poolB, k) > 300
+        taken = s == 1 ? high > p : low < p
+        if taken or old
+            if taken
+                w = array.get(poolW, k)
+                if s == -1 and (na(pBuP) or w >= pBuW)
+                    pBuP := p
+                    pBuX := low
+                    pBuB := bar_index
+                    pBuW := w
+                    pBuT := array.get(poolT, k)
+                    pBuK := f_kz(time)
+                if s == 1 and (na(pBeP) or w >= pBeW)
+                    pBeP := p
+                    pBeX := high
+                    pBeB := bar_index
+                    pBeW := w
+                    pBeT := array.get(poolT, k)
+                    pBeK := f_kz(time)
+            array.remove(poolP, k)
+            array.remove(poolS, k)
+            array.remove(poolW, k)
+            array.remove(poolB, k)
+            array.remove(poolT, k)
+
+if not na(pBuP)
+    pBuX := math.min(pBuX, low)
+    if close > pBuP
+        swBuBar := bar_index
+        swBuStart := pBuB
+        swBuW := pBuW
+        swBuT := pBuT
+        swBuK := pBuK
+        if showLiq and pBuW >= 2
+            label.new(bar_index, low, "$ " + pBuT, style = label.style_label_up, color = color.new(liqCol, 80), textcolor = liqCol, size = size.tiny)
+        pBuP := na
+    else if bar_index - pBuB >= 2
+        pBuP := na
+if not na(pBeP)
+    pBeX := math.max(pBeX, high)
+    if close < pBeP
+        swBeBar := bar_index
+        swBeStart := pBeB
+        swBeW := pBeW
+        swBeT := pBeT
+        swBeK := pBeK
+        if showLiq and pBeW >= 2
+            label.new(bar_index, high, "$ " + pBeT, style = label.style_label_down, color = color.new(liqCol, 80), textcolor = liqCol, size = size.tiny)
+        pBeP := na
+    else if bar_index - pBeB >= 2
+        pBeP := na
+
+// ───── FVG
+var fvgBoxes = array.new_box()
+var fvgDirs = array.new_int()
+var int lastBuFvg = na
+var int lastBeFvg = na
+bullFvg = low - high[2] > 0.05 * atr
+bearFvg = low[2] - high > 0.05 * atr
+if bullFvg
+    lastBuFvg := bar_index
+    if showFVG
+        array.push(fvgBoxes, box.new(bar_index - 1, low, bar_index, high[2], border_color = color.new(fvgCol, 50), bgcolor = color.new(fvgCol, 85), extend = extend.right, text = "FVG", text_size = size.tiny, text_color = fvgCol, text_halign = text.align_left))
+        array.push(fvgDirs, 1)
+if bearFvg
+    lastBeFvg := bar_index
+    if showFVG
+        array.push(fvgBoxes, box.new(bar_index - 1, low[2], bar_index, high, border_color = color.new(fvgCol, 50), bgcolor = color.new(fvgCol, 85), extend = extend.right, text = "FVG", text_size = size.tiny, text_color = fvgCol, text_halign = text.align_left))
+        array.push(fvgDirs, -1)
+nf = array.size(fvgBoxes)
+if nf > 0
+    for k = nf - 1 to 0
+        b = array.get(fvgBoxes, k)
+        d = array.get(fvgDirs, k)
+        filled = d == 1 ? low <= box.get_bottom(b) : high >= box.get_top(b)
+        if filled and bar_index > box.get_right(b)
+            box.delete(b)
+            array.remove(fvgBoxes, k)
+            array.remove(fvgDirs, k)
+while array.size(fvgBoxes) > 14
+    box.delete(array.shift(fvgBoxes))
+    array.shift(fvgDirs)
+
+// ───── Ордер-блоки
+var obBoxes = array.new_box()
+var obDirs = array.new_int()
+no = array.size(obBoxes)
+if no > 0
+    for k = no - 1 to 0
+        b = array.get(obBoxes, k)
+        d = array.get(obDirs, k)
+        broken = d == 1 ? close < box.get_bottom(b) : close > box.get_top(b)
+        if broken
+            box.delete(b)
+            array.remove(obBoxes, k)
+            array.remove(obDirs, k)
+while array.size(obBoxes) > 10
+    box.delete(array.shift(obBoxes))
+    array.shift(obDirs)
+
+// ───── Слом структуры и сетап
+bullBreak = not na(sH) and not sHB and close > sH
+bearBreak = not bullBreak and not na(sL) and not sLB and close < sL
+
+bool buySig = false
+bool sellSig = false
+string sigMsg = ""
+
+f_score(dir, sweepW, isChoch, hasFvg, entry, sl, kz) =>
+    s = 0
+    biasOk = hTrend == dir
+    s += biasOk ? 3 : 0
+    s += sweepW
+    s += isChoch ? 1 : 0
+    s += hasFvg ? 1 : 0
+    mid = (hHi + hLo) / 2
+    pdOk = not na(hHi) and not na(hLo) and hHi > hLo and (dir == 1 ? entry < mid : entry > mid)
+    s += pdOk ? 2 : 0
+    snrOk = dir == 1 ? (not na(hSup) and hSup >= sl and hSup <= entry + 0.5 * atr) : (not na(hRes) and hRes <= sl and hRes >= entry - 0.5 * atr)
+    s += snrOk ? 2 : 0
+    s += (kz or not useKz) ? 1 : 0
+    [s, biasOk]
+
+f_signal(dir, entry, sl, tp, score, lbl) =>
+    col = dir == 1 ? bullCol : bearCol
+    txt = (dir == 1 ? "BUY " : "SELL ") + str.tostring(score) + "/12\nВход " + str.tostring(entry, format.mintick) + "\nСтоп " + str.tostring(sl, format.mintick) + "\nТейк " + str.tostring(tp, format.mintick) + "\n" + lbl
+    label.new(bar_index, dir == 1 ? low : high, txt, style = dir == 1 ? label.style_label_up : label.style_label_down, color = color.new(col, 15), textcolor = color.white, size = size.small)
+    line.new(bar_index, entry, bar_index + 30, entry, color = goldCol, width = 2)
+    line.new(bar_index, sl, bar_index + 30, sl, color = bearCol, style = line.style_dashed)
+    line.new(bar_index, tp, bar_index + 30, tp, color = bullCol, style = line.style_dashed)
+
+if bullBreak
+    isChoch = trend == -1
+    trend := 1
+    sHB := true
+    if showStruct
+        line.new(sHi, sH, bar_index, sH, color = isChoch ? goldCol : color.gray, style = isChoch ? line.style_solid : line.style_dashed)
+        label.new(math.round((sHi + bar_index) / 2), sH, isChoch ? "CHoCH" : "BOS", style = label.style_none, textcolor = isChoch ? goldCol : color.gray, size = size.tiny)
+    span = math.min(bar_index - sHi, 300)
+    lo = 0
+    for k = 0 to span
+        if low[k] < low[lo]
+            lo := k
+    ob = lo
+    for k = lo to math.min(lo + 9, 480)
+        if close[k] < open[k]
+            ob := k
+            break
+    obTop = high[ob]
+    obBot = low[ob]
+    if showOB
+        array.push(obBoxes, box.new(bar_index - ob, obTop, bar_index, obBot, border_color = color.new(bullCol, 40), bgcolor = color.new(bullCol, 85), extend = extend.right, text = "OB", text_size = size.tiny, text_color = bullCol, text_halign = text.align_left))
+        array.push(obDirs, 1)
+    if not na(swBuBar) and bar_index - swBuBar <= sweepLookback and swBuStart >= sHi - sweepLookback
+        ext = low
+        for k = 0 to math.min(bar_index - swBuStart, 300)
+            ext := math.min(ext, low[k])
+        entry = entryMode == "Край OB" ? obTop : (obTop + obBot) / 2
+        if entry >= close
+            entry := close - 0.05 * atr
+        sl = ext - slBuf * atr
+        risk = entry - sl
+        if risk > 0.3 * atr and risk <= 4 * atr
+            tp = entry + rr * risk
+            hasFvg = not na(lastBuFvg) and lastBuFvg > swBuStart
+            [score, biasOk] = f_score(1, swBuW, isChoch, hasFvg, entry, sl, swBuK or f_kz(time))
+            if score >= minScore and (biasOk or not strictBias)
+                f_signal(1, entry, sl, tp, score, "снятие: " + swBuT)
+                buySig := true
+                sigMsg := "BUY XAUUSD " + str.tostring(score) + "/12 · вход " + str.tostring(entry, format.mintick) + " · стоп " + str.tostring(sl, format.mintick) + " · тейк " + str.tostring(tp, format.mintick)
+
+if bearBreak
+    isChoch = trend == 1
+    trend := -1
+    sLB := true
+    if showStruct
+        line.new(sLi, sL, bar_index, sL, color = isChoch ? goldCol : color.gray, style = isChoch ? line.style_solid : line.style_dashed)
+        label.new(math.round((sLi + bar_index) / 2), sL, isChoch ? "CHoCH" : "BOS", style = label.style_none, textcolor = isChoch ? goldCol : color.gray, size = size.tiny)
+    span = math.min(bar_index - sLi, 300)
+    hi = 0
+    for k = 0 to span
+        if high[k] > high[hi]
+            hi := k
+    ob = hi
+    for k = hi to math.min(hi + 9, 480)
+        if close[k] > open[k]
+            ob := k
+            break
+    obTop = high[ob]
+    obBot = low[ob]
+    if showOB
+        array.push(obBoxes, box.new(bar_index - ob, obTop, bar_index, obBot, border_color = color.new(bearCol, 40), bgcolor = color.new(bearCol, 85), extend = extend.right, text = "OB", text_size = size.tiny, text_color = bearCol, text_halign = text.align_left))
+        array.push(obDirs, -1)
+    if not na(swBeBar) and bar_index - swBeBar <= sweepLookback and swBeStart >= sLi - sweepLookback
+        ext = high
+        for k = 0 to math.min(bar_index - swBeStart, 300)
+            ext := math.max(ext, high[k])
+        entry = entryMode == "Край OB" ? obBot : (obTop + obBot) / 2
+        if entry <= close
+            entry := close + 0.05 * atr
+        sl = ext + slBuf * atr
+        risk = sl - entry
+        if risk > 0.3 * atr and risk <= 4 * atr
+            tp = entry - rr * risk
+            hasFvg = not na(lastBeFvg) and lastBeFvg > swBeStart
+            [score, biasOk] = f_score(-1, swBeW, isChoch, hasFvg, entry, sl, swBeK or f_kz(time))
+            if score >= minScore and (biasOk or not strictBias)
+                f_signal(-1, entry, sl, tp, score, "снятие: " + swBeT)
+                sellSig := true
+                sigMsg := "SELL XAUUSD " + str.tostring(score) + "/12 · вход " + str.tostring(entry, format.mintick) + " · стоп " + str.tostring(sl, format.mintick) + " · тейк " + str.tostring(tp, format.mintick)
+
+if buySig or sellSig
+    alert(sigMsg, alert.freq_once_per_bar_close)
+
+alertcondition(buySig, "Aurum: покупка A+", "BUY XAUUSD — сигнал Aurum SMC A+")
+alertcondition(sellSig, "Aurum: продажа A+", "SELL XAUUSD — сигнал Aurum SMC A+")
+
+// Фон killzone
+bgcolor(useKz and f_kz(time) ? color.new(goldCol, 94) : na, title = "Killzone")
