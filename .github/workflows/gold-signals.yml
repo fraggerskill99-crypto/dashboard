@@ -1,0 +1,54 @@
+name: Сигналы золота в Telegram
+
+on:
+  schedule:
+    # каждые 15 минут, пн–пт, 06:00–20:45 UTC (Лондон и Нью-Йорк)
+    - cron: '*/15 6-20 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      test:
+        description: 'Отправить проверочное сообщение'
+        type: boolean
+        default: true
+
+concurrency:
+  group: gold-signals
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: gold
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # память об уже отправленных сигналах между запусками
+      - uses: actions/cache/restore@v4
+        with:
+          path: .gold-state/state.json
+          key: gold-signals-${{ github.run_id }}
+          restore-keys: gold-signals-
+
+      - name: Проверить рынок
+        run: node gold/notify/notify.js ${{ inputs.test && '--test' || '' }}
+        env:
+          STATE_FILE: .gold-state/state.json
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TWELVE_KEY: ${{ secrets.TWELVE_KEY }}
+          GOLD_LTF: ${{ vars.GOLD_LTF }}
+          GOLD_HTF: ${{ vars.GOLD_HTF }}
+          GOLD_MIN_SCORE: ${{ vars.GOLD_MIN_SCORE }}
+          GOLD_RR: ${{ vars.GOLD_RR }}
+
+      - uses: actions/cache/save@v4
+        if: always() && hashFiles('.gold-state/state.json') != ''
+        with:
+          path: .gold-state/state.json
+          key: gold-signals-${{ github.run_id }}

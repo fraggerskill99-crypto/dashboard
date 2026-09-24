@@ -46,6 +46,25 @@ Pine Script для самого TradingView.
 
 Без хостинга: `python3 build.py` соберёт `dist/aurum_smc.html` — один файл, открывается в браузере.
 
+## Уведомления в Telegram (всегда, даже при закрытом приложении)
+
+Раз в 15 минут (пн–пт, 06:00–20:45 UTC) GitHub Actions запускает `notify/notify.js`: скачивает котировки,
+прогоняет тот же движок и присылает в Telegram новый сигнал A+ (вход, стоп, тейк, чек-лист), а потом его итог —
+тейк, стоп или «ордер не исполнился».
+
+1. В Telegram откройте **@BotFather** → `/newbot` → получите токен вида `123456:ABC...`.
+2. Напишите своему боту любое сообщение, затем откройте `https://api.telegram.org/bot<ТОКЕН>/getUpdates` —
+   число в `"chat":{"id": ...}` и есть ваш chat id.
+3. В репозитории: Settings → Secrets and variables → Actions → **New repository secret**:
+   `TELEGRAM_TOKEN` и `TELEGRAM_CHAT_ID`. По желанию `TWELVE_KEY` — тогда котировки XAU/USD спот вместо PAXG.
+4. Необязательно, вкладка **Variables**: `GOLD_MIN_SCORE` (порог, по умолчанию 8), `GOLD_RR` (2),
+   `GOLD_LTF` (15m), `GOLD_HTF` (4h) — поставьте те же, что выбрали в приложении по бэктесту.
+5. Actions → «Сигналы золота в Telegram» → **Run workflow** — придёт проверочное сообщение с разбором рынка.
+
+Расписание по cron срабатывает только в основной ветке репозитория, поэтому код должен быть слит в неё.
+GitHub иногда запускает cron с опозданием на несколько минут. Для приватного репозитория это около
+1300 минут Actions в месяц — в пределах бесплатных 2000; расписание меняется в `.github/workflows/gold-signals.yml`.
+
 ## Индикатор для TradingView
 
 `smc_snr.pine` — та же логика на Pine Script v5: зоны, BOS/CHoCH, снятия ликвидности, SNR старшего ТФ,
@@ -61,4 +80,5 @@ Pine Script для самого TradingView.
 | `smc_snr.pine` | индикатор TradingView |
 | `sw.js`, `manifest.webmanifest`, `icon*` | установка как приложение, работа без сети |
 | `test/engine.test.js` | тесты движка: `node gold/test/engine.test.js`, включая проверку, что нет заглядывания в будущее |
+| `notify/notify.js` | проверка рынка и отправка сигналов в Telegram (запускается из GitHub Actions) |
 | `build.py` | сборка одного файла `dist/aurum_smc.html` |

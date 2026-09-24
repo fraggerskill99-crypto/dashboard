@@ -595,7 +595,7 @@
       <div class="field"><label for="refresh">Автообновление</label>
         <select id="refresh">${[30, 60, 120, 300, 900].map(v => opt(v, v < 60 ? v + ' с' : v / 60 + ' мин', S.refresh)).join('')}</select></div>
       <div class="field row"><label for="notify">Уведомлять о новых сигналах</label><input type="checkbox" id="notify" ${S.notify ? 'checked' : ''}></div>
-      <small class="note">Уведомления приходят, пока приложение открыто или свёрнуто. Для пушей при закрытом телефоне поставьте оповещение на индикатор в TradingView.</small>
+      <small class="note">Здесь уведомления приходят, пока приложение открыто или свёрнуто. Чтобы сигналы приходили всегда — даже при выключенном экране, — подключите Telegram-бота (инструкция в gold/README.md) или оповещение индикатора в TradingView.</small>
       <div class="bar"><button class="btn" type="button" id="resetSettings">Сбросить настройки</button></div>`;
 
     const on = (id, ev, fn) => $('#' + id).addEventListener(ev, fn);
