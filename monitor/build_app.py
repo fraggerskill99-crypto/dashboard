@@ -22,7 +22,8 @@ VERSION = time.strftime('%Y%m%d%H%M')
 
 page = (ROOT / 'episoot_monitor.html').read_text(encoding='utf-8')
 seed = json.loads((ROOT / 'seed.json').read_text(encoding='utf-8'))
-geo = (ROOT / 'geo_ukpf.json').read_text(encoding='utf-8')
+GEO_FILES = {'ukpf': 'geo_ukpf.json', 'mpf': 'geo_mpf.json'}
+geos = {k: (ROOT / f).read_text(encoding='utf-8') for k, f in GEO_FILES.items()}
 adapter = (ROOT / 'app/app_data.js').read_text(encoding='utf-8')
 
 a = page.index('/*{{DATA_INIT}}*/'); b = page.index('/*{{/DATA_INIT}}*/') + len('/*{{/DATA_INIT}}*/')
@@ -52,7 +53,7 @@ sw_reg = ("<script>if ('serviceWorker' in navigator && location.protocol === 'ht
     '<link rel="apple-touch-icon" href="icon-192.png">\n<meta name="apple-mobile-web-app-capable" content="yes">\n' + sw_reg,
     pre), encoding='utf-8')
 (WWW / 'data/seed.json').write_text(json.dumps(seed, ensure_ascii=False), encoding='utf-8')
-(WWW / 'geo_ukpf.json').write_text(geo, encoding='utf-8')
+for k, f in GEO_FILES.items(): (WWW / f).write_text(geos[k], encoding='utf-8')
 for f in ('icon-192.png', 'icon-512.png', 'icon-maskable-512.png'):
     shutil.copy(ROOT / 'app' / f, WWW / f)
 (WWW / 'sw.js').write_text((ROOT / 'app/sw.js').read_text(encoding='utf-8').replace('{{VERSION}}', VERSION), encoding='utf-8')
@@ -67,7 +68,7 @@ for f in ('icon-192.png', 'icon-512.png', 'icon-maskable-512.png'):
 }, ensure_ascii=False, indent=1), encoding='utf-8')
 
 # один файл: данные и карта вшиты внутрь
-single_pre = pre + '\nwindow.__EPISODES__ = ' + json.dumps(seed, ensure_ascii=False) + ';\nwindow.__GEO__ = ' + geo + ';'
+single_pre = pre + '\nwindow.__EPISODES__ = ' + json.dumps(seed, ensure_ascii=False) + ';\nwindow.__GEOS__ = {' + ','.join(f'{json.dumps(k)}:{v}' for k, v in geos.items()) + '};'
 (OUT / 'ptitsa_monitor.html').write_text(doc('', single_pre.replace('</', '<\\/')), encoding='utf-8')
 
 for p in sorted(OUT.rglob('*')):

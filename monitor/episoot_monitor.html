@@ -169,6 +169,10 @@ button{font:inherit;cursor:pointer}
 .tbl a{color:var(--accent)}
 .tbl .sub2{color:var(--muted);font-size:12px}
 .chk{display:inline-flex;gap:6px;align-items:center}
+.farmsw{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;align-self:flex-start;background:var(--panel)}
+.fsw{border:0;background:transparent;color:var(--ink);padding:8px 16px;font-weight:500}
+.fsw+.fsw{border-left:1px solid var(--line)}
+.fsw[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
 @media (prefers-reduced-motion:no-preference){.item{animation:in .25s ease both}@keyframes in{from{opacity:.4}to{opacity:1}}}
 </style>
 
@@ -176,7 +180,7 @@ button{font:inherit;cursor:pointer}
   <header class="top">
     <div>
       <h1>Эпизоотический монитор птиц</h1>
-      <p class="sub">Для АО «Усть-Каменогорская птицефабрика». Мир — только высокопатогенный грипп птиц и болезнь Ньюкасла. Казахстан — падеж и массовый падеж птицы, грипп птиц, болезнь Ньюкасла. Каждая запись со ссылкой на источник.</p>
+      <p class="sub">Для АО «Усть-Каменогорская птицефабрика» (УКПФ) и ТОО «Макинская птицефабрика» (МПФ). Мир — только высокопатогенный грипп птиц и болезнь Ньюкасла. Казахстан — падеж и массовый падеж птицы, грипп птиц, болезнь Ньюкасла. Каждая запись со ссылкой на источник.</p>
     </div>
     <div class="stamp" id="stamp">Загружаю данные…</div>
   </header>
@@ -184,7 +188,7 @@ button{font:inherit;cursor:pointer}
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="feed" aria-selected="true">Лента<span class="n" id="n-feed"></span></button>
     <button class="tab" role="tab" data-tab="new" aria-selected="false">Новые вспышки РК<span class="n" id="n-new"></span></button>
-    <button class="tab" role="tab" data-tab="zone" aria-selected="false">50 км от УКПФ<span class="n" id="n-zone"></span></button>
+    <button class="tab" role="tab" data-tab="zone" aria-selected="false">50 км от фабрики<span class="n" id="n-zone"></span></button>
     <button class="tab" role="tab" data-tab="water" aria-selected="false">Водоёмы<span class="n" id="n-water"></span></button>
     <button class="tab" role="tab" data-tab="social" aria-selected="false">Соцсети и неофициальное<span class="n" id="n-social"></span></button>
     <button class="tab" role="tab" data-tab="official" aria-selected="false">Официальные источники</button>
@@ -242,17 +246,18 @@ button{font:inherit;cursor:pointer}
   <section class="panel" id="pane-new" hidden aria-labelledby="hNew">
     <div class="col-head kzhead">
       <div class="t"><h2 id="hNew">Новые вспышки и падеж по Казахстану</h2><button type="button" class="btn ghost sm" id="markSeen">Отметить всё прочитанным</button></div>
-      <p class="note">Все записи по Казахстану, сначала самые свежие: грипп птиц, болезнь Ньюкасла, падеж и массовый падеж, включая неофициальные сигналы. «Новое» — запись появилась после вашего прошлого просмотра. Справа расстояние до Усть-Каменогорской птицефабрики.</p>
+      <p class="note">Все записи по Казахстану, сначала самые свежие: грипп птиц, болезнь Ньюкасла, падеж и массовый падеж, включая неофициальные сигналы. «Новое» — запись появилась после вашего прошлого просмотра. У записей с координатами указано расстояние до УКПФ и МПФ.</p>
       <div class="chips" id="chips-new"></div>
     </div>
     <ul class="feed" id="feed-new"></ul>
   </section>
 
   <section id="pane-zone" hidden class="stack">
-    <div class="tiles" id="zoneTiles"></div>
+    <div class="farmsw" role="group" aria-label="Птицефабрика"><button type="button" class="fsw" data-farm="ukpf">УКПФ · Усть-Каменогорск</button><button type="button" class="fsw" data-farm="mpf">МПФ · Макинск</button></div>
+        <div class="tiles" id="zoneTiles"></div>
     <div class="mapgrid">
       <div class="panel mapbox">
-        <div class="maphead"><h2>Зона 50 км вокруг АО «Усть-Каменогорская птицефабрика»</h2>
+        <div class="maphead"><h2>Зона 50 км вокруг <span class="farmName"></span></h2>
           <label class="note">Масштаб <select id="zoneR"><option value="10">10 км</option><option value="25">25 км</option><option value="50" selected>50 км</option></select></label></div>
         <svg class="map" id="zoneMap" role="img" aria-label="Карта зоны 50 км вокруг птицефабрики"></svg>
         <div class="legend"><span><i class="lg farm"></i>птицефабрика</span><span><i class="lg ev"></i>событие из базы</span><span><i class="lg st"></i>населённый пункт</span><span><i class="lg wt"></i>водоёмы и реки</span><span><i class="lg ring"></i>10 / 25 / 50 км</span></div>
@@ -272,10 +277,11 @@ button{font:inherit;cursor:pointer}
   </section>
 
   <section id="pane-water" hidden class="stack">
-    <div class="tiles" id="waterTiles"></div>
+    <div class="farmsw" role="group" aria-label="Птицефабрика"><button type="button" class="fsw" data-farm="ukpf">УКПФ · Усть-Каменогорск</button><button type="button" class="fsw" data-farm="mpf">МПФ · Макинск</button></div>
+        <div class="tiles" id="waterTiles"></div>
     <div class="mapgrid">
       <div class="panel mapbox">
-        <div class="maphead"><h2>Водоёмы вокруг адреса: пос. Касыма Кайсенова, 033-й учётный квартал, 1</h2>
+        <div class="maphead"><h2>Водоёмы вокруг адреса: <span class="farmAddr"></span></h2>
           <label class="note">Масштаб <select id="waterR"><option value="5">5 км</option><option value="10">10 км</option><option value="25" selected>25 км</option><option value="50">50 км</option></select></label></div>
         <svg class="map" id="waterMap" role="img" aria-label="Карта водоёмов вокруг птицефабрики"></svg>
         <div class="legend"><span><i class="lg farm"></i>птицефабрика</span><span><i class="lg wt"></i>водоём</span><span><i class="lg riv"></i>река, ручей, канал</span><span><i class="lg hl"></i>выбранный объект</span></div>
@@ -415,7 +421,7 @@ function itemHtml(it, scope){
           ${scope === 'new' && isNew(it) ? '<span class="new">новое</span>' : ''}
         </div>
         <p class="title">${esc(it.title)}</p>
-        <div class="place">${esc(it.place)}${kmTo(it) != null ? ` · <span class="km">${fmtKm(kmTo(it))} от УКПФ</span>` : ''}</div>
+        <div class="place">${esc(it.place)}${kmBoth(it)}</div>
         ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
         ${it.birds ? `<div class="birds">${Number(it.birds).toLocaleString('ru-RU')} гол.</div>` : ''}
         ${sourcesHtml(it)}
@@ -455,7 +461,7 @@ function renderOfficial(){
 }
 function render(){
   renderCol('world'); renderCol('kz'); renderSocial(); renderNew(); if (tab === 'zone') renderZone();
-  if (GEO) $('n-zone').textContent = eventsWithKm().filter(e => e.km <= GEO.radius && inPeriod(e.date)).length;
+  if (GEO) $('n-zone').textContent = eventsWithKm().filter(e => e.km <= GEO.radius && inPeriod(e.date)).length || '';
   const st = $('stamp');
   if (!loaded) return;
   if (!db){ st.textContent = 'Нет связи с базой записей'; return; }
@@ -524,13 +530,16 @@ $('form').addEventListener('submit', async e => {
 
 
 /* ===== география: птицефабрика, зона 50 км, водоёмы ===== */
+const FARMS = {ukpf: 'geo_ukpf.json', mpf: 'geo_mpf.json'};
+const GEOS = {};
+let farmKey = FARMS[LS.get('epi:farm', 'ukpf')] ? LS.get('epi:farm', 'ukpf') : 'ukpf';
 let GEO = null, geoErr = false, selWater = null;
 const WCAT = {river:'Река', stream:'Ручей', lake:'Озеро', pond:'Пруд', reservoir:'Водохранилище', basin:'Технический бассейн', water:'Водоём', wastewater:'Очистные / отстойник', canal:'Канал, арык', spring:'Родник'};
 const WORDER = ['reservoir','lake','pond','water','river','stream','canal','basin','wastewater','spring'];
 const selW = new Set(LS.get('epi:wcat', ['reservoir','lake','pond','water','river']));
 const fmtKm = d => d < 1 ? 'на территории' : (d < 10 ? d.toFixed(1) : Math.round(d)) + ' км';
 
-function toKm(lat, lon){ return [(lon - GEO.center.lon) * GEO.kx, (lat - GEO.center.lat) * GEO.ky]; }
+function toKm(lat, lon, G = GEO){ return [(lon - G.center.lon) * G.kx, (lat - G.center.lat) * G.ky]; }
 function segDist(px, py, ax, ay, bx, by){
   const dx = bx - ax, dy = by - ay, l = dx*dx + dy*dy;
   let t = l ? ((px-ax)*dx + (py-ay)*dy) / l : 0; t = Math.max(0, Math.min(1, t));
@@ -545,19 +554,23 @@ function inRing(px, py, r){
   return c;
 }
 /* расстояние от точки до границы участка фабрики, км (0 — внутри) */
-function distFarm(x, y){
-  const ring = GEO.farm[0];
+function distFarm(x, y, G = GEO){
+  const ring = G.farm[0];
   if (inRing(x, y, ring)) return 0;
   let m = Infinity;
   for (let i = 1; i < ring.length; i++) m = Math.min(m, segDist(x, y, ...ring[i-1], ...ring[i]));
   return m;
 }
 const kmCache = new Map();
-function kmTo(it){
-  if (!GEO || !isFinite(it.lat) || !isFinite(it.lon)) return null;
-  const k = it.lat + ',' + it.lon;
-  if (!kmCache.has(k)){ const [x, y] = toKm(it.lat, it.lon); kmCache.set(k, distFarm(x, y)); }
+function kmTo(it, G = GEO){
+  if (!G || !isFinite(it.lat) || !isFinite(it.lon)) return null;
+  const k = G.short + ':' + it.lat + ',' + it.lon;
+  if (!kmCache.has(k)){ const [x, y] = toKm(it.lat, it.lon, G); kmCache.set(k, distFarm(x, y, G)); }
   return kmCache.get(k);
+}
+function kmBoth(it){
+  const parts = Object.values(GEOS).map(G => { const d = kmTo(it, G); return d == null ? '' : `${fmtKm(d)} от ${G.short}`; }).filter(Boolean);
+  return parts.length ? ` · <span class="km">${parts.join(' · ')}</span>` : '';
 }
 function compass(x, y){
   const b = (Math.atan2(x, y) * 180 / Math.PI + 360) % 360;
@@ -594,7 +607,7 @@ function drawMap(svg, R, opts){
     }
   }
   h += `<path class="farm" d="${geomPath('A', GEO.farm)}"/>`;
-  h += `<text x="${R/40}" y="${R/9}" font-size="${fs}" font-weight="600">УКПФ</text>`;
+  h += `<text x="${R/40}" y="${R/9}" font-size="${fs}" font-weight="600">${esc(GEO.short)}</text>`;
   if (opts.hl){
     for (const fi of opts.hl.fis){
       const [, kind, g] = GEO.features[fi];
@@ -612,16 +625,33 @@ function drawMap(svg, R, opts){
   svg.innerHTML = h;
 }
 
-function loadGeo(){
-  if (GEO || geoErr) return;
-  geoErr = null;
-  (window.__GEO__ ? Promise.resolve(window.__GEO__) : fetch('geo_ukpf.json').then(r => { if (!r.ok) throw 0; return r.json(); })).then(d => {
-    GEO = d; kmCache.clear();
-    $('n-water').textContent = d.water.length;
-    $('geoNote').textContent = `Данные: ${d.source}. Центр — участок «Өскемен құс фабрикасы» АҚ (${d.center.lat}, ${d.center.lon}), по адресу пос. Касыма Кайсенова, 033-й учётный квартал, 1, Уланский район, ВКО. Расстояния считаются от границы участка, направление — от фабрики на объект. Безымянные объекты — это пруды, отстойники и водоёмы, нанесённые на карту без названия; уточняйте на месте. Ссылка «карта» открывает точку на OpenStreetMap.`;
-    render(); renderGeo();
-  }).catch(() => { geoErr = true; renderGeo(); });
+function geoSource(key){
+  if (window.__GEOS__ && window.__GEOS__[key]) return Promise.resolve(window.__GEOS__[key]);
+  return fetch(FARMS[key]).then(r => { if (!r.ok) throw 0; return r.json(); });
 }
+function loadGeo(){
+  if (geoErr === null) return;
+  geoErr = null;
+  Promise.all(Object.keys(FARMS).map(k => geoSource(k).then(d => { GEOS[k] = d; }).catch(() => {}))).then(() => {
+    if (!GEOS[farmKey]) farmKey = Object.keys(GEOS)[0];
+    geoErr = !farmKey || !GEOS[farmKey];
+    kmCache.clear();
+    if (!geoErr) setFarm(farmKey, true);
+    render(); renderGeo();
+  });
+}
+function setFarm(key, quiet){
+  if (!GEOS[key]) return;
+  farmKey = key; GEO = GEOS[key]; selWater = null; LS.set('epi:farm', key);
+  for (const b of document.querySelectorAll('.fsw')) b.setAttribute('aria-pressed', String(b.dataset.farm === key));
+  for (const el of document.querySelectorAll('.farmName')) el.textContent = GEO.name;
+  for (const el of document.querySelectorAll('.farmAddr')) el.textContent = GEO.address;
+  $('n-water').textContent = GEO.water.length;
+  $('setTable').dataset.done = '';
+  $('geoNote').textContent = `Данные: ${GEO.source}. Центр — площадка ${GEO.name} (${GEO.center.lat}, ${GEO.center.lon}), адрес: ${GEO.address}. Расстояния считаются от границы площадки, направление — от фабрики на объект. Безымянные объекты — пруды, отстойники и водоёмы, нанесённые на карту без названия; уточняйте на месте. Ссылка «карта» открывает точку на OpenStreetMap.`;
+  if (!quiet){ render(); renderGeo(); }
+}
+document.addEventListener('click', e => { const b = e.target.closest('.fsw'); if (b) setFarm(b.dataset.farm); });
 
 function eventsWithKm(){
   return items.filter(it => it.scope === 'kz' && kmTo(it) != null).map(it => ({...it, km: kmTo(it)}));
@@ -663,8 +693,8 @@ function renderWater(){
   $('waterTiles').innerHTML = `
     <div class="tile"><b>${near(['reservoir','lake','pond','water','basin','wastewater'], 1)}</b><span>водоёмов на территории и в 1 км</span></div>
     <div class="tile"><b>${near(['reservoir','lake','pond','water'], 5)}</b><span>озёр, прудов, водохранилищ в 5 км</span></div>
-    <div class="tile"><b>${(GEO.water.find(w => w.name === 'Иртыш') || {d: '—'}).d} км</b><span>до Иртыша</span></div>
-    <div class="tile"><b>${(GEO.water.find(w => /Усть-Каменогорское/.test(w.name || '')) || {d: '—'}).d} км</b><span>до Усть-Каменогорского водохранилища</span></div>`;
+    ${keyTile(GEO.water.find(w => w.cat === 'river' && w.name), 'до реки')}
+    ${keyTile(GEO.water.find(w => ['lake','reservoir','water'].includes(w.cat) && w.name && w.ha >= 100), 'до крупного водоёма (от 100 га)')}`;
   $('chips-water').innerHTML = WORDER.map(c => `<button type="button" class="chip" data-scope="wcat" data-topic="${c}" aria-pressed="${selW.has(c)}">${WCAT[c]}<span class="n">${cnt(c)}</span></button>`).join('');
   const rows = inR.filter(w => (!selW.size || selW.has(w.cat)) && (!named || w.name) && (!q || ((w.name || '') + ' ' + (w.alt || '')).toLowerCase().includes(q)));
   $('waterCount').textContent = rows.length + ' из ' + inR.length + ' в ' + R + ' км';
@@ -674,6 +704,9 @@ function renderWater(){
       <td>${WCAT[w.cat]}</td><td class="n">${fmtKm(w.d)}</td><td>${w.dir}</td><td class="n">${w.ha != null ? w.ha.toLocaleString('ru-RU') : ''}</td></tr>`).join('') +
     (rows.length > 600 ? `<tr><td colspan="5" class="sub2">Показаны первые 600 — сузьте фильтр или радиус.</td></tr>` : '') + '</tbody>';
   drawMap($('waterMap'), R, {cats: selW.size ? new Set([...selW, 'river']) : null, hl: selWater, settlements: R >= 10});
+}
+function keyTile(w, label){
+  return `<div class="tile"><b>${w ? fmtKm(w.d) : '—'}</b><span>${label}${w ? ': ' + esc(w.name) + (w.ha ? `, ${Math.round(w.ha).toLocaleString('ru-RU')} га` : '') : ''}</span></div>`;
 }
 function renderGeo(){ if (tab === 'zone') renderZone(); if (tab === 'water') renderWater(); }
 
