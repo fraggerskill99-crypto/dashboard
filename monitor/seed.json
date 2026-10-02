@@ -1,0 +1,351 @@
+[
+ {
+  "id": "kz-2026-09-30-shakhovskoe-koktsidioz",
+  "scope": "kz",
+  "topic": "mass",
+  "date": "2026-09-30",
+  "status": "ruled_out",
+  "place": "СКО, Кызылжарский район, с. Шаховское",
+  "country": "Казахстан",
+  "birds": 15537,
+  "title": "Причина массового падежа в Шаховском — кокцидиоз, грипп птиц исключён",
+  "summary": "Ветеринары СКО назвали причиной гибели птицы (в основном гусей) в 28 подворьях кокцидиоз. Грипп птиц и пастереллёз лабораторно исключены, карантин не вводится. Кокцидиоз не входит в перечень болезней с компенсацией, возмещения владельцам не будет. В селе около 46 тыс. голов птицы в 200 подворьях.",
+  "sources": [
+   {
+    "name": "inform.kz",
+    "url": "https://www.inform.kz/ru/prichinu-massovoy-gibeli-domashney-ptitsi-ustanovili-vsko-dbef9236"
+   },
+   {
+    "name": "airpress.kz",
+    "url": "https://airpress.kz/social/sko-shahovskoe-kokczidioz-gibel-pticz/"
+   },
+   {
+    "name": "ulysmedia.kz",
+    "url": "https://ulysmedia.kz/news/81948-massovaia-gibel-ptits-v-sko-selchanam-otkazali-v-kompensatsii/"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "kz-2026-09-16-shakhovskoe-13k",
+  "scope": "kz",
+  "topic": "mass",
+  "date": "2026-09-16",
+  "status": "pending",
+  "place": "СКО, Кызылжарский район, с. Шаховское",
+  "country": "Казахстан",
+  "birds": 13869,
+  "title": "Более 13 тыс. гусей, уток и кур погибли в Шаховском, жители требуют карантина",
+  "summary": "Падеж идёт с конца августа, резкий рост с 8 сентября. У птицы слабость, сильный понос, кровоточащие раны; лечение не помогает. В публикациях упоминается, что лаборатория в Алматы выявила ГПГП, местные ветеринары с этим не согласились. Причина на дату публикации не установлена.",
+  "sources": [
+   {
+    "name": "kursiv.media",
+    "url": "https://kz.kursiv.media/2026-09-16/tsse-bolee-13-tys-domashnih-pticz-pogibli-v-sko-zhiteli-trebuyut-otveta/"
+   },
+   {
+    "name": "informburo.kz",
+    "url": "https://informburo.kz/novosti/na-tele-poiavliaiutsia-krovotocashhie-rany-domasniaia-ptica-massovo-gibnet-v-sele-sko"
+   },
+   {
+    "name": "inform.kz",
+    "url": "https://www.inform.kz/ru/okolo-14-tisyach-domashnih-ptits-pogiblo-v-sko-5512dea1"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "kz-2026-09-15-shakhovskoe-start",
+  "scope": "kz",
+  "topic": "hpai",
+  "date": "2026-09-15",
+  "status": "suspected",
+  "place": "СКО, Кызылжарский район, с. Шаховское",
+  "country": "Казахстан",
+  "birds": null,
+  "title": "Неизвестная болезнь массово убивает домашнюю птицу в СКО: подозрение на грипп птиц",
+  "summary": "Гибнут в основном гуси — десятками и сотнями в день. Начато расследование причин. Позже (30 сентября) грипп птиц лабораторно исключён, см. запись о кокцидиозе.",
+  "sources": [
+   {
+    "name": "zakon.kz",
+    "url": "https://www.zakon.kz/stati/6531570-neizvestnaya-bolezn-massovo-ubivaet-domashnyuyu-ptitsu-v-sko.html"
+   },
+   {
+    "name": "tv7.kz",
+    "url": "https://tv7.kz/ru/projects/news-ru/47268-v-sko-rassledujut-prichiny-massovogo-padezha-domashnej-pticy-v-sele-shahovskoe-15-09-2026/"
+   },
+   {
+    "name": "mtrk.kz",
+    "url": "https://mtrk.kz/ru/2026/09/15/massovyy-padyozh-pticy-snova-zafiksiro/"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "kz-2026-09-04-zhaman",
+  "scope": "kz",
+  "topic": "mass",
+  "date": "2026-09-04",
+  "status": "pending",
+  "place": "Костанайская область, озеро Жаман",
+  "country": "Казахстан",
+  "birds": null,
+  "title": "Массовая гибель диких водоплавающих птиц на озере Жаман",
+  "summary": "На берегу обнаружено много погибших водоплавающих птиц. Инспекция начала разбирательство по обращению областного общества охотников и рыболовов. Предварительная версия — загрязнение воды химикатами с соседних полей; выводы после анализа воды.",
+  "sources": [
+   {
+    "name": "inform.kz",
+    "url": "https://www.inform.kz/ru/massovaya-gibel-ptits-naozere-zhaman-skostanayskoy-oblasti-inspektsiya-nachala-r-69306dab"
+   },
+   {
+    "name": "cmn.kz",
+    "url": "https://cmn.kz/na-ozere-zhaman-v-kostanayskoy-oblasti-obnaruzhili-mnozhestvo-pogibshih-ptits-1cfc3a/"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "kz-2026-03-25-aktau-swans",
+  "scope": "kz",
+  "topic": "padezh",
+  "date": "2026-03-25",
+  "status": "ruled_out",
+  "place": "Мангистауская область, с. Сайына Шапагатова (у Актау), побережье Каспия",
+  "country": "Казахстан",
+  "birds": 11,
+  "title": "Сообщение о массовой гибели лебедей у Актау: ведомство насчитало 11 птиц",
+  "summary": "Погибших лебедей заметил местный житель. По данным ведомства, на береговой линии выявлено 11 погибших особей, утилизированы; признаков массовой гибели не установлено.",
+  "sources": [
+   {
+    "name": "baq.kz",
+    "url": "https://rus.baq.kz/na-poberezhe-kaspiya-vozle-aktau-obnaruzhili-massovuyu-gibel-lebedey-320019863/"
+   },
+   {
+    "name": "kznews.kz",
+    "url": "https://ru.kznews.kz/article/massovuiu-gibel-lebedei-obnaruzili-u-poberezia-aktau"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "kz-2026-02-10-aktau-swans",
+  "scope": "kz",
+  "topic": "padezh",
+  "date": "2026-02-10",
+  "status": "pending",
+  "place": "Мангистауская область, г. Актау (мкр 4а, 14, «Приморский»)",
+  "country": "Казахстан",
+  "birds": 11,
+  "title": "11 погибших лебедей на побережье Каспия в Актау, экологи проверяют воду",
+  "summary": "Инспекция лесного хозяйства и животного мира обнаружила 11 погибших лебедей; 11 февраля департамент экологии выехал на место и отобрал пробы воды.",
+  "sources": [
+   {
+    "name": "kursiv.media",
+    "url": "https://kz.kursiv.media/2026-02-10/zhki-ekologi-proveryayut-vodu-kaspiya-posle-gibeli-11-lebedey-v-aktau/"
+   },
+   {
+    "name": "inform.kz",
+    "url": "https://www.inform.kz/ru/v-aktau-proverili-vodu-posle-obnaruzheniya-pogibshih-lebedey-3a1f95"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-30-utah-mink",
+  "scope": "world",
+  "topic": "hpai",
+  "date": "2026-09-30",
+  "status": "confirmed",
+  "place": "США, штат Юта, норковая ферма",
+  "country": "США",
+  "birds": null,
+  "title": "H5N1 на норковой ферме в Юте: первая вспышка у норок в США",
+  "summary": "Семь норок дали положительный результат на грипп птиц; по документам штата ферма ожидает потерять до 80% животных.",
+  "sources": [
+   {
+    "name": "natureworldnews.com",
+    "url": "https://natureworldnews.com/articles/73401/20260930/utah-mink-farm-expects-lose-80-its-animals-bird-flu-state-records-show.htm"
+   },
+   {
+    "name": "hoodline.com",
+    "url": "https://hoodline.com/2026/09/utah-mink-farm-s-bird-flu-outbreak-stays-shrouded-as-records-fight-drags-on"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-27-minnesota",
+  "scope": "world",
+  "topic": "hpai",
+  "date": "2026-09-27",
+  "status": "confirmed",
+  "place": "США, штат Миннесота",
+  "country": "США",
+  "birds": 260000,
+  "title": "Грипп птиц вернулся в индюшатники Миннесоты с осенней миграцией",
+  "summary": "С 1 сентября подтверждено 7 коммерческих и 3 приусадебных стада, более 260 тыс. птиц. На Миннесоту приходится больше половины поражённых стад и птицы в США за последние 30 дней.",
+  "sources": [
+   {
+    "name": "mprnews.org",
+    "url": "https://mprnews.org/story/2026/09/27/bird-flu-back-early-in-minnesota"
+   },
+   {
+    "name": "agweek.com",
+    "url": "https://agweek.com/livestock/poultry/minnesota-leads-nation-in-avian-flu-cases-as-virus-returns-to-turkey-flocks"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-22-iowa-boone",
+  "scope": "world",
+  "topic": "hpai",
+  "date": "2026-09-22",
+  "status": "confirmed",
+  "place": "США, штат Айова, округ Бун",
+  "country": "США",
+  "birds": null,
+  "title": "ГПГП в приусадебном стаде в округе Бун, Айова",
+  "summary": "Департамент сельского хозяйства Айовы подтвердил случай; это седьмое выявление гриппа птиц в штате за 2026 год.",
+  "sources": [
+   {
+    "name": "iowacapitaldispatch.com",
+    "url": "https://iowacapitaldispatch.com/2026/09/22/highly-pathogenic-avian-influenza-detected-in-boone-county/"
+   },
+   {
+    "name": "kcrg.com",
+    "url": "https://www.kcrg.com/2026/09/22/highly-pathogenic-avian-influenza-detected-boone-county-backyard-flock/"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-26-victoria",
+  "scope": "world",
+  "topic": "hpai",
+  "date": "2026-09-26",
+  "status": "info",
+  "place": "Австралия, штат Виктория",
+  "country": "Австралия",
+  "birds": null,
+  "title": "Виктория: около 200 случаев H5 у диких птиц, птицеводство на закрытом содержании",
+  "summary": "После первого выявления в Портленде в июле зарегистрировано около 200 случаев H5 у дикой птицы. В промышленной птице вирус не выявлен. Хозяйства с 50 и более птицами на юге и побережье держат птицу в помещениях минимум до середины октября; ужесточение правил содержания несушек отложено на 12 месяцев.",
+  "sources": [
+   {
+    "name": "abc.net.au",
+    "url": "https://abc.net.au/news/2026-09-26/caged-egg-rule-change-delayed-victoria-bird-flu/107195078"
+   },
+   {
+    "name": "agriculture.vic.gov.au",
+    "url": "https://agriculture.vic.gov.au/biosecurity/animal-diseases/poultry-diseases/H5N1-avian-influenza-H5-bird-flu"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-efsa-jun-aug",
+  "scope": "world",
+  "topic": "hpai",
+  "date": "2026-09-15",
+  "status": "info",
+  "place": "Европа (ЕС/ЕЭЗ), обзор EFSA/ECDC за июнь–август",
+  "country": "Европа",
+  "birds": null,
+  "title": "EFSA: 110 выявлений H5N1 в Европе летом, из них 7 в домашней птице",
+  "summary": "С 5 июня по 28 августа 2026 г. — 110 выявлений ГПГП A(H5N1): 7 у домашней и 103 у дикой птицы в 12 странах, сезонный минимум. Вне Европы эпизоотия продолжается в Америке (в Мексике также H7N3). У людей за период 15 случаев без летальных исходов (Бангладеш, Камбоджа — H5N1; Китай — H9N2). Риск для населения ЕС низкий. Дата записи ориентировочная — сентябрь 2026.",
+  "sources": [
+   {
+    "name": "ECDC",
+    "url": "https://www.ecdc.europa.eu/en/publications-data/avian-influenza-overview-june-august-2026"
+   },
+   {
+    "name": "EFSA Journal",
+    "url": "https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2026.10369"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-22-hungary-kerekegyhaza",
+  "scope": "world",
+  "topic": "nd",
+  "date": "2026-09-22",
+  "status": "confirmed",
+  "place": "Венгрия, Бач-Кишкун, Керекедьхаза",
+  "country": "Венгрия",
+  "birds": 7500,
+  "title": "Четвёртая вспышка болезни Ньюкасла в Венгрии — стадо цесарок",
+  "summary": "22 сентября подтверждена вспышка в стаде 7 500 цесарок. Ранее, 12 сентября, в том же Керекедьхазе — 20 412 кур.",
+  "sources": [
+   {
+    "name": "wattagnet.com",
+    "url": "https://www.wattagnet.com/broilers-turkeys/diseases-health/news/15835905/newcastle-disease-hits-fourth-flock-in-hungary"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-08-hungary-fulophaza",
+  "scope": "world",
+  "topic": "nd",
+  "date": "2026-09-08",
+  "status": "confirmed",
+  "place": "Венгрия, Бач-Кишкун, Фюлёпхаза",
+  "country": "Венгрия",
+  "birds": 219000,
+  "title": "Венгрия: болезнь Ньюкасла в промышленной птице впервые с 1992 года",
+  "summary": "Служба безопасности пищевой цепи подтвердила вирус в двух бройлерных хозяйствах, около 219 тыс. бройлеров.",
+  "sources": [
+   {
+    "name": "poultrymed.com",
+    "url": "https://www.poultrymed.com/ID-Eng-Hung090926"
+   },
+   {
+    "name": "wattagnet.com",
+    "url": "https://www.wattagnet.com/broilers-turkeys/diseases-health/news/15834519/newcastle-disease-strikes-two-hungarian-broiler-flocks"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-17-poland",
+  "scope": "world",
+  "topic": "nd",
+  "date": "2026-09-17",
+  "status": "confirmed",
+  "place": "Польша, Любуское воеводство, Змяна Дольна (гмина Всхова)",
+  "country": "Польша",
+  "birds": 3843913,
+  "title": "Польша: новая вспышка на яичной ферме, всего 53 очага с начала эпизоотии",
+  "summary": "9 сентября болезнь Ньюкасла подтверждена на промышленной ферме кур-несушек. По состоянию на 17 сентября в стране 53 подтверждённых очага, затронуто 3 843 913 птиц.",
+  "sources": [
+   {
+    "name": "poultrymed.com",
+    "url": "https://www.poultrymed.com/ID-Eng-Poland180926"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "w-2026-09-12-spain",
+  "scope": "world",
+  "topic": "nd",
+  "date": "2026-09-12",
+  "status": "confirmed",
+  "place": "Испания, два региона",
+  "country": "Испания",
+  "birds": 2079666,
+  "title": "Испания: 40 вспышек болезни Ньюкасла с декабря 2025 года",
+  "summary": "Минсельхоз Испании сообщил о 40 очагах в двух регионах за декабрь 2025 — сентябрь 2026; уничтожено 2 079 666 восприимчивых птиц. До этого домашняя птица была свободна от болезни с июня 2022 года. Циркулирует вирулентный генотип VII.",
+  "sources": [
+   {
+    "name": "poultrymed.com",
+    "url": "https://www.poultrymed.com/ID-Eng-Spain120926"
+   },
+   {
+    "name": "avinews.com",
+    "url": "https://avinews.com/en/spain-confirms-return-of-newcastle-disease-after-three-years/"
+   }
+  ],
+  "addedBy": "claude"
+ }
+]

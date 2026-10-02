@@ -1,0 +1,293 @@
+<title>Эпизоотический монитор птиц</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Раскладка: сводная строка сверху, ниже две колонки-ленты — «Мир» и «Казахстан», на телефоне друг под другом */
+:root{
+  --bg:#eef2f1; --panel:#ffffff; --ink:#15211f; --muted:#5b6b68; --line:#d5dedb;
+  --accent:#0f6b5c; --accent-soft:#dcefea;
+  --crit:#b3261e; --crit-bg:#fbe5e3; --warn:#9a5b00; --warn-bg:#fdf0d9;
+  --ok:#3f6b48; --ok-bg:#e3efe5; --info-bg:#e9eeed;
+  --kz:#1d6fa5; --kz-soft:#e0eef8;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
+  --accent:#5cc3ad; --accent-soft:#183a34;
+  --crit:#ff8a80; --crit-bg:#3a1f1d; --warn:#f2b45a; --warn-bg:#3a2c14;
+  --ok:#8fc79a; --ok-bg:#1c3022; --info-bg:#1e2b29;
+  --kz:#6cb6ea; --kz-soft:#16304a; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
+  --accent:#5cc3ad; --accent-soft:#183a34;
+  --crit:#ff8a80; --crit-bg:#3a1f1d; --warn:#f2b45a; --warn-bg:#3a2c14;
+  --ok:#8fc79a; --ok-bg:#1c3022; --info-bg:#1e2b29;
+  --kz:#6cb6ea; --kz-soft:#16304a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding:20px 16px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(20px,3vw,28px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:17px;font-weight:500}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.sub{color:var(--muted);margin:4px 0 0;max-width:68ch}
+.stamp{font:12px var(--f-mono);color:var(--muted);text-align:right}
+.stamp b{color:var(--ink);font-weight:600}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.bar input,.bar select,.form input,.form select,.form textarea{
+  font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.bar input{flex:1 1 220px;min-width:0}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--panel);border-radius:8px;padding:7px 14px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0;overflow:hidden}
+.col-head{padding:14px 16px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.col-head .t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.col-head .scope{font:600 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.col.kz .col-head .scope{color:var(--kz)}
+.col.kz .col-head{background:linear-gradient(var(--kz-soft),transparent)}
+.col.world .col-head{background:linear-gradient(var(--accent-soft),transparent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 10px;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.chip .n{font:600 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.chip[aria-pressed="true"] .n{color:var(--panel)}
+.feed{list-style:none;margin:0;padding:0}
+.item{padding:14px 16px;border-top:1px solid var(--line);display:grid;grid-template-columns:76px 1fr;gap:4px 14px}
+.item:first-child{border-top:0}
+.date{font:12px/1.35 var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;padding-top:2px}
+.date b{display:block;font-size:15px;color:var(--ink);font-weight:600}
+.body{min-width:0;display:flex;flex-direction:column;gap:5px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tag{font:600 11px var(--f-mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:var(--info-bg);color:var(--muted)}
+.st{font-size:12px;padding:1px 8px;border-radius:999px;font-weight:500}
+.st.confirmed{background:var(--crit-bg);color:var(--crit)}
+.st.suspected,.st.pending{background:var(--warn-bg);color:var(--warn)}
+.st.ruled_out{background:var(--ok-bg);color:var(--ok)}
+.st.info{background:var(--info-bg);color:var(--muted)}
+.place{font-size:13px;color:var(--muted)}
+.title{font-weight:600;font-size:15px;line-height:1.35;margin:0;text-wrap:pretty}
+.sum{margin:0;color:var(--ink);font-size:14px;max-width:68ch}
+.birds{font:600 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.src{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px}
+.src a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+.col.kz .src a{color:var(--kz);border-bottom-color:var(--kz-soft)}
+.src a:hover{border-bottom-color:currentColor}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+.empty b{display:block;color:var(--ink);margin-bottom:4px}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.form .w2{grid-column:span 2}.form .w4{grid-column:1/-1}
+.form textarea{min-height:70px;resize:vertical}
+.form .act{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (max-width:640px){.form{grid-template-columns:1fr 1fr}.form .w2{grid-column:1/-1}}
+.note{font-size:13px;color:var(--muted)}
+.foot{font-size:12px;color:var(--muted);max-width:90ch}
+@media (prefers-reduced-motion:no-preference){.item{animation:in .25s ease both}@keyframes in{from{opacity:.4}to{opacity:1}}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Эпизоотический монитор птиц</h1>
+      <p class="sub">Мир — только высокопатогенный грипп птиц и болезнь Ньюкасла. Казахстан — падеж и массовый падеж птицы, грипп птиц, болезнь Ньюкасла. Каждая запись со ссылкой на источник.</p>
+    </div>
+    <div class="stamp" id="stamp">Загружаю данные…</div>
+  </header>
+
+  <div class="bar">
+    <input id="q" type="search" placeholder="Поиск: страна, область, село, вид птицы…" aria-label="Поиск">
+    <select id="period" aria-label="Период">
+      <option value="30">За 30 дней</option>
+      <option value="90" selected>За 90 дней</option>
+      <option value="365">За год</option>
+      <option value="0">Всё время</option>
+    </select>
+    <button class="btn ghost" id="addBtn" hidden>Добавить эпизод</button>
+  </div>
+
+  <form class="form" id="form" hidden>
+    <label>Колонка<select id="f_scope"><option value="kz">Казахстан</option><option value="world">Мир</option></select></label>
+    <label>Тема<select id="f_topic"></select></label>
+    <label>Дата<input id="f_date" type="date" required></label>
+    <label>Статус<select id="f_status">
+      <option value="pending">Выясняется</option><option value="suspected">Подозрение</option>
+      <option value="confirmed">Подтверждено</option><option value="ruled_out">Исключено</option><option value="info">Сводка</option>
+    </select></label>
+    <label class="w2">Место (страна, область, район, населённый пункт)<input id="f_place" required></label>
+    <label>Погибло / уничтожено, голов<input id="f_birds" type="number" min="0" inputmode="numeric"></label>
+    <label>Источник (ссылка)<input id="f_url" type="url" placeholder="https://…"></label>
+    <label class="w4">Заголовок<input id="f_title" required></label>
+    <label class="w4">Кратко<textarea id="f_sum"></textarea></label>
+    <div class="act"><button class="btn" type="submit">Сохранить</button><button class="btn ghost" type="button" id="cancelBtn">Отмена</button><span class="note" id="formNote"></span></div>
+  </form>
+
+  <div class="cols">
+    <section class="col world" aria-labelledby="hWorld">
+      <div class="col-head">
+        <div class="t"><h2 id="hWorld">Мир</h2><span class="scope">ГПГП · БН</span></div>
+        <div class="chips" id="chips-world"></div>
+      </div>
+      <ul class="feed" id="feed-world"></ul>
+    </section>
+    <section class="col kz" aria-labelledby="hKz">
+      <div class="col-head">
+        <div class="t"><h2 id="hKz">Казахстан</h2><span class="scope">РК</span></div>
+        <div class="chips" id="chips-kz"></div>
+      </div>
+      <ul class="feed" id="feed-kz"></ul>
+    </section>
+  </div>
+
+  <p class="foot">ГПГП — высокопатогенный грипп птиц, БН — болезнь Ньюкасла. Статус записи отражает то, что сказано в источнике на дату публикации; официальное подтверждение смотрите на сайтах МСХ РК и WOAH WAHIS. Записи с пометкой «вручную» добавлены пользователями страницы.</p>
+</div>
+
+<script>
+const TOPICS = {
+  world: [['hpai','Грипп птиц'],['nd','Ньюкасл']],
+  kz:    [['padezh','Падеж'],['mass','Массовый падеж'],['hpai','Грипп птиц'],['nd','Ньюкасл']]
+};
+const TOPIC_LABEL = {hpai:'Грипп птиц', nd:'Ньюкасл', padezh:'Падеж', mass:'Массовый падеж'};
+const STATUS = {confirmed:'Подтверждено', suspected:'Подозрение', pending:'Выясняется', ruled_out:'Исключено', info:'Сводка'};
+const MONTHS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+
+let items = [], meta = null, loaded = false, db = null;
+const sel = {world:new Set(), kz:new Set()};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+$('period').value = String(LS.get('epi:period', 90));
+for (const s of ['world','kz']) for (const t of LS.get('epi:sel:'+s, [])) sel[s].add(t);
+
+function fmtDate(d){
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(d || '');
+  if (!m) return '<b>—</b>';
+  return m[3] ? `<b>${+m[3]} ${MONTHS[+m[2]-1]}</b>${m[1]}` : `<b>${MONTHS[+m[2]-1]}</b>${m[1]}`;
+}
+function plainDate(d){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
+  return m ? `${+m[3]} ${MONTHS[+m[2]-1]} ${m[1]}` : String(d || '—');
+}
+function inPeriod(d){
+  const days = +$('period').value;
+  if (!days) return true;
+  const t = Date.parse((d || '').length === 7 ? d + '-28' : d);
+  return !isNaN(t) && Date.now() - t <= days * 864e5;
+}
+function matches(it){
+  const q = $('q').value.trim().toLowerCase();
+  if (!q) return true;
+  return [it.title, it.summary, it.place, it.country].join(' ').toLowerCase().includes(q);
+}
+
+function renderCol(scope){
+  const pool = items.filter(it => it.scope === scope && inPeriod(it.date) && matches(it));
+  const chips = $('chips-' + scope);
+  chips.innerHTML = TOPICS[scope].map(([k, label]) => {
+    const n = pool.filter(it => it.topic === k).length;
+    return `<button type="button" class="chip" data-scope="${scope}" data-topic="${k}" aria-pressed="${sel[scope].has(k)}">${label}<span class="n">${n}</span></button>`;
+  }).join('');
+  const shown = pool.filter(it => !sel[scope].size || sel[scope].has(it.topic))
+                    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const feed = $('feed-' + scope);
+  if (!loaded){ feed.innerHTML = '<li class="empty">Загружаю записи…</li>'; return; }
+  if (!db){ feed.innerHTML = '<li class="empty"><b>Записи недоступны</b>Откройте страницу по ссылке на claude.ai, войдя в свою учётную запись.</li>'; return; }
+  if (!shown.length){
+    feed.innerHTML = `<li class="empty"><b>Нет записей</b>${pool.length ? 'Снимите фильтр по теме' : 'Расширьте период или измените поиск'}.</li>`;
+    return;
+  }
+  feed.innerHTML = shown.map(it => `
+    <li class="item">
+      <div class="date">${fmtDate(it.date)}</div>
+      <div class="body">
+        <div class="meta">
+          <span class="tag">${esc(TOPIC_LABEL[it.topic] || it.topic)}</span>
+          ${it.status ? `<span class="st ${esc(it.status)}">${esc(STATUS[it.status] || it.status)}</span>` : ''}
+          ${it.addedBy === 'user' ? '<span class="tag">вручную</span>' : ''}
+        </div>
+        <p class="title">${esc(it.title)}</p>
+        <div class="place">${esc(it.place)}</div>
+        ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
+        ${it.birds ? `<div class="birds">${Number(it.birds).toLocaleString('ru-RU')} гол.</div>` : ''}
+        ${(it.sources || []).length ? `<div class="src">${it.sources.filter(s => /^https?:\/\//.test(s.url || '')).map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name || new URL(s.url).hostname)}</a>`).join('')}</div>` : ''}
+      </div>
+    </li>`).join('');
+}
+function render(){
+  renderCol('world'); renderCol('kz');
+  const st = $('stamp');
+  if (!loaded) return;
+  if (!db){ st.textContent = 'Нет связи с базой записей'; return; }
+  const w = items.filter(i => i.scope === 'world').length, k = items.filter(i => i.scope === 'kz').length;
+  const upd = meta && meta.updatedAt ? plainDate(meta.updatedAt) : '—';
+  st.innerHTML = `Обновлено: <b>${esc(upd)}</b><br>в базе: мир <b>${w}</b> · Казахстан <b>${k}</b>`;
+}
+
+document.addEventListener('click', e => {
+  const c = e.target.closest('.chip');
+  if (!c) return;
+  const s = c.dataset.scope, t = c.dataset.topic;
+  sel[s].has(t) ? sel[s].delete(t) : sel[s].add(t);
+  LS.set('epi:sel:' + s, [...sel[s]]);
+  render();
+});
+$('q').addEventListener('input', render);
+$('period').addEventListener('change', () => { LS.set('epi:period', +$('period').value); render(); });
+
+/* форма ручного добавления */
+function fillTopics(){
+  $('f_topic').innerHTML = TOPICS[$('f_scope').value].map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
+}
+$('f_scope').addEventListener('change', fillTopics);
+$('addBtn').addEventListener('click', () => {
+  fillTopics();
+  $('f_date').value = new Date().toISOString().slice(0, 10);
+  $('form').hidden = false; $('addBtn').hidden = true; $('f_place').focus();
+});
+$('cancelBtn').addEventListener('click', () => { $('form').hidden = true; $('addBtn').hidden = false; $('formNote').textContent = ''; });
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const url = $('f_url').value.trim();
+  const doc = {
+    scope: $('f_scope').value, topic: $('f_topic').value, date: $('f_date').value,
+    status: $('f_status').value, place: $('f_place').value.trim(), title: $('f_title').value.trim(),
+    summary: $('f_sum').value.trim(), birds: $('f_birds').value ? +$('f_birds').value : null,
+    sources: url ? [{name: (() => { try{ return new URL(url).hostname; }catch(_){ return 'источник'; } })(), url}] : [],
+    addedBy: 'user', createdAt: new Date().toISOString()
+  };
+  $('formNote').textContent = 'Сохраняю…';
+  try{
+    await db.collection('episodes').add(doc);
+    $('form').reset(); $('form').hidden = true; $('addBtn').hidden = false; $('formNote').textContent = '';
+  }catch(err){
+    $('formNote').textContent = 'Не сохранилось: у вас нет прав на запись в эту страницу или нет связи. Попросите владельца дать доступ.';
+  }
+});
+
+render();
+(async () => {
+  try{ db = await claude.use('db'); }catch(e){ db = null; }
+  if (!db){ loaded = true; render(); return; }
+  db.collection('episodes').onSnapshot(snap => {
+    items = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    loaded = true; render();
+  }, () => { loaded = true; render(); });
+  db.doc('meta/status').onSnapshot(d => { meta = d.exists ? d.data() : null; render(); }, () => {});
+  try{
+    const user = await claude.use('user');
+    const can = user ? await user.can('data.write') : null;
+    $('addBtn').hidden = can === false;
+  }catch(e){}
+})();
+</script>
