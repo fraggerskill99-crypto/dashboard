@@ -1,0 +1,91 @@
+name: Монитор птиц — сборка приложения
+
+on:
+  push:
+    paths:
+      - 'monitor/**'
+      - '.github/workflows/monitor-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monitor-app
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Веб-версия и одиночный файл
+        run: python3 monitor/build_app.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Android-оболочка (Capacitor)
+        run: |
+          mkdir -p shell && cd shell
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          cp -r ../monitor/dist_app/www ./www
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "kz.ukpf.ptitsamonitor",
+            "appName": "Монитор птиц",
+            "webDir": "www",
+            "android": { "allowMixedContent": false }
+          }
+          JSON
+          npx cap add android
+          npx cap sync android
+          # иконка приложения
+          RES=android/app/src/main/res
+          rm -rf $RES/mipmap-anydpi-v26
+          for dir in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp ../monitor/app/android/$dir.png $RES/mipmap-$dir/ic_launcher.png
+            cp ../monitor/app/android/$dir.png $RES/mipmap-$dir/ic_launcher_round.png
+          done
+
+      - name: Сборка APK
+        working-directory: shell/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon -q
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/monitor-ptits.apk"
+
+      - name: Веб-версия → ветка gh-pages
+        run: |
+          cd monitor/dist_app/www
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -qm "Веб-версия монитора птиц: ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+
+      - name: Выпуск «monitor-app» с файлами для установки
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp monitor/dist_app/ptitsa_monitor.html ptitsa_monitor.html
+          gh release delete monitor-app --cleanup-tag -y || true
+          gh release create monitor-app monitor-ptits.apk ptitsa_monitor.html \
+            --target "$GITHUB_SHA" --title "Эпизоотический монитор птиц" \
+            --notes "Android: скачайте monitor-ptits.apk на телефон и откройте (разрешите установку из этого источника). Компьютер без интернета: ptitsa_monitor.html — открыть двойным щелчком. Веб-версия для установки с телефона или ПК: https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/ (после включения GitHub Pages). Сборка ${GITHUB_SHA::7}."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monitor-app
+          path: |
+            monitor-ptits.apk
+            monitor/dist_app/ptitsa_monitor.html

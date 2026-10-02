@@ -28,3 +28,19 @@
 | `addedBy` | `claude` или `user` (добавлено через форму на странице) |
 
 `meta/status.updatedAt` — дата последнего обновления, выводится в шапке.
+
+## Установка как приложение
+
+`python3 monitor/build_app.py` собирает из той же страницы устанавливаемую версию (`monitor/dist_app/`).
+При каждом изменении в `monitor/` GitHub Actions (`.github/workflows/monitor-app.yml`) пересобирает всё и
+выкладывает выпуск **monitor-app**: https://github.com/fraggerskill99-crypto/dashboard/releases/tag/monitor-app
+
+| Файл в выпуске | Куда ставить |
+|----------------|--------------|
+| `monitor-ptits.apk` | Android: скачать на телефон, открыть, разрешить установку из этого источника. |
+| `ptitsa_monitor.html` | Любой компьютер: открыть двойным щелчком, работает без интернета. |
+| Веб-версия (ветка `gh-pages`) | Телефон или ПК через браузер → «Установить приложение» / «На экран Домой». Один раз включить: Settings → Pages → Deploy from a branch → `gh-pages`. Адрес: https://fraggerskill99-crypto.github.io/dashboard/ |
+
+Приложение показывает вшитые записи и при наличии интернета подтягивает свежий `monitor/seed.json`
+из репозитория. Эпизоды, добавленные в приложении, хранятся только на этом устройстве.
+`seed.json` — `{updatedAt, episodes: [...]}`: при добавлении новостей обновляйте `updatedAt`.

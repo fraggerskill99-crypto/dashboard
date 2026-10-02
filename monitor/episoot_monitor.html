@@ -629,7 +629,7 @@ function drawMap(svg, R, opts){
 function loadGeo(){
   if (GEO || geoErr) return;
   geoErr = null;
-  fetch('geo_ukpf.json').then(r => { if (!r.ok) throw 0; return r.json(); }).then(d => {
+  (window.__GEO__ ? Promise.resolve(window.__GEO__) : fetch('geo_ukpf.json').then(r => { if (!r.ok) throw 0; return r.json(); })).then(d => {
     GEO = d; kmCache.clear();
     $('n-water').textContent = d.water.length;
     $('geoNote').textContent = `Данные: ${d.source}. Центр — участок «Өскемен құс фабрикасы» АҚ (${d.center.lat}, ${d.center.lon}), по адресу пос. Касыма Кайсенова, 033-й учётный квартал, 1, Уланский район, ВКО. Расстояния считаются от границы участка, направление — от фабрики на объект. Безымянные объекты — это пруды, отстойники и водоёмы, нанесённые на карту без названия; уточняйте на месте. Ссылка «карта» открывает точку на OpenStreetMap.`;
@@ -748,6 +748,7 @@ renderOfficial();
 loadGeo();
 showTab(PANES.includes(location.hash.slice(1)) ? location.hash.slice(1) : LS.get('epi:tab', 'feed'));
 render();
+/*{{DATA_INIT}}*/
 (async () => {
   try{ db = await claude.use('db'); }catch(e){ db = null; }
   if (!db){ loaded = true; render(); return; }
@@ -762,4 +763,5 @@ render();
     $('addBtn').hidden = can === false;
   }catch(e){}
 })();
+/*{{/DATA_INIT}}*/
 </script>
