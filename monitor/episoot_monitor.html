@@ -45,6 +45,7 @@ h2{font-size:17px;font-weight:500}
 .bar input,.bar select,.form input,.form select,.form textarea{
   font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
 .bar input{flex:1 1 220px;min-width:0}
+#bar{justify-content:flex-end}
 button{font:inherit;cursor:pointer}
 .btn{border:1px solid var(--accent);background:var(--accent);color:var(--panel);border-radius:8px;padding:7px 14px;font-weight:500}
 .btn.ghost{background:transparent;color:var(--accent)}
@@ -190,7 +191,6 @@ button{font:inherit;cursor:pointer}
   </nav>
 
   <div class="bar" id="bar">
-    <input id="q" type="search" placeholder="Поиск: страна, область, село, вид птицы…" aria-label="Поиск">
     <select id="period" aria-label="Период">
       <option value="30">За 30 дней</option>
       <option value="90" selected>За 90 дней</option>
@@ -300,10 +300,6 @@ button{font:inherit;cursor:pointer}
       <div class="chips" id="chips-social"></div>
     </div>
     <ul class="feed" id="feed-social"></ul>
-    <div class="col-head" style="border-top:1px solid var(--line);border-bottom:0">
-      <div class="t"><h2>Искать самому</h2><span class="scope">по слову из поиска</span></div>
-      <div class="find" id="selfsearch"></div>
-    </div>
   </section>
 
   <div class="dir" id="pane-official" hidden></div>
@@ -382,11 +378,7 @@ function inPeriod(d){
   const t = Date.parse((d || '').length === 7 ? d + '-28' : d);
   return !isNaN(t) && Date.now() - t <= days * 864e5;
 }
-function matches(it){
-  const q = $('q').value.trim().toLowerCase();
-  if (!q) return true;
-  return [it.title, it.summary, it.place, it.country, it.keyword].join(' ').toLowerCase().includes(q);
-}
+function matches(it){ return true; }
 const host = u => { try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return 'источник'; } };
 const isUnofficial = it => !!it.unofficial;
 
@@ -434,7 +426,7 @@ function itemHtml(it, scope){
 function emptyHtml(pool){
   if (!loaded) return '<li class="empty">Загружаю записи…</li>';
   if (!db) return '<li class="empty"><b>Записи недоступны</b>Откройте страницу по ссылке на claude.ai, войдя в свою учётную запись.</li>';
-  return `<li class="empty"><b>Нет записей</b>${pool.length ? 'Снимите фильтр' : 'Расширьте период или измените поиск'}.</li>`;
+  return `<li class="empty"><b>Нет записей</b>${pool.length ? 'Снимите фильтр' : 'Расширьте период'}.</li>`;
 }
 const byDate = (a, b) => (b.date || '').localeCompare(a.date || '');
 
@@ -455,11 +447,6 @@ function renderSocial(){
   }).join('');
   const shown = pool.filter(it => !sel.social.size || sel.social.has(it.platform)).sort(byDate);
   $('feed-social').innerHTML = shown.length ? shown.map(it => itemHtml(it, 'social')).join('') : emptyHtml(pool);
-  const word = $('q').value.trim();
-  $('selfsearch').innerHTML = word
-    ? findLinks(word, 'kz').replace('<div class="find">', '').replace(/<\/div>$/, '') +
-      TG_KZ.slice(3).map(([c, n]) => `<a href="https://t.me/s/${c}?q=${encodeURIComponent(word)}" target="_blank" rel="noopener">Telegram: ${esc(n)}</a>`).join('')
-    : '<span>Введите слово в поиске вверху (например «Шаховское» или «падеж гусей») — здесь появятся ссылки на поиск в TikTok, Instagram и Telegram-каналах.</span>';
 }
 function renderOfficial(){
   $('pane-official').innerHTML = Object.entries(OFFICIAL).map(([group, list]) => `
@@ -498,7 +485,6 @@ document.addEventListener('click', e => {
   LS.set('epi:sel:' + s, [...sel[s]]);
   render();
 });
-$('q').addEventListener('input', render);
 $('period').addEventListener('change', () => { LS.set('epi:period', +$('period').value); render(); });
 
 /* форма ручного добавления */
