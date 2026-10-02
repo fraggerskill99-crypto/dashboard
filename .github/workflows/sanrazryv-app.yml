@@ -102,6 +102,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           find . -type f | sort
+          cp sanrazryv/dist/sanrazryv.html sanrazryv.html
           gh release delete sanrazryv-app --cleanup-tag -y || true
           gh release create sanrazryv-app sanrazryv.apk sanrazryv-setup.exe sanrazryv-portable.exe sanrazryv.html \
             --target "$GITHUB_SHA" --title "Санитарный разрыв" \
