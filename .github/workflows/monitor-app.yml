@@ -43,7 +43,7 @@ jobs:
             "appId": "kz.ukpf.ptitsamonitor",
             "appName": "Монитор птиц",
             "webDir": "www",
-            "android": { "allowMixedContent": false }
+            "android": { "allowMixedContent": false, "adjustMarginsForEdgeToEdge": "force" }
           }
           JSON
           npx cap add android

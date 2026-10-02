@@ -23,7 +23,7 @@
       }
     })
   };
-  $('addBtn').hidden = false;
+  $('addBtn').hidden = false; $('addBtn').dataset.allowed = '1';
   publish();
   if (window.__DATA_URL__ && navigator.onLine !== false){
     try{

@@ -173,13 +173,101 @@ button{font:inherit;cursor:pointer}
 .fsw{border:0;background:transparent;color:var(--ink);padding:8px 16px;font-weight:500}
 .fsw+.fsw{border-left:1px solid var(--line)}
 .fsw[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+/* ---- телефон ---- */
+h1 .short{display:none}
+.bnav,.fab,.segm{display:none}
+.srcbox summary{cursor:pointer;font-size:13px;color:var(--muted);list-style:none;display:inline-flex;align-items:center;gap:6px;padding:2px 0}
+.srcbox summary::-webkit-details-marker{display:none}
+.srcbox summary::before{content:"▸";font-size:11px;transition:transform .15s}
+.srcbox[open] summary::before{transform:rotate(90deg)}
+.srcbox[open] summary{margin-bottom:4px}
+.srcbox{display:flex;flex-direction:column;gap:4px}
+.mob{display:none}
+.bar input[type=checkbox]{flex:none}
+.fsw small{font-size:12px;opacity:.8;font-weight:400}
+@media (max-width:720px){
+  body{padding:0 12px calc(76px + env(safe-area-inset-bottom,0px));font-size:15px}
+  .wrap{gap:12px}
+  .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin:0 -12px;padding:10px 12px 8px;border-bottom:1px solid var(--line);flex-wrap:nowrap;align-items:center}
+  h1{font-size:19px}
+  h1 .full,.top .sub{display:none}
+  h1 .short{display:inline}
+  .stamp{font-size:11px;line-height:1.35;white-space:nowrap}
+  .nomob{display:none}
+  h1{white-space:nowrap}
+  #pane-feed .col-head .t{display:none}
+  .fsw{display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.25}
+  .tabs{display:none}
+  #addBtn{display:none}
+  .bar{justify-content:flex-start}
+  .bar select{padding:6px 8px}
+  .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
+  .bnav button{flex:1;border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;font-size:11px;position:relative;min-height:52px}
+  .bnav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .bnav button[aria-current="page"]{color:var(--accent);font-weight:600}
+  .bnav button[aria-current="page"] svg{stroke-width:2.3}
+  .bnav .dot{position:absolute;top:6px;left:calc(50% + 8px);width:9px;height:9px;border-radius:50%;background:var(--crit);border:2px solid var(--panel)}
+  .moremenu{position:fixed;right:8px;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:31;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);display:flex;flex-direction:column;min-width:240px;overflow:hidden}
+  .moremenu button{border:0;background:transparent;color:var(--ink);text-align:left;padding:14px 16px;font-size:15px}
+  .moremenu button+button{border-top:1px solid var(--line)}
+  .fab{display:flex;position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:29;width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:var(--panel);font-size:30px;line-height:1;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .fab[hidden]{display:none!important}
+  .segm{display:flex;background:var(--info-bg);border-radius:10px;padding:3px;gap:3px}
+  .segm button{flex:1;border:0;background:transparent;color:var(--muted);padding:9px 0;border-radius:8px;font-weight:500;font-size:15px}
+  .segm button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  #pane-feed[data-show="kz"] .col.world,#pane-feed[data-show="world"] .col.kz{display:none}
+  .col-head{padding:12px 12px 10px}
+  .col-head .t h2{font-size:16px}
+  .chips{flex-wrap:nowrap;overflow-x:auto;margin:0 -12px;padding:0 12px 2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;padding:6px 12px;font-size:14px}
+  .item{grid-template-columns:1fr;padding:12px;gap:4px}
+  .item .date{display:flex;gap:6px;align-items:baseline;padding:0}
+  .item .date b{display:inline;font-size:13px}
+  .title{font-size:16px}
+  .sum{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+  .sum.open{display:block}
+  .src .k{min-width:0;width:100%}
+  .src .row{gap:2px 12px}
+  .src a,.find a{padding:4px 0;display:inline-block}
+  .tiles{gap:8px}
+  .tile{padding:10px 12px}
+  .tile b{font-size:19px}
+  .tile span{font-size:12px}
+  .maphead{padding:10px 12px}
+  .maphead h2{font-size:14px}
+  .legend{padding:8px 12px;gap:4px 10px}
+  .farmsw{align-self:stretch;display:flex}
+  .fsw{flex:1;padding:10px 6px;font-size:14px}
+  #waterTable th:nth-child(2),#waterTable td:nth-child(2),#waterTable th:nth-child(4),#waterTable td:nth-child(4),#waterTable th:nth-child(5),#waterTable td:nth-child(5){display:none}
+  #setTable th:nth-child(4),#setTable td:nth-child(4){display:table-cell}
+  .mob{display:block}
+  .tablewrap,.tablewrap.tall{max-height:none}
+  .tbl td{padding:9px 10px}
+  .form{grid-template-columns:1fr;padding:14px}
+  .form .w2,.form .w4{grid-column:1}
+  .dir{gap:12px}
+  .foot{font-size:11px}
+}
 @media (prefers-reduced-motion:no-preference){.item{animation:in .25s ease both}@keyframes in{from{opacity:.4}to{opacity:1}}}
 </style>
 
+<nav class="bnav" aria-label="Разделы">
+  <button type="button" data-tab="feed"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span>Лента</span></button>
+  <button type="button" data-tab="new"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M5 12H2M22 12h-3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/><circle cx="12" cy="12" r="3"/></svg><span>Новые</span><i class="dot" id="bnNew" hidden></i></button>
+  <button type="button" data-tab="zone"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><span>50 км</span></button>
+  <button type="button" data-tab="water"><svg viewBox="0 0 24 24"><path d="M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z"/></svg><span>Водоёмы</span></button>
+  <button type="button" data-tab="more" id="bnMore"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Ещё</span></button>
+</nav>
+<div class="moremenu" id="moreMenu" hidden>
+  <button type="button" data-tab="social">Соцсети и неофициальное</button>
+  <button type="button" data-tab="official">Официальные источники</button>
+</div>
+<button type="button" class="fab" id="fab" hidden aria-label="Добавить эпизод">+</button>
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Эпизоотический монитор птиц</h1>
+      <h1><span class="full">Эпизоотический монитор птиц</span><span class="short">Монитор птиц</span></h1>
       <p class="sub">Для АО «Усть-Каменогорская птицефабрика» (УКПФ) и ТОО «Макинская птицефабрика» (МПФ). Мир — только высокопатогенный грипп птиц и болезнь Ньюкасла. Казахстан — падеж и массовый падеж птицы, грипп птиц, болезнь Ньюкасла. Каждая запись со ссылкой на источник.</p>
     </div>
     <div class="stamp" id="stamp">Загружаю данные…</div>
@@ -226,7 +314,8 @@ button{font:inherit;cursor:pointer}
     <div class="act"><button class="btn" type="submit">Сохранить</button><button class="btn ghost" type="button" id="cancelBtn">Отмена</button><span class="note" id="formNote"></span></div>
   </form>
 
-  <div class="cols" id="pane-feed">
+  <div class="segm" id="feedSeg" role="group" aria-label="Что показать"><button type="button" data-col="kz" aria-pressed="true">Казахстан</button><button type="button" data-col="world" aria-pressed="false">Мир</button></div>
+  <div class="cols" id="pane-feed" data-show="kz">
     <section class="col world" aria-labelledby="hWorld">
       <div class="col-head">
         <div class="t"><h2 id="hWorld">Мир</h2><span class="scope">ГПГП · БН</span></div>
@@ -253,7 +342,7 @@ button{font:inherit;cursor:pointer}
   </section>
 
   <section id="pane-zone" hidden class="stack">
-    <div class="farmsw" role="group" aria-label="Птицефабрика"><button type="button" class="fsw" data-farm="ukpf">УКПФ · Усть-Каменогорск</button><button type="button" class="fsw" data-farm="mpf">МПФ · Макинск</button></div>
+    <div class="farmsw" role="group" aria-label="Птицефабрика"><button type="button" class="fsw" data-farm="ukpf"><b>УКПФ</b> <small>Усть-Каменогорск</small></button><button type="button" class="fsw" data-farm="mpf"><b>МПФ</b> <small>Макинск</small></button></div>
         <div class="tiles" id="zoneTiles"></div>
     <div class="mapgrid">
       <div class="panel mapbox">
@@ -277,7 +366,7 @@ button{font:inherit;cursor:pointer}
   </section>
 
   <section id="pane-water" hidden class="stack">
-    <div class="farmsw" role="group" aria-label="Птицефабрика"><button type="button" class="fsw" data-farm="ukpf">УКПФ · Усть-Каменогорск</button><button type="button" class="fsw" data-farm="mpf">МПФ · Макинск</button></div>
+    <div class="farmsw" role="group" aria-label="Птицефабрика"><button type="button" class="fsw" data-farm="ukpf"><b>УКПФ</b> <small>Усть-Каменогорск</small></button><button type="button" class="fsw" data-farm="mpf"><b>МПФ</b> <small>Макинск</small></button></div>
         <div class="tiles" id="waterTiles"></div>
     <div class="mapgrid">
       <div class="panel mapbox">
@@ -398,6 +487,13 @@ function sourcesHtml(it){
       `<a href="${esc(s.url)}" target="_blank" rel="noopener">${s.platform ? esc(PLATFORM[s.platform] || s.platform) + ': ' : ''}${esc(s.name || host(s.url))}</a>`).join('')}</div>`
   ).join('') + '</div>';
 }
+function srcBlock(it){
+  const src = sourcesHtml(it), find = findLinks(it.keyword, it.scope);
+  if (!src && !find) return '';
+  const n = (it.sources || []).length;
+  return `<details class="srcbox"${MOBILE() ? '' : ' open'}><summary>Источники${n ? ` · ${n}` : ''}</summary>${src}${find}</details>`;
+}
+const MOBILE = () => window.matchMedia('(max-width: 720px)').matches;
 function findLinks(word, scope){
   if (!word) return '';
   const q = encodeURIComponent(word);
@@ -424,8 +520,7 @@ function itemHtml(it, scope){
         <div class="place">${esc(it.place)}${kmBoth(it)}</div>
         ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
         ${it.birds ? `<div class="birds">${Number(it.birds).toLocaleString('ru-RU')} гол.</div>` : ''}
-        ${sourcesHtml(it)}
-        ${findLinks(it.keyword, it.scope)}
+        ${srcBlock(it)}
       </div>
     </li>`;
 }
@@ -460,6 +555,7 @@ function renderOfficial(){
       `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a><span>${esc(d)}</span></li>`).join('')}</ul></section>`).join('');
 }
 function render(){
+  if (typeof syncNav === 'function') setTimeout(syncNav);
   renderCol('world'); renderCol('kz'); renderSocial(); renderNew(); if (tab === 'zone') renderZone();
   if (GEO) $('n-zone').textContent = eventsWithKm().filter(e => e.km <= GEO.radius && inPeriod(e.date)).length || '';
   const st = $('stamp');
@@ -468,7 +564,7 @@ function render(){
   const main = items.filter(i => !isUnofficial(i)), soc = items.length - main.length;
   $('n-feed').textContent = main.length; $('n-social').textContent = soc;
   const upd = meta && meta.updatedAt ? plainDate(meta.updatedAt) : '—';
-  st.innerHTML = `Обновлено: <b>${esc(upd)}</b><br>мир <b>${main.filter(i => i.scope === 'world').length}</b> · Казахстан <b>${main.filter(i => i.scope === 'kz').length}</b> · неофиц. <b>${soc}</b>`;
+  st.innerHTML = `Обновлено: <b>${esc(upd)}</b><br class="nomob"><span class="nomob">мир <b>${main.filter(i => i.scope === 'world').length}</b> · Казахстан <b>${main.filter(i => i.scope === 'kz').length}</b> · неофиц. <b>${soc}</b></span>`;
 }
 const PANES = ['feed','new','zone','water','social','official'];
 function showTab(t){
@@ -479,6 +575,8 @@ function showTab(t){
   $('bar').hidden = t === 'official' || t === 'water';
   $('mainFoot').hidden = t === 'water' || t === 'zone';
   LS.set('epi:tab', t);
+  $('feedSeg').hidden = t !== 'feed';
+  if (typeof syncNav === 'function') syncNav();
   if (t === 'zone' || t === 'water') renderGeo();
 }
 document.addEventListener('click', e => {
@@ -587,7 +685,7 @@ function geomPath(kind, g){
 function drawMap(svg, R, opts){
   const pad = R * 0.04, vb = [-R - pad, -R - pad, 2*R + 2*pad, 2*R + 2*pad];
   svg.setAttribute('viewBox', vb.join(' '));
-  const fs = R / 34, inView = (x, y) => Math.abs(x) <= R + pad && Math.abs(y) <= R + pad;
+  const fs = R / (MOBILE() ? 20 : 34), inView = (x, y) => Math.abs(x) <= R + pad && Math.abs(y) <= R + pad;
   let h = '';
   const ptR = R / 160;
   for (const [cat, kind, g] of GEO.features){
@@ -602,7 +700,7 @@ function drawMap(svg, R, opts){
     for (const st of GEO.settlements){
       if (!inView(st.x, st.y)) continue;
       h += `<circle class="st" cx="${st.x}" cy="${-st.y}" r="${R/220 + (st.pop > 5000 ? R/260 : 0)}"/>`;
-      const big = (st.pop || 0) >= (R > 30 ? 3000 : R > 12 ? 800 : 0);
+      const big = (st.pop || 0) >= (MOBILE() ? (R > 30 ? 15000 : R > 12 ? 3000 : 400) : (R > 30 ? 3000 : R > 12 ? 800 : 0));
       if (big) h += `<text x="${st.x + R/120}" y="${-st.y - R/120}" font-size="${st.pop > 100000 ? fs*1.15 : fs*0.85}">${esc(st.name)}</text>`;
     }
   }
@@ -700,7 +798,7 @@ function renderWater(){
   $('waterCount').textContent = rows.length + ' из ' + inR.length + ' в ' + R + ' км';
   $('waterTable').innerHTML = `<thead><tr><th>Объект</th><th>Тип</th><th>Расст.</th><th>Напр.</th><th>Площадь, га</th></tr></thead><tbody>` +
     rows.slice(0, 600).map(w => `<tr data-wi="${GEO.water.indexOf(w)}" class="${selWater === w ? 'sel' : ''}">
-      <td>${w.name ? esc(w.name) : '<span class="sub2">без названия</span>'} <a href="${osm(w.lat, w.lon)}" target="_blank" rel="noopener" class="sub2">карта</a>${w.alt ? `<div class="sub2">${esc(w.alt)}</div>` : ''}${w.inter ? '<div class="sub2">пересыхающий</div>' : ''}</td>
+      <td>${w.name ? esc(w.name) : '<span class="sub2">без названия</span>'} <a href="${osm(w.lat, w.lon)}" target="_blank" rel="noopener" class="sub2">карта</a>${w.alt ? `<div class="sub2">${esc(w.alt)}</div>` : ''}${w.inter ? '<div class="sub2">пересыхающий</div>' : ''}<div class="sub2 mob">${WCAT[w.cat]} · ${w.dir}${w.ha != null ? ' · ' + w.ha.toLocaleString('ru-RU') + ' га' : ''}</div></td>
       <td>${WCAT[w.cat]}</td><td class="n">${fmtKm(w.d)}</td><td>${w.dir}</td><td class="n">${w.ha != null ? w.ha.toLocaleString('ru-RU') : ''}</td></tr>`).join('') +
     (rows.length > 600 ? `<tr><td colspan="5" class="sub2">Показаны первые 600 — сузьте фильтр или радиус.</td></tr>` : '') + '</tbody>';
   drawMap($('waterMap'), R, {cats: selW.size ? new Set([...selW, 'river']) : null, hl: selWater, settlements: R >= 10});
@@ -763,6 +861,35 @@ $('waterR').addEventListener('change', () => { selWater = null; renderWater(); }
 $('wq').addEventListener('input', renderWater);
 $('wNamed').addEventListener('change', renderWater);
 
+/* ---- телефон: нижняя панель, «Ещё», кнопка «+», Мир/Казахстан ---- */
+function syncNav(){
+  for (const b of document.querySelectorAll('.bnav button')){
+    const on = b.dataset.tab === tab || (b.dataset.tab === 'more' && (tab === 'social' || tab === 'official'));
+    on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+  }
+  $('fab').hidden = !(['feed','new','social'].includes(tab)) || $('addBtn').dataset.allowed !== '1';
+  $('bnNew').hidden = !items.some(it => it.scope === 'kz' && isNew(it));
+}
+document.addEventListener('click', e => {
+  const nb = e.target.closest('.bnav button, .moremenu button');
+  if (nb){
+    if (nb.dataset.tab === 'more'){ $('moreMenu').hidden = !$('moreMenu').hidden; return; }
+    $('moreMenu').hidden = true;
+    showTab(nb.dataset.tab); window.scrollTo(0, 0); return;
+  }
+  if (!e.target.closest('#moreMenu')) $('moreMenu').hidden = true;
+  const sg = e.target.closest('#feedSeg button');
+  if (sg){
+    $('pane-feed').dataset.show = sg.dataset.col; LS.set('epi:col', sg.dataset.col);
+    for (const b of document.querySelectorAll('#feedSeg button')) b.setAttribute('aria-pressed', String(b === sg));
+    return;
+  }
+  const sm = e.target.closest('.sum');
+  if (sm && MOBILE()) sm.classList.toggle('open');
+});
+$('fab').addEventListener('click', () => { $('addBtn').click(); $('form').scrollIntoView({behavior: 'smooth', block: 'start'}); });
+(() => { const c = LS.get('epi:col', 'kz'); const b = document.querySelector(`#feedSeg button[data-col="${c}"]`); if (b) b.click(); })();
+
 renderOfficial();
 loadGeo();
 showTab(PANES.includes(location.hash.slice(1)) ? location.hash.slice(1) : LS.get('epi:tab', 'feed'));
@@ -779,7 +906,7 @@ render();
   try{
     const user = await claude.use('user');
     const can = user ? await user.can('data.write') : null;
-    $('addBtn').hidden = can === false;
+    $('addBtn').hidden = can === false; $('addBtn').dataset.allowed = can === false ? '' : '1'; syncNav();
   }catch(e){}
 })();
 /*{{/DATA_INIT}}*/
