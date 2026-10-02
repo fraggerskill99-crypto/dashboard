@@ -53,6 +53,13 @@ h2{font:500 16px var(--f-display)}
 .tile b{display:block;font:600 24px var(--f-display);font-variant-numeric:tabular-nums}
 .tile span{font-size:13px;color:var(--muted)}
 .tile.bird b{color:var(--bird)}
+.sechead{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.sechead h2{color:var(--bird)}
+.sechead .seg{margin-left:auto}
+.agegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;padding:12px}
+.agegrid .card .v{color:var(--bird);font-size:16px}
+.agegrp h3{font:600 13px var(--f-body);color:var(--muted);padding:12px 14px 0;margin:0}
+@media (max-width:720px){.agegrid{grid-template-columns:1fr 1fr;padding:8px;gap:6px}.sechead .seg{margin-left:0}}
 .warnbox{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:0}
 
 /* доска */
@@ -149,7 +156,8 @@ h2{font:500 16px var(--f-display)}
 </style>
 
 <nav class="bnav" aria-label="Разделы">
-  <button type="button" data-view="board"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg><span>Сегодня</span></button>
+  <button type="button" data-view="age"><svg viewBox="0 0 24 24"><path d="M7 14c0-4 2.5-8 6-8 2.5 0 4 1.6 4 3.5 0 1.3-.7 2.2-1.7 2.7L19 14h-4"/><path d="M7 14c0 3.3 2.7 6 6 6 1.5 0 2.8-.5 3.8-1.4"/><circle cx="13.5" cy="9" r=".8"/></svg><span>Возраст</span></button>
+  <button type="button" data-view="proc"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg><span>Процессы</span></button>
   <button type="button" data-view="houses"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>Корпуса</span></button>
   <button type="button" data-view="files"><svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9 14l3-3 3 3"/></svg><span>Графики</span></button>
 </nav>
@@ -166,14 +174,25 @@ h2{font:500 16px var(--f-display)}
   </header>
 
   <nav class="tabs">
-    <button type="button" class="tab" data-view="board">Доска на день</button>
+    <button type="button" class="tab" data-view="age">Возраст птицы</button>
+    <button type="button" class="tab" data-view="proc">Процессы</button>
     <button type="button" class="tab" data-view="houses">Корпуса</button>
     <button type="button" class="tab" data-view="files">Графики и настройки</button>
   </nav>
 
-  <section id="v-board">
-    <div class="tiles" id="tiles"></div>
-    <p class="warnbox" id="rangeWarn" hidden></p>
+  <section id="v-age" class="houses">
+    <div class="tiles" id="tilesAge"></div>
+    <p class="warnbox rangeWarn" hidden></p>
+    <div class="panel">
+      <div class="sechead"><h2>Возраст птицы</h2><span class="note">дней от заселения</span>
+        <span class="seg" id="ageSort"><button type="button" data-v="age">по возрасту</button><button type="button" data-v="ceh">по цехам</button></span></div>
+      <div id="ageList"></div>
+    </div>
+  </section>
+
+  <section id="v-proc" hidden>
+    <div class="tiles" id="tilesProc"></div>
+    <p class="warnbox rangeWarn" hidden></p>
     <div class="board" id="board" style="margin-top:12px"></div>
   </section>
 
@@ -274,7 +293,9 @@ const dn = n => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
 let MONTHS = LS.get('sr:months', {});
 const SETTINGS_V = 2;
 let settings = Object.assign({ageBase: 0, zsFrom: 'last', v: SETTINGS_V}, (LS.get('sr:settings', {}).v === SETTINGS_V ? LS.get('sr:settings', {}) : {}));
-let view = LS.get('sr:view', 'board');
+let view = LS.get('sr:view', 'age');
+if (!['age','proc','houses','files'].includes(view)) view = 'age';
+let ageSort = LS.get('sr:ageSort', 'age');
 let day = todayIso();
 let cehSel = LS.get('sr:ceh', '');
 
@@ -351,7 +372,7 @@ async function handleFiles(files){
   if (!LS.set('sr:months', MONTHS)) toast('Не хватило памяти устройства, чтобы сохранить графики');
   rebuild();
   $('uplNote').textContent = (done.length ? 'Загружено — ' + done.join('; ') + '. ' : '') + (bad.length ? 'Не удалось прочитать: ' + bad.join(', ') + ' (нет строки «Цех — Этаж» с датами).' : '');
-  if (done.length){ toast('Графики загружены'); if (view === 'files') setView('board'); }
+  if (done.length){ toast('Графики загружены'); if (view === 'files') setView('age'); }
 }
 const MONTHS_NAME = ym => `${MONTHS_NAME_MAP[+ym.slice(5,7) - 1]} ${ym.slice(0,4)}`;
 const MONTHS_NAME_MAP = MONN;
@@ -416,16 +437,16 @@ const hName = H => `${H.ceh} · ${H.fl}`;
 function render(){
   $('day').value = day;
   for (const b of document.querySelectorAll('.tab[data-view], .bnav [data-view]')) b.dataset.view === view ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
-  for (const v of ['board','houses','files']) $('v-' + v).hidden = v !== view;
-  if (view === 'board') renderBoard();
+  for (const v of ['age','proc','houses','files']) $('v-' + v).hidden = v !== view;
+  if (view === 'age') renderAge();
+  if (view === 'proc') renderProc();
   if (view === 'houses') renderHouses();
   if (view === 'files') renderFiles();
 }
 function noData(){
   return `<div class="panel empty"><b>Графики ещё не загружены</b>Откройте «Графики» и загрузите файлы Excel с графиком санитарного разрыва — приложение само посчитает возраст птицы и покажет, где какой процесс идёт.<div style="margin-top:14px"><button type="button" class="btn" data-view="files">Загрузить графики</button></div></div>`;
 }
-function renderBoard(){
-  if (!HOUSES.length){ $('tiles').innerHTML = ''; $('rangeWarn').hidden = true; $('board').innerHTML = noData(); return; }
+function dayData(){
   const birds = [], cols = Object.fromEntries(COLUMNS.map(([k]) => [k, []])), idle = [], other = {};
   for (const H of HOUSES){
     const s = stateOf(H, day);
@@ -434,21 +455,49 @@ function renderBoard(){
     if (!s.bird && !s.codes.length) idle.push([H, s]);
   }
   birds.sort((a, b) => (b[1].bird.age ?? -1) - (a[1].bird.age ?? -1));
-  const inProc = HOUSES.filter(H => (H.codes[day] || []).length).length;
-  const ages = birds.map(x => x[1].bird.age).filter(a => a != null);
-  $('tiles').innerHTML = `
-    <div class="tile bird"><b>${birds.length}</b><span>корпусов с птицей</span></div>
-    <div class="tile"><b>${inProc}</b><span>в работе по графику</span></div>
-    <div class="tile"><b>${idle.length}</b><span>пустых без работ</span></div>
-    <div class="tile"><b>${ages.length ? Math.max(...ages) : '—'}</b><span>макс. возраст птицы, дн.</span></div>`;
+  return {birds, cols, idle, other};
+}
+function rangeWarn(){
   const outside = !RANGE || day < RANGE.from || day > RANGE.to;
-  $('rangeWarn').hidden = !outside;
-  if (outside) $('rangeWarn').textContent = `На ${fmtD(day)} графика нет: загружены даты ${RANGE ? fmtD(RANGE.from) + ' — ' + fmtD(RANGE.to) : '—'}. Возраст птицы считается, процессы на этот день не известны.`;
-  const card = (H, s, val, sub) => `<button type="button" class="card" data-house="${esc(H.key)}"><span class="h">${esc(H.ceh)} <small>·</small> ${esc(H.fl)}${sub ? `<span class="sub">${sub}</span>` : ''}</span><span class="v">${val}</span></button>`;
-  let h = `<section class="col bird"><header><h3>Птица — возраст</h3><span class="n">${birds.length}</span></header><div class="codes">дней от заселения</div><div class="cards">` +
-    (birds.length ? birds.map(([H, s]) => card(H, s, s.bird.age != null ? `${s.bird.age} дн.` : '?',
-      s.bird.since ? `с ${fmtShort(s.bird.since)}${s.nextOs ? ` · ОС ${fmtShort(s.nextOs)}` : ''}` : 'дата заселения ранее графиков')).join('')
-      : '<div class="empty" style="padding:12px">нет</div>') + '</div></section>';
+  for (const el of document.querySelectorAll('.rangeWarn')){
+    el.hidden = !outside;
+    if (outside) el.textContent = `На ${fmtD(day)} графика нет: загружены даты ${RANGE ? fmtD(RANGE.from) + ' — ' + fmtD(RANGE.to) : '—'}. Возраст птицы считается, процессы на этот день не известны.`;
+  }
+}
+const card = (H, s, val, sub) => `<button type="button" class="card" data-house="${esc(H.key)}"><span class="h">${esc(H.ceh)} <small>·</small> ${esc(H.fl)}${sub ? `<span class="sub">${sub}</span>` : ''}</span><span class="v">${val}</span></button>`;
+const birdCard = ([H, s]) => card(H, s, s.bird.age != null ? `${s.bird.age} дн.` : '?',
+  s.bird.since ? `с ${fmtShort(s.bird.since)}${s.nextOs ? ` · ОС ${fmtShort(s.nextOs)}` : ''}` : 'дата заселения ранее графиков');
+function renderAge(){
+  if (!HOUSES.length){ $('tilesAge').innerHTML = ''; $('ageList').innerHTML = noData(); return; }
+  rangeWarn();
+  const {birds} = dayData();
+  const ages = birds.map(x => x[1].bird.age).filter(a => a != null);
+  const soon = birds.filter(([, s]) => s.nextOs).map(([, s]) => dayNum(s.nextOs) - dayNum(day)).filter(n => n >= 0 && n <= 7).length;
+  $('tilesAge').innerHTML = `
+    <div class="tile bird"><b>${birds.length}</b><span>корпусов с птицей</span></div>
+    <div class="tile"><b>${ages.length ? Math.max(...ages) : '—'}</b><span>самая старшая птица, дн.</span></div>
+    <div class="tile"><b>${ages.length ? Math.min(...ages) : '—'}</b><span>самая молодая птица, дн.</span></div>
+    <div class="tile"><b>${soon}</b><span>освобождение в ближайшие 7 дней</span></div>`;
+  for (const b of $('ageSort').children) b.setAttribute('aria-pressed', String(b.dataset.v === ageSort));
+  if (!birds.length){ $('ageList').innerHTML = '<div class="empty">На этот день корпусов с птицей нет.</div>'; return; }
+  if (ageSort === 'ceh'){
+    const cehs = [...new Set(HOUSES.map(H => H.ceh))];
+    $('ageList').innerHTML = cehs.map(c => { const list = birds.filter(([H]) => H.ceh === c).sort((a, b) => a[0].order - b[0].order);
+      return list.length ? `<div class="agegrp"><h3>${esc(c)} · ${list.length}</h3><div class="agegrid">${list.map(birdCard).join('')}</div></div>` : ''; }).join('');
+  } else $('ageList').innerHTML = `<div class="agegrid">${birds.map(birdCard).join('')}</div>`;
+}
+function renderProc(){
+  if (!HOUSES.length){ $('tilesProc').innerHTML = ''; $('board').innerHTML = noData(); return; }
+  rangeWarn();
+  const {cols, idle, other} = dayData();
+  const inProc = HOUSES.filter(H => (H.codes[day] || []).length).length;
+  const nProc = COLUMNS.filter(([k]) => cols[k].length).length + Object.keys(other).length;
+  $('tilesProc').innerHTML = `
+    <div class="tile"><b>${inProc}</b><span>корпусов в работе по графику</span></div>
+    <div class="tile"><b>${nProc}</b><span>видов работ сегодня</span></div>
+    <div class="tile"><b>${cols.zs.length}</b><span>заселяются</span></div>
+    <div class="tile"><b>${idle.length}</b><span>пустых без работ</span></div>`;
+  let h = '';
   for (const [k, title, codes] of COLUMNS){
     const list = cols[k]; if (!list.length) continue;
     h += `<section class="col"><header><h3>${title}</h3><span class="n">${list.length}</span></header><div class="codes">${codes.join(' · ')}</div><div class="cards">` +
@@ -459,7 +508,7 @@ function renderBoard(){
   if (idle.length)
     h += `<section class="col"><header><h3>Пустые, без работ</h3><span class="n">${idle.length}</span></header><div class="codes">санитарный разрыв</div><div class="cards">` +
       idle.map(([H, s]) => card(H, s, s.empty && s.empty.days ? dn(s.empty.days) : '', s.nextZs ? `ЗС ${fmtShort(s.nextZs)}` : '')).join('') + '</div></section>';
-  $('board').innerHTML = h;
+  $('board').innerHTML = h || '<div class="panel empty"><b>На этот день работ по графику нет</b></div>';
 }
 function statusChip(s){
   if (s.codes.length){
@@ -519,6 +568,7 @@ document.addEventListener('click', e => {
     delete MONTHS[d.dataset.del]; LS.set('sr:months', MONTHS); rebuild(); toast('График удалён'); return;
   }
   const a = e.target.closest('#ageBase button'); if (a){ settings.ageBase = +a.dataset.v; LS.set('sr:settings', settings); render(); return; }
+  const as = e.target.closest('#ageSort button'); if (as){ ageSort = as.dataset.v; LS.set('sr:ageSort', ageSort); renderAge(); return; }
   const z = e.target.closest('#zsFrom button'); if (z){ settings.zsFrom = z.dataset.v; LS.set('sr:settings', settings); render(); return; }
   if (e.target.id === 'closeSheet' || e.target.id === 'sheet') $('sheet').hidden = true;
 });
