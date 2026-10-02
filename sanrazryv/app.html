@@ -200,18 +200,18 @@ h2{font:500 16px var(--f-display)}
       <div class="upl" style="padding-bottom:4px"><h2>Настройки</h2></div>
       <div class="setrow">
         <span>День заселения считать</span>
-        <span class="seg" id="ageBase"><button type="button" data-v="1">1-м днём</button><button type="button" data-v="0">0-м днём</button></span>
+        <span class="seg" id="ageBase"><button type="button" data-v="0">0-м днём</button><button type="button" data-v="1">1-м днём</button></span>
       </div>
       <div class="setrow">
         <span>Многодневное заселение — возраст считать</span>
-        <span class="seg" id="zsFrom"><button type="button" data-v="first">с первого дня</button><button type="button" data-v="last">с последнего дня</button></span>
+        <span class="seg" id="zsFrom"><button type="button" data-v="last">с последнего дня</button><button type="button" data-v="first">с первого дня</button></span>
       </div>
     </div>
     <div class="panel">
       <div class="upl" style="padding-bottom:0"><h2>Коды работ</h2><p class="note">Берутся из условных обозначений в загруженных графиках.</p></div>
       <div class="legend" id="legend"></div>
     </div>
-    <p class="foot">Данные хранятся только на этом устройстве. Возраст птицы считается от дня заселения (код ЗС), санитарный разрыв — от дня освобождения (код ОС).</p>
+    <p class="foot">Данные хранятся только на этом устройстве. Возраст птицы считается от дня заселения (код ЗС): день заселения — 0, на следующий день птице 1 день; если ЗС стоит несколько дней подряд — от последнего из них. Санитарный разрыв — от дня освобождения (код ОС).</p>
   </section>
 </div>
 
@@ -272,7 +272,8 @@ const dn = n => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
 
 /* ===== хранилище: { 'ГГГГ-ММ': {title, file, loadedAt, houses: {key: {ceh, fl, order, codes: {date: [..]}}}, legend} } ===== */
 let MONTHS = LS.get('sr:months', {});
-let settings = Object.assign({ageBase: 1, zsFrom: 'first'}, LS.get('sr:settings', {}));
+const SETTINGS_V = 2;
+let settings = Object.assign({ageBase: 0, zsFrom: 'last', v: SETTINGS_V}, (LS.get('sr:settings', {}).v === SETTINGS_V ? LS.get('sr:settings', {}) : {}));
 let view = LS.get('sr:view', 'board');
 let day = todayIso();
 let cehSel = LS.get('sr:ceh', '');
@@ -394,7 +395,7 @@ function stateOf(H, D){
   const zsAfterOs = zsRun && (!lastOs || zsRun.first > lastOs);
   if (zsAfterOs){
     const start = settings.zsFrom === 'last' && zsRun.last <= D ? zsRun.last : zsRun.first;
-    bird = {since: zsRun.first, age: dayNum(D) - dayNum(start) + (+settings.ageBase)};
+    bird = {since: start, age: dayNum(D) - dayNum(start) + (+settings.ageBase)};
   } else if (lastOs){
     empty = {since: lastOs, days: dayNum(D) - dayNum(lastOs) + 1};
   } else {
