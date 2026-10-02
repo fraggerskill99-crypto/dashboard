@@ -4,25 +4,15 @@
 <style>
 /* Раскладка: шапка с датой, ниже доска — колонка «Птица» и колонки процессов; на телефоне колонки идут секциями, внизу панель разделов */
 :root{
-  --bg:#eef2f1; --panel:#ffffff; --ink:#15211f; --muted:#5b6b68; --line:#d5dedb;
-  --accent:#0f6b5c; --accent-soft:#dcefea; --info-bg:#e9eeed;
-  --bird:#1d6fa5; --bird-soft:#e0eef8;
-  --warn:#9a5b00; --warn-bg:#fdf0d9; --crit:#b3261e; --crit-bg:#fbe5e3; --ok:#3f6b48; --ok-bg:#e3efe5;
+  /* фирменный фон aitas ukpf — бежевый; одна светлая тема */
+  --bg:#e5dbc0; --panel:#f5f0e2; --ink:#221e1a; --muted:#6b6250; --line:#d3c7a6;
+  --accent:#0f6b5c; --accent-soft:#e0e6d4; --info-bg:#ece4cd;
+  --bird:#1d5f8f; --bird-soft:#e2e5dc;
+  --warn:#8a5300; --warn-bg:#f4e3c2; --crit:#a8281f; --crit-bg:#f3d9cf; --ok:#3f6b48; --ok-bg:#dfe7d2;
   --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
-  --accent:#5cc3ad; --accent-soft:#183a34; --info-bg:#1e2b29;
-  --bird:#6cb6ea; --bird-soft:#16304a;
-  --warn:#f2b45a; --warn-bg:#3a2c14; --crit:#ff8a80; --crit-bg:#3a1f1d; --ok:#8fc79a; --ok-bg:#1c3022; color-scheme:dark;
-}}
-:root[data-theme="dark"]{
-  --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
-  --accent:#5cc3ad; --accent-soft:#183a34; --info-bg:#1e2b29;
-  --bird:#6cb6ea; --bird-soft:#16304a;
-  --warn:#f2b45a; --warn-bg:#3a2c14; --crit:#ff8a80; --crit-bg:#3a1f1d; --ok:#8fc79a; --ok-bg:#1c3022; color-scheme:dark;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -34,6 +24,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 h1{font:700 clamp(19px,2.6vw,26px) var(--f-display);letter-spacing:-.01em}
 h2{font:500 16px var(--f-display)}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin:0 -16px;padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:16px;flex:1;min-width:0}
+.brand .logo{height:52px;width:auto;margin-left:auto;order:2}
 .datebar{display:flex;align-items:center;gap:6px}
 .datebar button{border:1px solid var(--line);background:var(--panel);border-radius:8px;width:38px;height:38px;font-size:18px}
 .datebar input{font:600 15px var(--f-mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 8px;height:38px}
@@ -146,6 +138,8 @@ h2{font:500 16px var(--f-display)}
   body{padding:0 12px calc(78px + env(safe-area-inset-bottom,0px))}
   .top{margin:0 -12px;padding:10px 12px 8px}
   h1{font-size:18px}
+  .brand .logo{height:40px}
+  .brand{width:100%}
   .tabs{display:none}
   .datebar{width:100%}
   .datebar input{flex:1;min-width:0}
@@ -176,7 +170,7 @@ h2{font:500 16px var(--f-display)}
 
 <div class="wrap">
   <header class="top">
-    <h1>Санитарный разрыв</h1>
+    <div class="brand"><h1>Санитарный разрыв</h1><img class="logo" src="{{LOGO}}" alt="aitas ukpf — Усть-Каменогорская птицефабрика"></div>
     <div class="datebar">
       <button type="button" id="prevDay" aria-label="Предыдущий день">‹</button>
       <input type="date" id="day" aria-label="Дата">
