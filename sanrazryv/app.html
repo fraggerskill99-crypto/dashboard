@@ -59,6 +59,18 @@ h2{font:500 16px var(--f-display)}
 .agegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;padding:12px}
 .agegrid .card .v{color:var(--bird);font-size:16px}
 .agegrp h3{font:600 13px var(--f-body);color:var(--muted);padding:12px 14px 0;margin:0}
+.agegrp h3 span{font-weight:400}
+.tablewrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font:600 11px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--line)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.c{font-weight:600}
+.tbl .age{font:600 15px var(--f-mono);color:var(--bird);white-space:nowrap}
+.tbl .k{display:block;font-size:12px;color:var(--muted)}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover td{background:var(--info-bg)}
+.tile small{display:block;font-size:13px;color:var(--ink);font-weight:600}
 @media (max-width:720px){.agegrid{grid-template-columns:1fr 1fr;padding:8px;gap:6px}.sechead .seg{margin-left:0}}
 .warnbox{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:0}
 
@@ -183,6 +195,10 @@ h2{font:500 16px var(--f-display)}
   <section id="v-age" class="houses">
     <div class="tiles" id="tilesAge"></div>
     <p class="warnbox rangeWarn" hidden></p>
+    <div class="panel">
+      <div class="sechead"><h2>По площадкам</h2><span class="note">самая молодая и самая старшая птица</span></div>
+      <div class="tablewrap"><table class="tbl" id="cehAge"></table></div>
+    </div>
     <div class="panel">
       <div class="sechead"><h2>Возраст птицы</h2><span class="note">дней от заселения</span>
         <span class="seg" id="ageSort"><button type="button" data-v="age">по возрасту</button><button type="button" data-v="ceh">по цехам</button></span></div>
@@ -472,18 +488,36 @@ function renderAge(){
   rangeWarn();
   const {birds} = dayData();
   const ages = birds.map(x => x[1].bird.age).filter(a => a != null);
+  const known = birds.filter(x => x[1].bird.age != null);
+  const oldest = known[0], youngest = known[known.length - 1];
+  // по площадкам: мин/макс возраст и корпуса
+  const cehs = [...new Set(HOUSES.map(H => H.ceh))];
+  const fmtK = list => list.map(([H]) => H.fl).sort((x, y) => x - y).map(esc).join(', ');
+  $('cehAge').innerHTML = '<thead><tr><th>Площадка</th><th>С птицей</th><th>Самая молодая</th><th>Самая старшая</th></tr></thead><tbody>' +
+    cehs.map(c => {
+      const all = HOUSES.filter(H => H.ceh === c).length;
+      const L = known.filter(([H]) => H.ceh === c);
+      const unk = birds.filter(([H, st]) => H.ceh === c && st.bird.age == null).length;
+      if (!L.length) return `<tr data-ceh-jump="${esc(c)}"><td class="c">${esc(c)}</td><td>${unk ? unk + ' из ' + all : '0 из ' + all}</td><td colspan="2" class="note">${unk ? 'дата заселения раньше графиков' : 'птицы нет'}</td></tr>`;
+      const mn = Math.min(...L.map(x => x[1].bird.age)), mx = Math.max(...L.map(x => x[1].bird.age));
+      const kMin = L.filter(x => x[1].bird.age === mn), kMax = L.filter(x => x[1].bird.age === mx);
+      return `<tr data-ceh-jump="${esc(c)}"><td class="c">${esc(c)}</td><td>${L.length + unk} из ${all}</td>
+        <td><span class="age">${mn} дн.</span><span class="k">корп. ${fmtK(kMin)}</span></td>
+        <td><span class="age">${mx} дн.</span><span class="k">корп. ${fmtK(kMax)}</span></td></tr>`;
+    }).join('') + '</tbody>';
   const soon = birds.filter(([, s]) => s.nextOs).map(([, s]) => dayNum(s.nextOs) - dayNum(day)).filter(n => n >= 0 && n <= 7).length;
   $('tilesAge').innerHTML = `
     <div class="tile bird"><b>${birds.length}</b><span>корпусов с птицей</span></div>
-    <div class="tile"><b>${ages.length ? Math.max(...ages) : '—'}</b><span>самая старшая птица, дн.</span></div>
-    <div class="tile"><b>${ages.length ? Math.min(...ages) : '—'}</b><span>самая молодая птица, дн.</span></div>
+    <div class="tile"><b>${oldest ? oldest[1].bird.age + ' дн.' : '—'}</b><span>самая старшая птица</span>${oldest ? `<small>${esc(oldest[0].ceh)} · корпус ${esc(oldest[0].fl)}</small>` : ''}</div>
+    <div class="tile"><b>${youngest ? youngest[1].bird.age + ' дн.' : '—'}</b><span>самая молодая птица</span>${youngest ? `<small>${esc(youngest[0].ceh)} · корпус ${esc(youngest[0].fl)}</small>` : ''}</div>
     <div class="tile"><b>${soon}</b><span>освобождение в ближайшие 7 дней</span></div>`;
   for (const b of $('ageSort').children) b.setAttribute('aria-pressed', String(b.dataset.v === ageSort));
   if (!birds.length){ $('ageList').innerHTML = '<div class="empty">На этот день корпусов с птицей нет.</div>'; return; }
   if (ageSort === 'ceh'){
     const cehs = [...new Set(HOUSES.map(H => H.ceh))];
     $('ageList').innerHTML = cehs.map(c => { const list = birds.filter(([H]) => H.ceh === c).sort((a, b) => a[0].order - b[0].order);
-      return list.length ? `<div class="agegrp"><h3>${esc(c)} · ${list.length}</h3><div class="agegrid">${list.map(birdCard).join('')}</div></div>` : ''; }).join('');
+      const ag = list.map(x => x[1].bird.age).filter(a => a != null);
+      return list.length ? `<div class="agegrp" id="grp-${esc(c)}"><h3>${esc(c)} · ${list.length} корп. <span>${ag.length ? `· от ${Math.min(...ag)} до ${Math.max(...ag)} дн.` : ''}</span></h3><div class="agegrid">${list.map(birdCard).join('')}</div></div>` : ''; }).join('');
   } else $('ageList').innerHTML = `<div class="agegrid">${birds.map(birdCard).join('')}</div>`;
 }
 function renderProc(){
@@ -568,6 +602,8 @@ document.addEventListener('click', e => {
     delete MONTHS[d.dataset.del]; LS.set('sr:months', MONTHS); rebuild(); toast('График удалён'); return;
   }
   const a = e.target.closest('#ageBase button'); if (a){ settings.ageBase = +a.dataset.v; LS.set('sr:settings', settings); render(); return; }
+  const cj = e.target.closest('[data-ceh-jump]');
+  if (cj){ ageSort = 'ceh'; LS.set('sr:ageSort', ageSort); renderAge(); const g = document.getElementById('grp-' + cj.dataset.cehJump); if (g) g.scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
   const as = e.target.closest('#ageSort button'); if (as){ ageSort = as.dataset.v; LS.set('sr:ageSort', ageSort); renderAge(); return; }
   const z = e.target.closest('#zsFrom button'); if (z){ settings.zsFrom = z.dataset.v; LS.set('sr:settings', settings); render(); return; }
   if (e.target.id === 'closeSheet' || e.target.id === 'sheet') $('sheet').hidden = true;
