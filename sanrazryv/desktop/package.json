@@ -1,0 +1,16 @@
+{
+  "name": "sanrazryv",
+  "productName": "Санитарный разрыв",
+  "version": "1.0.0",
+  "description": "Возраст птицы и процессы санитарного разрыва по цехам и корпусам из графиков Excel",
+  "author": "UKPF",
+  "main": "main.js",
+  "build": {
+    "appId": "kz.ukpf.sanrazryv",
+    "productName": "Санитарный разрыв",
+    "files": ["main.js", "www/**/*"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }], "icon": "www/icon-512.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "Санитарный разрыв", "artifactName": "sanrazryv-setup.exe" },
+    "portable": { "artifactName": "sanrazryv-portable.exe" }
+  }
+}

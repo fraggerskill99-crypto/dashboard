@@ -1,0 +1,108 @@
+name: Санитарный разрыв — сборка приложения
+
+on:
+  push:
+    paths:
+      - 'sanrazryv/**'
+      - '.github/workflows/sanrazryv-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sanrazryv-app
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Веб-версия и одиночный файл
+        run: python3 sanrazryv/build.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Android-оболочка (Capacitor)
+        run: |
+          mkdir -p shell && cd shell
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          cp -r ../sanrazryv/dist/www ./www
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "kz.ukpf.sanrazryv",
+            "appName": "Санразрыв",
+            "webDir": "www",
+            "android": { "allowMixedContent": false, "adjustMarginsForEdgeToEdge": "force" }
+          }
+          JSON
+          npx cap add android
+          npx cap sync android
+          RES=android/app/src/main/res
+          rm -rf $RES/mipmap-anydpi-v26
+          for dir in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp ../sanrazryv/icons/android/$dir.png $RES/mipmap-$dir/ic_launcher.png
+            cp ../sanrazryv/icons/android/$dir.png $RES/mipmap-$dir/ic_launcher_round.png
+          done
+      - name: Сборка APK
+        working-directory: shell/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon -q
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/sanrazryv.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-web
+          path: |
+            sanrazryv.apk
+            sanrazryv/dist/sanrazryv.html
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Веб-версия
+        run: python sanrazryv/build.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Сборка .exe (Electron)
+        shell: bash
+        working-directory: sanrazryv/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          cp -r ../dist/www ./www
+          npm install --no-audit --no-fund --save-dev electron@33 electron-builder@25
+          npx electron-builder --win --publish never
+          ls dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            sanrazryv/desktop/dist/sanrazryv-setup.exe
+            sanrazryv/desktop/dist/sanrazryv-portable.exe
+
+  release:
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Выпуск «sanrazryv-app»
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          find . -type f | sort
+          gh release delete sanrazryv-app --cleanup-tag -y || true
+          gh release create sanrazryv-app sanrazryv.apk sanrazryv-setup.exe sanrazryv-portable.exe sanrazryv.html \
+            --target "$GITHUB_SHA" --title "Санитарный разрыв" \
+            --notes "Телефон Android: sanrazryv.apk. Компьютер Windows: sanrazryv-setup.exe (установщик) или sanrazryv-portable.exe (без установки). Любой компьютер: sanrazryv.html — открыть двойным щелчком. Графики Excel загружаются в самом приложении и хранятся только на устройстве. Сборка ${GITHUB_SHA::7}."

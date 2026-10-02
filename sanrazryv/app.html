@@ -1,0 +1,538 @@
+<title>Санитарный разрыв</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Раскладка: шапка с датой, ниже доска — колонка «Птица» и колонки процессов; на телефоне колонки идут секциями, внизу панель разделов */
+:root{
+  --bg:#eef2f1; --panel:#ffffff; --ink:#15211f; --muted:#5b6b68; --line:#d5dedb;
+  --accent:#0f6b5c; --accent-soft:#dcefea; --info-bg:#e9eeed;
+  --bird:#1d6fa5; --bird-soft:#e0eef8;
+  --warn:#9a5b00; --warn-bg:#fdf0d9; --crit:#b3261e; --crit-bg:#fbe5e3; --ok:#3f6b48; --ok-bg:#e3efe5;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
+  --accent:#5cc3ad; --accent-soft:#183a34; --info-bg:#1e2b29;
+  --bird:#6cb6ea; --bird-soft:#16304a;
+  --warn:#f2b45a; --warn-bg:#3a2c14; --crit:#ff8a80; --crit-bg:#3a1f1d; --ok:#8fc79a; --ok-bg:#1c3022; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
+  --accent:#5cc3ad; --accent-soft:#183a34; --info-bg:#1e2b29;
+  --bird:#6cb6ea; --bird-soft:#16304a;
+  --warn:#f2b45a; --warn-bg:#3a2c14; --crit:#ff8a80; --crit-bg:#3a1f1d; --ok:#8fc79a; --ok-bg:#1c3022; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding:0 16px 40px}
+button{font:inherit;cursor:pointer;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font:700 clamp(19px,2.6vw,26px) var(--f-display);letter-spacing:-.01em}
+h2{font:500 16px var(--f-display)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin:0 -16px;padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between}
+.datebar{display:flex;align-items:center;gap:6px}
+.datebar button{border:1px solid var(--line);background:var(--panel);border-radius:8px;width:38px;height:38px;font-size:18px}
+.datebar input{font:600 15px var(--f-mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 8px;height:38px}
+.datebar .today{width:auto;padding:0 12px;font-size:14px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tab{border:0;background:transparent;color:var(--muted);padding:9px 14px;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500}
+.tab[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.note{font-size:13px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--panel);border-radius:8px;padding:8px 16px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{border-color:var(--crit);background:transparent;color:var(--crit)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0}
+.empty{padding:32px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.tile b{display:block;font:600 24px var(--f-display);font-variant-numeric:tabular-nums}
+.tile span{font-size:13px;color:var(--muted)}
+.tile.bird b{color:var(--bird)}
+.warnbox{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:0}
+
+/* доска */
+.board{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;align-items:flex-start}
+.col{flex:0 0 220px;background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0;display:flex;flex-direction:column}
+.col.bird{flex-basis:260px;border-color:var(--bird)}
+.col header{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.col header h3{font:600 14px var(--f-body)}
+.col header .n{font:600 13px var(--f-mono);color:var(--muted)}
+.col.bird header{background:var(--bird-soft);border-radius:11px 11px 0 0}
+.col.bird header h3{color:var(--bird)}
+.col .codes{font:11px var(--f-mono);color:var(--muted);padding:0 12px 6px;letter-spacing:.03em}
+.cards{display:flex;flex-direction:column;gap:6px;padding:8px}
+.card{border:1px solid var(--line);border-radius:8px;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--panel);text-align:left;width:100%}
+.card:hover{border-color:var(--accent)}
+.card{min-width:0}
+.card .h{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.card .h small{font-weight:400;color:var(--muted)}
+.card .v{font:600 13px var(--f-mono);color:var(--muted);text-align:right;white-space:nowrap}
+.col.bird .card .v{color:var(--bird);font-size:15px}
+.card .sub{display:block;font:400 11px var(--f-body);color:var(--muted);white-space:normal}
+
+/* корпуса */
+.houses{display:flex;flex-direction:column;gap:12px}
+.grp header{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline}
+.hrow{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--line);width:100%;border-left:0;border-right:0;border-bottom:0;background:transparent;text-align:left}
+.hrow:first-of-type{border-top:0}
+.hrow .fl{font:600 15px var(--f-mono)}
+.hrow .st{font-size:14px}
+.hrow .st small{display:block;color:var(--muted);font-size:12px}
+.chip{font-size:12px;padding:2px 9px;border-radius:999px;background:var(--info-bg);color:var(--muted);white-space:nowrap}
+.chip.bird{background:var(--bird-soft);color:var(--bird);font-weight:600}
+.chip.proc{background:var(--warn-bg);color:var(--warn)}
+.chip.zs{background:var(--ok-bg);color:var(--ok)}
+.chip.os{background:var(--crit-bg);color:var(--crit)}
+.filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filters button{flex:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 12px;font-size:14px}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+
+/* графики */
+.upl{display:flex;flex-direction:column;gap:12px;padding:16px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.mlist{list-style:none;margin:0;padding:0}
+.mlist li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line)}
+.mlist li:first-child{border-top:0}
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 16px;padding:12px 16px}
+.legend div{font-size:13px}
+.legend b{font-family:var(--f-mono);display:inline-block;min-width:44px}
+.setrow{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:6px 12px;font-size:14px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+
+/* карточка корпуса */
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}
+.sheet .box{background:var(--panel);width:min(560px,100%);max-height:85vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+@media (min-width:721px){.sheet{align-items:center}.sheet .box{border-radius:16px}}
+.sheet .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.sheet .x{border:0;background:var(--info-bg);border-radius:50%;width:36px;height:36px;font-size:18px;flex:none}
+.tl{list-style:none;margin:8px 0 0;padding:0}
+.tl li{display:grid;grid-template-columns:86px 1fr;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
+.tl li.today{background:var(--accent-soft);margin:0 -16px;padding:6px 16px}
+.tl .d{font:13px var(--f-mono);color:var(--muted)}
+.bnav{display:none}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:90vw}
+.foot{font-size:12px;color:var(--muted)}
+
+@media (max-width:720px){
+  body{padding:0 12px calc(78px + env(safe-area-inset-bottom,0px))}
+  .top{margin:0 -12px;padding:10px 12px 8px}
+  h1{font-size:18px}
+  .tabs{display:none}
+  .datebar{width:100%}
+  .datebar input{flex:1;min-width:0}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .tile b{font-size:20px}
+  .board{flex-direction:column;overflow:visible}
+  .board,.col,.cards{max-width:100%}
+  .col,.col.bird{flex-basis:auto;width:100%}
+  .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .col.bird .cards{grid-template-columns:1fr 1fr}
+  .card{flex-direction:column;align-items:flex-start;gap:0;padding:8px 10px}
+  .card .v{text-align:left}
+  .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
+  .bnav button{flex:1;border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;font-size:11px;min-height:52px}
+  .bnav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .bnav button[aria-current="page"]{color:var(--accent);font-weight:600}
+  .hrow{grid-template-columns:56px 1fr auto;padding:10px 12px}
+}
+@media (prefers-reduced-motion:no-preference){.card,.hrow{transition:border-color .15s}}
+</style>
+
+<nav class="bnav" aria-label="Разделы">
+  <button type="button" data-view="board"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg><span>Сегодня</span></button>
+  <button type="button" data-view="houses"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>Корпуса</span></button>
+  <button type="button" data-view="files"><svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9 14l3-3 3 3"/></svg><span>Графики</span></button>
+</nav>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Санитарный разрыв</h1>
+    <div class="datebar">
+      <button type="button" id="prevDay" aria-label="Предыдущий день">‹</button>
+      <input type="date" id="day" aria-label="Дата">
+      <button type="button" id="nextDay" aria-label="Следующий день">›</button>
+      <button type="button" class="today" id="toToday">Сегодня</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" class="tab" data-view="board">Доска на день</button>
+    <button type="button" class="tab" data-view="houses">Корпуса</button>
+    <button type="button" class="tab" data-view="files">Графики и настройки</button>
+  </nav>
+
+  <section id="v-board">
+    <div class="tiles" id="tiles"></div>
+    <p class="warnbox" id="rangeWarn" hidden></p>
+    <div class="board" id="board" style="margin-top:12px"></div>
+  </section>
+
+  <section id="v-houses" hidden>
+    <div class="filters" id="cehFilter"></div>
+    <div class="houses" id="houses" style="margin-top:12px"></div>
+  </section>
+
+  <section id="v-files" hidden class="houses">
+    <div class="panel">
+      <div class="upl">
+        <h2>Загрузить графики санитарного разрыва</h2>
+        <p class="note">Файлы Excel (.xlsx) в том виде, как их составляет цех: строки «Цех — Этаж», столбцы — дни месяца, в ячейках коды работ. Можно загрузить сразу несколько месяцев; повторная загрузка месяца заменяет его.</p>
+        <label class="drop" id="drop">
+          <span>Перетащите файлы сюда или</span>
+          <span class="btn">Выбрать файлы</span>
+          <input type="file" id="file" accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden>
+        </label>
+        <p class="note" id="uplNote"></p>
+      </div>
+      <ul class="mlist" id="months"></ul>
+    </div>
+    <div class="panel">
+      <div class="upl" style="padding-bottom:4px"><h2>Настройки</h2></div>
+      <div class="setrow">
+        <span>День заселения считать</span>
+        <span class="seg" id="ageBase"><button type="button" data-v="1">1-м днём</button><button type="button" data-v="0">0-м днём</button></span>
+      </div>
+      <div class="setrow">
+        <span>Многодневное заселение — возраст считать</span>
+        <span class="seg" id="zsFrom"><button type="button" data-v="first">с первого дня</button><button type="button" data-v="last">с последнего дня</button></span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="upl" style="padding-bottom:0"><h2>Коды работ</h2><p class="note">Берутся из условных обозначений в загруженных графиках.</p></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <p class="foot">Данные хранятся только на этом устройстве. Возраст птицы считается от дня заселения (код ЗС), санитарный разрыв — от дня освобождения (код ОС).</p>
+  </section>
+</div>
+
+<div class="sheet" id="sheet" hidden><div class="box" role="dialog" aria-modal="true" id="sheetBox"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<!--{{XLSX}}-->
+<script>
+/* ===== справочник кодов ===== */
+const LEGEND_BASE = {
+  'ОС':'освобождение','ОЧ':'очистка','ОЧН':'очистка ночь','П':'побелка день','ПН':'побелка ночь',
+  'ДЗ':'дезинфекция','ЗО':'засыпка','ДС':'дезинсекция','ГФ':'газация формалином','ГГ':'газация глутаркой',
+  'МД':'мойка день','Р':'ремонт','ПДГ':'подготовка','ЗС':'заселение','СО':'септик обработка',
+  'ОД':'обработка дорог','МС':'мойка сутки','МН':'мойка ночь','Ш':'шахта','ПР':'приёмка птичника','ЗН':'засыпка в ночь'
+};
+/* колонки доски: процессы в порядке цикла санразрыва */
+const COLUMNS = [
+  ['os','Освобождение, очистка',['ОС','ОЧ','ОЧН']],
+  ['r','Ремонт',['Р']],
+  ['ms','Мойка',['МС','МД','МН']],
+  ['pr','Приёмка птичника',['ПР']],
+  ['ds','Дезинсекция',['ДС']],
+  ['dz','Дезинфекция',['ДЗ']],
+  ['zo','Засыпка',['ЗО','ЗН']],
+  ['gf','Газация',['ГФ','ГГ']],
+  ['p','Побелка',['П','ПН']],
+  ['so','Септик',['СО']],
+  ['od','Обработка дорог',['ОД']],
+  ['sh','Шахта',['Ш']],
+  ['pdg','Подготовка',['ПДГ']],
+  ['zs','Заселение',['ЗС']]
+];
+const CODE_COL = {}; for (const [k,,codes] of COLUMNS) for (const c of codes) CODE_COL[c] = k;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+};
+function toast(t){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 3500); }
+
+/* ===== даты (только календарные дни, без часовых поясов) ===== */
+const pad = n => String(n).padStart(2, '0');
+const iso = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+const todayIso = () => { const t = new Date(); return iso(t.getFullYear(), t.getMonth() + 1, t.getDate()); };
+const dayNum = s => Math.round(Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10)) / 864e5);
+const fromNum = n => { const d = new Date(n * 864e5); return iso(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()); };
+const addDays = (s, k) => fromNum(dayNum(s) + k);
+const MON = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const MONN = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const fmtD = s => `${+s.slice(8,10)} ${MON[+s.slice(5,7) - 1]}`;
+const fmtShort = s => `${s.slice(8,10)}.${s.slice(5,7)}`;
+const WD = ['вс','пн','вт','ср','чт','пт','сб'];
+const wd = s => WD[new Date(dayNum(s) * 864e5).getUTCDay()];
+function plural(n, a, b, c){ n = Math.abs(n) % 100; const n1 = n % 10; return n > 10 && n < 20 ? c : n1 > 1 && n1 < 5 ? b : n1 === 1 ? a : c; }
+const dn = n => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
+
+/* ===== хранилище: { 'ГГГГ-ММ': {title, file, loadedAt, houses: {key: {ceh, fl, order, codes: {date: [..]}}}, legend} } ===== */
+let MONTHS = LS.get('sr:months', {});
+let settings = Object.assign({ageBase: 1, zsFrom: 'first'}, LS.get('sr:settings', {}));
+let view = LS.get('sr:view', 'board');
+let day = todayIso();
+let cehSel = LS.get('sr:ceh', '');
+
+/* ===== разбор Excel ===== */
+const codeSplit = v => String(v).toUpperCase().replace(/Ё/g, 'Е').split(/[\\/,;+]+/).map(s => s.trim()).filter(Boolean);
+function serialToIso(n){ const p = XLSX.SSF.parse_date_code(n); return p ? iso(p.y, p.m, p.d) : null; }
+function cellDate(c){
+  if (!c) return null;
+  if (c.t === 'n' && c.v > 20000 && c.v < 80000) return serialToIso(c.v);
+  if (c.t === 'd' && c.v instanceof Date) return iso(c.v.getFullYear(), c.v.getMonth() + 1, c.v.getDate());
+  return null;
+}
+function parseSheet(ws){
+  const ref = ws['!ref']; if (!ref) return null;
+  const R = XLSX.utils.decode_range(ref);
+  const at = (r, c) => ws[XLSX.utils.encode_cell({r, c})];
+  const txt = (r, c) => { const x = at(r, c); return x && x.v != null ? String(x.v).trim() : ''; };
+  // строка заголовка: «Цех» и «Этаж»
+  let hr = -1, cc = 0, fc = 1;
+  for (let r = R.s.r; r <= Math.min(R.e.r, 40) && hr < 0; r++)
+    for (let c = R.s.c; c <= Math.min(R.e.c, 6); c++)
+      if (/^цех/i.test(txt(r, c)) && /^этаж|^корпус/i.test(txt(r, c + 1))){ hr = r; cc = c; fc = c + 1; break; }
+  if (hr < 0) return null;
+  const dates = [];
+  for (let c = fc + 1; c <= R.e.c; c++){ const d = cellDate(at(hr, c)); if (d) dates.push([c, d]); else if (dates.length) break; }
+  if (!dates.length) return null;
+  // блоки цехов: новый блок, когда номер этажа повторяется
+  const houses = {}; let block = null, seen = new Set(), order = 0;
+  const blocks = [];
+  for (let r = hr + 1; r <= R.e.r; r++){
+    const fx = at(r, fc); const fl = fx && typeof fx.v === 'number' ? fx.v : parseInt(txt(r, fc), 10);
+    if (!Number.isFinite(fl)) { if (block) break; else continue; }
+    if (!block || seen.has(fl)){ block = {label: '', rows: []}; blocks.push(block); seen = new Set(); }
+    seen.add(fl); block.rows.push([r, fl]);
+    const a = txt(r, cc); if (a && !block.label) block.label = a.replace(/\s+/g, ' ');
+  }
+  blocks.forEach((b, i) => { if (!b.label) b.label = 'Цех ' + (i + 1); });
+  for (const b of blocks) for (const [r, fl] of b.rows){
+    const key = b.label + '|' + fl;
+    const h = houses[key] = {ceh: b.label, fl, order: order++, codes: {}};
+    for (const [c, d] of dates){ const x = at(r, c); if (x && x.v != null && String(x.v).trim()){ const cs = codeSplit(x.v); if (cs.length) h.codes[d] = cs; } }
+  }
+  // условные обозначения ниже таблицы: «КОД | расшифровка»
+  const legend = {};
+  for (let r = hr + 1; r <= R.e.r; r++) for (let c = R.s.c; c < R.e.c; c++){
+    const k = txt(r, c), v = txt(r, c + 1);
+    if (k && v && /^[А-ЯЁа-яё]{1,4}$/.test(k) && /^[а-яё]/i.test(v) && v.length > 3 && !/^\d/.test(v)) legend[k.toUpperCase().replace(/Ё/g,'Е')] = v.toLowerCase();
+  }
+  return {dates: dates.map(x => x[1]), houses, legend, title: txt(hr - 1, cc) || ''};
+}
+async function readFile(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, {type: 'array', cellDates: false});
+  const out = [];
+  for (const name of wb.SheetNames){ const p = parseSheet(wb.Sheets[name]); if (p) out.push(p); }
+  return out;
+}
+async function handleFiles(files){
+  if (typeof XLSX === 'undefined'){ toast('Не загрузилась библиотека чтения Excel'); return; }
+  const done = [], bad = [];
+  for (const f of files){
+    try{
+      const parts = await readFile(f);
+      if (!parts.length){ bad.push(f.name); continue; }
+      for (const p of parts){
+        // месяц — по большинству дат
+        const cnt = {}; for (const d of p.dates){ const m = d.slice(0, 7); cnt[m] = (cnt[m] || 0) + 1; }
+        const ym = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0];
+        MONTHS[ym] = {file: f.name, loadedAt: new Date().toISOString(), from: p.dates[0], to: p.dates[p.dates.length - 1], houses: p.houses, legend: p.legend};
+        done.push(`${MONTHS_NAME(ym)}: ${Object.keys(p.houses).length} корпусов`);
+      }
+    }catch(e){ bad.push(f.name); }
+  }
+  if (!LS.set('sr:months', MONTHS)) toast('Не хватило памяти устройства, чтобы сохранить графики');
+  rebuild();
+  $('uplNote').textContent = (done.length ? 'Загружено — ' + done.join('; ') + '. ' : '') + (bad.length ? 'Не удалось прочитать: ' + bad.join(', ') + ' (нет строки «Цех — Этаж» с датами).' : '');
+  if (done.length){ toast('Графики загружены'); if (view === 'files') setView('board'); }
+}
+const MONTHS_NAME = ym => `${MONTHS_NAME_MAP[+ym.slice(5,7) - 1]} ${ym.slice(0,4)}`;
+const MONTHS_NAME_MAP = MONN;
+
+/* ===== расчёт состояния корпусов ===== */
+let HOUSES = [], LEGEND = {}, RANGE = null;
+function rebuild(){
+  const map = new Map();
+  LEGEND = Object.assign({}, LEGEND_BASE);
+  const yms = Object.keys(MONTHS).sort();
+  for (const ym of yms){
+    const M = MONTHS[ym];
+    Object.assign(LEGEND, M.legend || {});
+    for (const [key, h] of Object.entries(M.houses)){
+      if (!map.has(key)) map.set(key, {key, ceh: h.ceh, fl: h.fl, order: h.order, codes: {}});
+      const H = map.get(key); H.order = Math.min(H.order, h.order + 0);
+      Object.assign(H.codes, h.codes);
+    }
+  }
+  HOUSES = [...map.values()].sort((a, b) => a.order - b.order);
+  for (const H of HOUSES){
+    H.days = Object.keys(H.codes).sort();
+    // серии заселения (подряд идущие дни с ЗС) и даты освобождения
+    H.zs = []; H.os = [];
+    let run = null;
+    for (const d of H.days){
+      const cs = H.codes[d];
+      if (cs.includes('ЗС')){ if (run && dayNum(d) - dayNum(run.last) === 1) run.last = d; else { run = {first: d, last: d}; H.zs.push(run); } }
+      if (cs.includes('ОС')) H.os.push(d);
+    }
+  }
+  RANGE = yms.length ? {from: MONTHS[yms[0]].from, to: MONTHS[yms[yms.length - 1]].to} : null;
+  render();
+}
+/* состояние корпуса на дату D */
+function stateOf(H, D){
+  const codes = H.codes[D] || [];
+  const zsRun = [...H.zs].reverse().find(r => r.first <= D);
+  const lastOs = [...H.os].reverse().find(d => d <= D);
+  let bird = null, empty = null;
+  const zsAfterOs = zsRun && (!lastOs || zsRun.first > lastOs);
+  if (zsAfterOs){
+    const start = settings.zsFrom === 'last' && zsRun.last <= D ? zsRun.last : zsRun.first;
+    bird = {since: zsRun.first, age: dayNum(D) - dayNum(start) + (+settings.ageBase)};
+  } else if (lastOs){
+    empty = {since: lastOs, days: dayNum(D) - dayNum(lastOs) + 1};
+  } else {
+    // событий до этой даты нет: если первое событие — освобождение, значит птица сидит с прошлого периода
+    const first = H.days.find(d => d > D);
+    const firstCodes = first ? H.codes[first] : null;
+    if (!H.days.length || (firstCodes && firstCodes.includes('ОС')) || !first) bird = {since: null, age: null};
+    else empty = {since: null, days: null};
+  }
+  if (codes.includes('ОС')) bird = null;
+  const nextOs = bird ? H.os.find(d => d > D) : null;
+  const nextZs = !bird ? (H.zs.find(r => r.first > D) || {}).first : null;
+  return {codes, bird, empty, nextOs, nextZs};
+}
+const hName = H => `${H.ceh} · ${H.fl}`;
+
+/* ===== отрисовка ===== */
+function render(){
+  $('day').value = day;
+  for (const b of document.querySelectorAll('.tab[data-view], .bnav [data-view]')) b.dataset.view === view ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+  for (const v of ['board','houses','files']) $('v-' + v).hidden = v !== view;
+  if (view === 'board') renderBoard();
+  if (view === 'houses') renderHouses();
+  if (view === 'files') renderFiles();
+}
+function noData(){
+  return `<div class="panel empty"><b>Графики ещё не загружены</b>Откройте «Графики» и загрузите файлы Excel с графиком санитарного разрыва — приложение само посчитает возраст птицы и покажет, где какой процесс идёт.<div style="margin-top:14px"><button type="button" class="btn" data-view="files">Загрузить графики</button></div></div>`;
+}
+function renderBoard(){
+  if (!HOUSES.length){ $('tiles').innerHTML = ''; $('rangeWarn').hidden = true; $('board').innerHTML = noData(); return; }
+  const birds = [], cols = Object.fromEntries(COLUMNS.map(([k]) => [k, []])), idle = [], other = {};
+  for (const H of HOUSES){
+    const s = stateOf(H, day);
+    if (s.bird) birds.push([H, s]);
+    for (const c of s.codes){ const k = CODE_COL[c]; if (k){ if (!cols[k].some(x => x[0] === H)) cols[k].push([H, s, c]); } else (other[c] = other[c] || []).push([H, s, c]); }
+    if (!s.bird && !s.codes.length) idle.push([H, s]);
+  }
+  birds.sort((a, b) => (b[1].bird.age ?? -1) - (a[1].bird.age ?? -1));
+  const inProc = HOUSES.filter(H => (H.codes[day] || []).length).length;
+  const ages = birds.map(x => x[1].bird.age).filter(a => a != null);
+  $('tiles').innerHTML = `
+    <div class="tile bird"><b>${birds.length}</b><span>корпусов с птицей</span></div>
+    <div class="tile"><b>${inProc}</b><span>в работе по графику</span></div>
+    <div class="tile"><b>${idle.length}</b><span>пустых без работ</span></div>
+    <div class="tile"><b>${ages.length ? Math.max(...ages) : '—'}</b><span>макс. возраст птицы, дн.</span></div>`;
+  const outside = !RANGE || day < RANGE.from || day > RANGE.to;
+  $('rangeWarn').hidden = !outside;
+  if (outside) $('rangeWarn').textContent = `На ${fmtD(day)} графика нет: загружены даты ${RANGE ? fmtD(RANGE.from) + ' — ' + fmtD(RANGE.to) : '—'}. Возраст птицы считается, процессы на этот день не известны.`;
+  const card = (H, s, val, sub) => `<button type="button" class="card" data-house="${esc(H.key)}"><span class="h">${esc(H.ceh)} <small>·</small> ${esc(H.fl)}${sub ? `<span class="sub">${sub}</span>` : ''}</span><span class="v">${val}</span></button>`;
+  let h = `<section class="col bird"><header><h3>Птица — возраст</h3><span class="n">${birds.length}</span></header><div class="codes">дней от заселения</div><div class="cards">` +
+    (birds.length ? birds.map(([H, s]) => card(H, s, s.bird.age != null ? `${s.bird.age} дн.` : '?',
+      s.bird.since ? `с ${fmtShort(s.bird.since)}${s.nextOs ? ` · ОС ${fmtShort(s.nextOs)}` : ''}` : 'дата заселения ранее графиков')).join('')
+      : '<div class="empty" style="padding:12px">нет</div>') + '</div></section>';
+  for (const [k, title, codes] of COLUMNS){
+    const list = cols[k]; if (!list.length) continue;
+    h += `<section class="col"><header><h3>${title}</h3><span class="n">${list.length}</span></header><div class="codes">${codes.join(' · ')}</div><div class="cards">` +
+      list.map(([H, s, c]) => card(H, s, codes.length > 1 ? c : '', s.empty && s.empty.days ? `санразрыв ${dn(s.empty.days)}` : (s.bird && s.bird.age != null ? `птица ${s.bird.age} дн.` : ''))).join('') + '</div></section>';
+  }
+  for (const [c, list] of Object.entries(other))
+    h += `<section class="col"><header><h3>${esc(LEGEND[c] || c)}</h3><span class="n">${list.length}</span></header><div class="codes">${esc(c)}</div><div class="cards">${list.map(([H, s]) => card(H, s, '', '')).join('')}</div></section>`;
+  if (idle.length)
+    h += `<section class="col"><header><h3>Пустые, без работ</h3><span class="n">${idle.length}</span></header><div class="codes">санитарный разрыв</div><div class="cards">` +
+      idle.map(([H, s]) => card(H, s, s.empty && s.empty.days ? dn(s.empty.days) : '', s.nextZs ? `ЗС ${fmtShort(s.nextZs)}` : '')).join('') + '</div></section>';
+  $('board').innerHTML = h;
+}
+function statusChip(s){
+  if (s.codes.length){
+    const cls = s.codes.includes('ЗС') ? 'zs' : s.codes.includes('ОС') ? 'os' : 'proc';
+    return `<span class="chip ${cls}">${s.codes.map(c => esc(LEGEND[c] || c)).join(' + ')}</span>`;
+  }
+  if (s.bird) return `<span class="chip bird">птица ${s.bird.age != null ? s.bird.age + ' дн.' : ''}</span>`;
+  return `<span class="chip">пусто</span>`;
+}
+function renderHouses(){
+  if (!HOUSES.length){ $('cehFilter').innerHTML = ''; $('houses').innerHTML = noData(); return; }
+  const cehs = [...new Set(HOUSES.map(H => H.ceh))];
+  if (cehSel && !cehs.includes(cehSel)) cehSel = '';
+  $('cehFilter').innerHTML = `<button type="button" data-ceh="" aria-pressed="${!cehSel}">Все</button>` + cehs.map(c => `<button type="button" data-ceh="${esc(c)}" aria-pressed="${cehSel === c}">${esc(c)}</button>`).join('');
+  $('houses').innerHTML = cehs.filter(c => !cehSel || c === cehSel).map(c => {
+    const list = HOUSES.filter(H => H.ceh === c);
+    const rows = list.map(H => { const s = stateOf(H, day);
+      const sub = s.bird ? (s.bird.since ? `заселение ${fmtShort(s.bird.since)}${s.nextOs ? ` · освобождение ${fmtShort(s.nextOs)}` : ''}` : 'заселение раньше загруженных графиков')
+        : s.empty ? (s.empty.since ? `освобождён ${fmtShort(s.empty.since)}, санразрыв ${dn(s.empty.days)}${s.nextZs ? ` · заселение ${fmtShort(s.nextZs)}` : ''}` : (s.nextZs ? `заселение ${fmtShort(s.nextZs)}` : '')) : '';
+      return `<button type="button" class="hrow" data-house="${esc(H.key)}"><span class="fl">${esc(H.fl)}</span><span class="st">${statusChip(s)}<small>${sub}</small></span><span class="note">›</span></button>`; }).join('');
+    const nb = list.filter(H => stateOf(H, day).bird).length;
+    return `<div class="panel grp"><header><h2>${esc(c)}</h2><span class="note">${list.length} корп. · с птицей ${nb}</span></header>${rows}</div>`;
+  }).join('');
+}
+function renderFiles(){
+  const yms = Object.keys(MONTHS).sort();
+  $('months').innerHTML = yms.length ? yms.map(ym => { const M = MONTHS[ym];
+    return `<li><span><b>${MONTHS_NAME(ym)}</b><br><span class="note">${esc(M.file)} · ${Object.keys(M.houses).length} корпусов · ${fmtShort(M.from)}–${fmtShort(M.to)}</span></span><button type="button" class="btn danger" data-del="${ym}">Удалить</button></li>`; }).join('')
+    : '<li><span class="note">Пока ничего не загружено.</span></li>';
+  for (const b of $('ageBase').children) b.setAttribute('aria-pressed', String(String(settings.ageBase) === b.dataset.v));
+  for (const b of $('zsFrom').children) b.setAttribute('aria-pressed', String(settings.zsFrom === b.dataset.v));
+  $('legend').innerHTML = Object.entries(LEGEND).sort().map(([k, v]) => `<div><b>${esc(k)}</b> ${esc(v)}</div>`).join('');
+}
+function openHouse(key){
+  const H = HOUSES.find(h => h.key === key); if (!H) return;
+  const s = stateOf(H, day);
+  const from = addDays(day, -45), to = addDays(day, 30);
+  const days = H.days.filter(d => d >= from && d <= to);
+  if (!days.includes(day)) days.push(day);
+  days.sort();
+  $('sheetBox').innerHTML = `<div class="head"><div><h2>${esc(H.ceh)} · ${esc(H.fl)}</h2><p class="note">${fmtD(day)}: ${s.bird ? `птица, ${s.bird.age != null ? dn(s.bird.age) : 'возраст неизвестен'}` : s.empty && s.empty.days ? `санитарный разрыв, ${dn(s.empty.days)}` : 'пусто'}</p></div><button type="button" class="x" id="closeSheet" aria-label="Закрыть">✕</button></div>
+    ${statusChip(s)}
+    <ul class="tl">${days.map(d => { const cs = H.codes[d] || []; const st = stateOf(H, d);
+      return `<li class="${d === day ? 'today' : ''}"><span class="d">${fmtShort(d)} ${wd(d)}</span><span>${cs.length ? cs.map(c => `<b>${esc(c)}</b> ${esc(LEGEND[c] || '')}`).join(', ') : (st.bird ? `<span class="note">птица ${st.bird.age != null ? st.bird.age + ' дн.' : ''}</span>` : '<span class="note">—</span>')}</span></li>`; }).join('')}</ul>`;
+  $('sheet').hidden = false;
+}
+
+/* ===== события ===== */
+function setView(v){ view = v; LS.set('sr:view', v); render(); window.scrollTo(0, 0); }
+document.addEventListener('click', e => {
+  const v = e.target.closest('[data-view]'); if (v){ setView(v.dataset.view); return; }
+  const h = e.target.closest('[data-house]'); if (h){ openHouse(h.dataset.house); return; }
+  const c = e.target.closest('[data-ceh]'); if (c){ cehSel = c.dataset.ceh; LS.set('sr:ceh', cehSel); renderHouses(); return; }
+  const d = e.target.closest('[data-del]');
+  if (d){
+    if (d.dataset.confirm !== '1'){ d.dataset.confirm = '1'; d.textContent = 'Точно удалить?'; setTimeout(() => { d.dataset.confirm = ''; d.textContent = 'Удалить'; }, 3000); return; }
+    delete MONTHS[d.dataset.del]; LS.set('sr:months', MONTHS); rebuild(); toast('График удалён'); return;
+  }
+  const a = e.target.closest('#ageBase button'); if (a){ settings.ageBase = +a.dataset.v; LS.set('sr:settings', settings); render(); return; }
+  const z = e.target.closest('#zsFrom button'); if (z){ settings.zsFrom = z.dataset.v; LS.set('sr:settings', settings); render(); return; }
+  if (e.target.id === 'closeSheet' || e.target.id === 'sheet') $('sheet').hidden = true;
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('sheet').hidden = true; });
+$('day').addEventListener('change', () => { if ($('day').value){ day = $('day').value; render(); } });
+$('prevDay').addEventListener('click', () => { day = addDays(day, -1); render(); });
+$('nextDay').addEventListener('click', () => { day = addDays(day, 1); render(); });
+$('toToday').addEventListener('click', () => { day = todayIso(); render(); });
+$('file').addEventListener('change', e => { handleFiles([...e.target.files]); e.target.value = ''; });
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); handleFiles([...e.dataTransfer.files]); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && day !== todayIso() && $('day').dataset.auto !== '0') { day = todayIso(); render(); } });
+$('day').addEventListener('input', () => $('day').dataset.auto = '0');
+
+rebuild();
+</script>
