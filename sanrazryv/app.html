@@ -62,6 +62,24 @@ h2{font:500 16px var(--f-display)}
 .tbl .k{display:block;font-size:12px;color:var(--muted)}
 .tbl tbody tr{cursor:pointer}
 .tbl tbody tr:hover td{background:var(--info-bg)}
+.procbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.dday{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.dday.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.dday>header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:10px 14px;background:var(--info-bg);border-bottom:1px solid var(--line)}
+.dday>header h3{font:600 16px var(--f-body);margin:0}
+.dday>header h3 small{font-weight:400;color:var(--muted);margin-left:6px}
+.dday.today>header{background:var(--accent-soft)}
+.dday .tag{font:600 11px var(--f-mono);color:var(--panel);background:var(--accent);border-radius:5px;padding:2px 7px;margin-left:8px;vertical-align:2px}
+.prow{display:grid;grid-template-columns:300px 1fr;gap:4px 14px;padding:9px 14px;border-top:1px solid var(--line)}
+.prow:first-of-type{border-top:0}
+.prow .pn{font-weight:600;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline}
+.prow .pn small{font:11px var(--f-mono);color:var(--muted);font-weight:400}
+.prow .pn .cnt{font:600 12px var(--f-mono);color:var(--muted);margin-left:auto}
+.hl{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px}
+.hl span b{font-weight:600}
+.hl button{border:0;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
+.prow.p-zs .pn{color:var(--ok)} .prow.p-os .pn{color:var(--crit)}
+@media (max-width:720px){.prow{grid-template-columns:1fr;padding:9px 12px}.procbar .seg{width:100%;display:flex}.procbar .seg button{flex:1}}
 .tile small{display:block;font-size:13px;color:var(--ink);font-weight:600}
 @media (max-width:720px){.agegrid{grid-template-columns:1fr 1fr;padding:8px;gap:6px}.sechead .seg{margin-left:0}}
 .warnbox{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:0}
@@ -200,10 +218,17 @@ h2{font:500 16px var(--f-display)}
     </div>
   </section>
 
-  <section id="v-proc" hidden>
-    <div class="tiles" id="tilesProc"></div>
-    <p class="warnbox rangeWarn" hidden></p>
-    <div class="board" id="board" style="margin-top:12px"></div>
+  <section id="v-proc" hidden class="houses">
+    <div class="procbar">
+      <span class="seg" id="procMode"><button type="button" data-v="dates">По датам</button><button type="button" data-v="day">На один день</button></span>
+      <span class="seg" id="procSpan"><button type="button" data-v="7">7 дней</button><button type="button" data-v="14">14 дней</button><button type="button" data-v="month">до конца графика</button></span>
+    </div>
+    <div id="procDates"></div>
+    <div id="procDay">
+      <div class="tiles" id="tilesProc"></div>
+      <p class="warnbox rangeWarn" hidden></p>
+      <div class="board" id="board" style="margin-top:12px"></div>
+    </div>
   </section>
 
   <section id="v-houses" hidden>
@@ -295,6 +320,7 @@ const MONN = ['Январь','Февраль','Март','Апрель','Май'
 const fmtD = s => `${+s.slice(8,10)} ${MON[+s.slice(5,7) - 1]}`;
 const fmtShort = s => `${s.slice(8,10)}.${s.slice(5,7)}`;
 const WD = ['вс','пн','вт','ср','чт','пт','сб'];
+const WDL = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
 const wd = s => WD[new Date(dayNum(s) * 864e5).getUTCDay()];
 function plural(n, a, b, c){ n = Math.abs(n) % 100; const n1 = n % 10; return n > 10 && n < 20 ? c : n1 > 1 && n1 < 5 ? b : n1 === 1 ? a : c; }
 const dn = n => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
@@ -514,7 +540,42 @@ function renderAge(){
       return list.length ? `<div class="agegrp" id="grp-${esc(c)}"><h3>${esc(c)} · ${list.length} корп. <span>${ag.length ? `· от ${Math.min(...ag)} до ${Math.max(...ag)} дн.` : ''}</span></h3><div class="agegrid">${list.map(birdCard).join('')}</div></div>` : ''; }).join('');
   } else $('ageList').innerHTML = `<div class="agegrid">${birds.map(birdCard).join('')}</div>`;
 }
+let procMode = LS.get('sr:procMode', 'dates'), procSpan = LS.get('sr:procSpan', '7');
+function renderDates(){
+  if (!HOUSES.length){ $('procDates').innerHTML = noData(); return; }
+  const today = todayIso();
+  let end = procSpan === 'month' ? (RANGE ? RANGE.to : day) : addDays(day, +procSpan - 1);
+  if (dayNum(end) < dayNum(day)) end = day;
+  const out = [];
+  for (let n = dayNum(day); n <= dayNum(end); n++){
+    const d = fromNum(n);
+    const rows = [];
+    for (const [k, title, codes] of COLUMNS){
+      const list = HOUSES.filter(H => (H.codes[d] || []).some(c => codes.includes(c)));
+      if (list.length) rows.push([k, title, codes, list]);
+    }
+    const known = new Set(COLUMNS.flatMap(x => x[2]));
+    const oth = {};
+    for (const H of HOUSES) for (const c of (H.codes[d] || [])) if (!known.has(c)) (oth[c] = oth[c] || []).push(H);
+    for (const [c, list] of Object.entries(oth)) rows.push(['x', LEGEND[c] || c, [c], list]);
+    const total = HOUSES.filter(H => (H.codes[d] || []).length).length;
+    const inRange = RANGE && d >= RANGE.from && d <= RANGE.to;
+    const byCeh = list => { const m = new Map(); for (const H of list){ if (!m.has(H.ceh)) m.set(H.ceh, []); m.get(H.ceh).push(H); }
+      return [...m].map(([c, hs]) => `<span><b>${esc(c)}:</b> ${hs.sort((a, b) => a.fl - b.fl).map(H => `<button type="button" data-house="${esc(H.key)}">${esc(H.fl)}</button>`).join(', ')}</span>`).join(''); };
+    out.push(`<section class="dday${d === today ? ' today' : ''}"><header><h3>${fmtD(d)}<small>${WDL[new Date(n * 864e5).getUTCDay()]}</small>${d === today ? '<span class="tag">сегодня</span>' : ''}</h3><span class="note">${inRange ? (total ? total + ' корп. в работе' : 'работ нет') : 'нет графика'}</span></header>` +
+      rows.map(([k, title, codes, list]) => `<div class="prow p-${k}"><div class="pn">${esc(title)} <small>${codes.map(esc).join('·')}</small><span class="cnt">${list.length}</span></div><div class="hl">${byCeh(list)}</div></div>`).join('') + '</section>');
+  }
+  $('procDates').innerHTML = out.join('');
+}
 function renderProc(){
+  for (const b of $('procMode').children) b.setAttribute('aria-pressed', String(b.dataset.v === procMode));
+  for (const b of $('procSpan').children) b.setAttribute('aria-pressed', String(b.dataset.v === procSpan));
+  $('procSpan').hidden = procMode !== 'dates';
+  $('procDates').hidden = procMode !== 'dates'; $('procDay').hidden = procMode === 'dates';
+  if (procMode === 'dates'){ renderDates(); return; }
+  renderProcDay();
+}
+function renderProcDay(){
   if (!HOUSES.length){ $('tilesProc').innerHTML = ''; $('board').innerHTML = noData(); return; }
   rangeWarn();
   const {cols, idle, other} = dayData();
@@ -598,6 +659,8 @@ document.addEventListener('click', e => {
   const a = e.target.closest('#ageBase button'); if (a){ settings.ageBase = +a.dataset.v; LS.set('sr:settings', settings); render(); return; }
   const cj = e.target.closest('[data-ceh-jump]');
   if (cj){ ageSort = 'ceh'; LS.set('sr:ageSort', ageSort); renderAge(); const g = document.getElementById('grp-' + cj.dataset.cehJump); if (g) g.scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
+  const pm = e.target.closest('#procMode button'); if (pm){ procMode = pm.dataset.v; LS.set('sr:procMode', procMode); renderProc(); return; }
+  const ps = e.target.closest('#procSpan button'); if (ps){ procSpan = ps.dataset.v; LS.set('sr:procSpan', procSpan); renderProc(); return; }
   const as = e.target.closest('#ageSort button'); if (as){ ageSort = as.dataset.v; LS.set('sr:ageSort', ageSort); renderAge(); return; }
   const z = e.target.closest('#zsFrom button'); if (z){ settings.zsFrom = z.dataset.v; LS.set('sr:settings', settings); render(); return; }
   if (e.target.id === 'closeSheet' || e.target.id === 'sheet') $('sheet').hidden = true;
