@@ -90,6 +90,31 @@ button{font:inherit;cursor:pointer}
 @media (max-width:640px){.form{grid-template-columns:1fr 1fr}.form .w2{grid-column:1/-1}}
 .note{font-size:13px;color:var(--muted)}
 .foot{font-size:12px;color:var(--muted);max-width:90ch}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
+.tab{border:0;background:transparent;color:var(--muted);padding:9px 14px;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .n{font:600 12px var(--f-mono);margin-left:6px;color:var(--muted)}
+.src{flex-direction:column;gap:3px}
+.src .row{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.src .k{font:600 10px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-width:78px}
+.src .k.official{color:var(--ok)}
+.src .k.social{color:var(--warn)}
+.find{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.find a{color:var(--muted)}
+.pf{font:600 11px var(--f-mono);padding:2px 7px;border-radius:5px;background:var(--warn-bg);color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0;overflow:hidden}
+.panel .col-head{background:linear-gradient(var(--warn-bg),transparent)}
+.warnbox{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:0}
+.dir{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+@media (max-width:860px){.dir{grid-template-columns:1fr}}
+.dir ul{list-style:none;margin:0;padding:0}
+.dir li{padding:11px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.dir li:first-child{border-top:0}
+.dir li a{color:var(--accent);font-weight:600;text-decoration:none}
+.dir li a:hover{text-decoration:underline}
+.dir li span{font-size:13px;color:var(--muted)}
+.dir h3{font:600 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;padding:12px 16px 6px;border-top:1px solid var(--line);background:var(--bg)}
+.dir h3:first-child{border-top:0}
 @media (prefers-reduced-motion:no-preference){.item{animation:in .25s ease both}@keyframes in{from{opacity:.4}to{opacity:1}}}
 </style>
 
@@ -102,7 +127,13 @@ button{font:inherit;cursor:pointer}
     <div class="stamp" id="stamp">Загружаю данные…</div>
   </header>
 
-  <div class="bar">
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="feed" aria-selected="true">Лента<span class="n" id="n-feed"></span></button>
+    <button class="tab" role="tab" data-tab="social" aria-selected="false">Соцсети и неофициальное<span class="n" id="n-social"></span></button>
+    <button class="tab" role="tab" data-tab="official" aria-selected="false">Официальные источники</button>
+  </nav>
+
+  <div class="bar" id="bar">
     <input id="q" type="search" placeholder="Поиск: страна, область, село, вид птицы…" aria-label="Поиск">
     <select id="period" aria-label="Период">
       <option value="30">За 30 дней</option>
@@ -124,12 +155,16 @@ button{font:inherit;cursor:pointer}
     <label class="w2">Место (страна, область, район, населённый пункт)<input id="f_place" required></label>
     <label>Погибло / уничтожено, голов<input id="f_birds" type="number" min="0" inputmode="numeric"></label>
     <label>Источник (ссылка)<input id="f_url" type="url" placeholder="https://…"></label>
+    <label>Тип источника<select id="f_kind">
+      <option value="media">СМИ</option><option value="official">Официальный</option>
+      <option value="telegram">Telegram</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="other">Другое неофициальное</option>
+    </select></label>
     <label class="w4">Заголовок<input id="f_title" required></label>
     <label class="w4">Кратко<textarea id="f_sum"></textarea></label>
     <div class="act"><button class="btn" type="submit">Сохранить</button><button class="btn ghost" type="button" id="cancelBtn">Отмена</button><span class="note" id="formNote"></span></div>
   </form>
 
-  <div class="cols">
+  <div class="cols" id="pane-feed">
     <section class="col world" aria-labelledby="hWorld">
       <div class="col-head">
         <div class="t"><h2 id="hWorld">Мир</h2><span class="scope">ГПГП · БН</span></div>
@@ -146,7 +181,22 @@ button{font:inherit;cursor:pointer}
     </section>
   </div>
 
-  <p class="foot">ГПГП — высокопатогенный грипп птиц, БН — болезнь Ньюкасла. Статус записи отражает то, что сказано в источнике на дату публикации; официальное подтверждение смотрите на сайтах МСХ РК и WOAH WAHIS. Записи с пометкой «вручную» добавлены пользователями страницы.</p>
+  <section class="panel" id="pane-social" hidden aria-labelledby="hSoc">
+    <div class="col-head">
+      <div class="t"><h2 id="hSoc">Неофициальные данные</h2><span class="scope">Telegram · Instagram · TikTok</span></div>
+      <p class="warnbox">Сообщения из соцсетей и анализы, которые государственная ветслужба не признала. Это сигналы для проверки, а не подтверждённые факты.</p>
+      <div class="chips" id="chips-social"></div>
+    </div>
+    <ul class="feed" id="feed-social"></ul>
+    <div class="col-head" style="border-top:1px solid var(--line);border-bottom:0">
+      <div class="t"><h2>Искать самому</h2><span class="scope">по слову из поиска</span></div>
+      <div class="find" id="selfsearch"></div>
+    </div>
+  </section>
+
+  <div class="dir" id="pane-official" hidden></div>
+
+  <p class="foot">ГПГП — высокопатогенный грипп птиц, БН — болезнь Ньюкасла. Статус записи отражает то, что сказано в источнике на дату публикации; официальное подтверждение смотрите во вкладке «Официальные источники». У каждой записи ссылки разделены: официальные, СМИ, соцсети. Записи с пометкой «вручную» добавлены пользователями страницы.</p>
 </div>
 
 <script>
@@ -156,10 +206,45 @@ const TOPICS = {
 };
 const TOPIC_LABEL = {hpai:'Грипп птиц', nd:'Ньюкасл', padezh:'Падеж', mass:'Массовый падеж'};
 const STATUS = {confirmed:'Подтверждено', suspected:'Подозрение', pending:'Выясняется', ruled_out:'Исключено', info:'Сводка'};
+const KIND = {official:'Официально', media:'СМИ', social:'Соцсети'};
+const PLATFORM = {telegram:'Telegram', instagram:'Instagram', tiktok:'TikTok', other:'Неофиц. данные'};
 const MONTHS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
 
-let items = [], meta = null, loaded = false, db = null;
-const sel = {world:new Set(), kz:new Set()};
+/* Telegram-каналы, где ищем по слову: у Telegram нет общего веб-поиска, только по каналу */
+const TG_KZ = [['skonews','Новости СКО'],['zakonkz','Zakon.kz'],['orda_kz','ORDA'],['agropresskz','AGROPRESS'],['zhest_kz_official','ZHEST_KZ']];
+
+/* Справочник официальных источников */
+const OFFICIAL = {
+  'Казахстан': [
+    ['Министерство сельского хозяйства РК — новости','https://www.gov.kz/memleket/entities/moa/press/news','Официальные сообщения о вспышках, карантинах, вакцинации. В составе МСХ — Комитет ветеринарного контроля и надзора.'],
+    ['Национальный референтный центр по ветеринарии (НРЦВ)','https://nrcv.kz/ru/o-nas/','Государственная лаборатория, которая официально ставит диагноз по особо опасным болезням.'],
+    ['Ветстанция Кызылжарского района (СКО)','https://kvs-kzh.sko.kz/?lang=ru','Районная служба по селу Шаховское и соседним сёлам.'],
+    ['МСХ РК в Facebook','https://www.facebook.com/minagri.gov.kz/','Официальная страница министерства.']
+  ],
+  'Мир': [
+    ['WOAH WAHIS — уведомления о вспышках','https://wahis.woah.org','Официальные уведомления стран во Всемирную организацию здравоохранения животных, включая Казахстан.'],
+    ['WOAH — грипп птиц, ситуационные отчёты','https://www.woah.org/en/disease/avian-influenza/','Ежемесячные обзоры ГПГП по миру.'],
+    ['WOAH — болезнь Ньюкасла','https://www.woah.org/en/disease/newcastle-disease/','Описание болезни и ссылки на отчёты.'],
+    ['FAO EMPRES-i — карта вспышек','https://empres-i.apps.fao.org','База и карта вспышек болезней животных.'],
+    ['FAO — обзор гриппа птиц','https://www.fao.org/animal-health/situation-updates/global-aiv-with-zoonotic-potential/en','Регулярные сводки по гриппу птиц с зоонозным потенциалом.'],
+    ['EFSA — грипп птиц','https://www.efsa.europa.eu/en/topics/topic/avian-influenza','Квартальные обзоры по Европе вместе с ECDC.'],
+    ['ЕС — система ADIS','https://food.ec.europa.eu/animals/animal-diseases/animal-disease-information-system-adis_en','Вспышки в странах ЕС, в том числе болезнь Ньюкасла.'],
+    ['USDA APHIS — выявления ГПГП в США','https://www.aphis.usda.gov/livestock-poultry-disease/avian/avian-influenza/hpai-detections','Список поражённых коммерческих и приусадебных стад.'],
+    ['Россельхознадзор','https://fsvps.gov.ru','Ситуация в России и сообщения о зарубежных вспышках.'],
+    ['Agriculture Victoria — H5N1','https://agriculture.vic.gov.au/biosecurity/animal-diseases/poultry-diseases/H5N1-avian-influenza-H5-bird-flu','Австралия, штат Виктория.']
+  ],
+  'Telegram и Instagram (неофициально)': [
+    ['Новости Петропавловска и СКО','https://t.me/skonews','Telegram-канал, писал о падеже в Бугровом и Шаховском.'],
+    ['Zakon.kz','https://t.me/zakonkz','Telegram-канал издания.'],
+    ['ORDA','https://t.me/orda_kz','Telegram-канал издания.'],
+    ['AGROPRESS','https://t.me/agropresskz','Аграрные новости Казахстана.'],
+    ['ZHEST_KZ','https://t.me/zhest_kz_official','Публиковал фото погибших птиц на озере Жаман.'],
+    ['АСБК (BirdLife Kazakhstan)','https://www.instagram.com/acbk.kz/','Instagram орнитологов: гибель диких птиц.']
+  ]
+};
+
+let items = [], meta = null, loaded = false, db = null, tab = 'feed';
+const sel = {world:new Set(), kz:new Set(), social:new Set()};
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -168,7 +253,7 @@ const LS = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 };
 $('period').value = String(LS.get('epi:period', 90));
-for (const s of ['world','kz']) for (const t of LS.get('epi:sel:'+s, [])) sel[s].add(t);
+for (const s of ['world','kz','social']) for (const t of LS.get('epi:sel:'+s, [])) sel[s].add(t);
 
 function fmtDate(d){
   const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(d || '');
@@ -188,53 +273,107 @@ function inPeriod(d){
 function matches(it){
   const q = $('q').value.trim().toLowerCase();
   if (!q) return true;
-  return [it.title, it.summary, it.place, it.country].join(' ').toLowerCase().includes(q);
+  return [it.title, it.summary, it.place, it.country, it.keyword].join(' ').toLowerCase().includes(q);
 }
+const host = u => { try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return 'источник'; } };
+const isUnofficial = it => !!it.unofficial;
 
-function renderCol(scope){
-  const pool = items.filter(it => it.scope === scope && inPeriod(it.date) && matches(it));
-  const chips = $('chips-' + scope);
-  chips.innerHTML = TOPICS[scope].map(([k, label]) => {
-    const n = pool.filter(it => it.topic === k).length;
-    return `<button type="button" class="chip" data-scope="${scope}" data-topic="${k}" aria-pressed="${sel[scope].has(k)}">${label}<span class="n">${n}</span></button>`;
-  }).join('');
-  const shown = pool.filter(it => !sel[scope].size || sel[scope].has(it.topic))
-                    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const feed = $('feed-' + scope);
-  if (!loaded){ feed.innerHTML = '<li class="empty">Загружаю записи…</li>'; return; }
-  if (!db){ feed.innerHTML = '<li class="empty"><b>Записи недоступны</b>Откройте страницу по ссылке на claude.ai, войдя в свою учётную запись.</li>'; return; }
-  if (!shown.length){
-    feed.innerHTML = `<li class="empty"><b>Нет записей</b>${pool.length ? 'Снимите фильтр по теме' : 'Расширьте период или измените поиск'}.</li>`;
-    return;
-  }
-  feed.innerHTML = shown.map(it => `
+function sourcesHtml(it){
+  const list = (it.sources || []).filter(s => /^https?:\/\//.test(s.url || ''));
+  if (!list.length) return '';
+  const groups = {official:[], media:[], social:[]};
+  for (const s of list) (groups[s.kind] || groups.media).push(s);
+  return '<div class="src">' + Object.keys(groups).filter(k => groups[k].length).map(k =>
+    `<div class="row"><span class="k ${k}">${KIND[k]}</span>${groups[k].map(s =>
+      `<a href="${esc(s.url)}" target="_blank" rel="noopener">${s.platform ? esc(PLATFORM[s.platform] || s.platform) + ': ' : ''}${esc(s.name || host(s.url))}</a>`).join('')}</div>`
+  ).join('') + '</div>';
+}
+function findLinks(word, scope){
+  if (!word) return '';
+  const q = encodeURIComponent(word);
+  let h = `<span>Найти в соцсетях:</span>
+    <a href="https://www.tiktok.com/search?q=${q}" target="_blank" rel="noopener">TikTok</a>
+    <a href="https://www.instagram.com/explore/search/keyword/?q=${q}" target="_blank" rel="noopener">Instagram</a>`;
+  if (scope !== 'world') h += TG_KZ.slice(0, 3).map(([c, n]) => `<a href="https://t.me/s/${c}?q=${q}" target="_blank" rel="noopener">Telegram: ${esc(n)}</a>`).join('');
+  return `<div class="find">${h}</div>`;
+}
+function itemHtml(it, scope){
+  return `
     <li class="item">
       <div class="date">${fmtDate(it.date)}</div>
       <div class="body">
         <div class="meta">
+          ${scope === 'social' ? `<span class="tag">${it.scope === 'world' ? 'Мир' : 'Казахстан'}</span>` : ''}
           <span class="tag">${esc(TOPIC_LABEL[it.topic] || it.topic)}</span>
           ${it.status ? `<span class="st ${esc(it.status)}">${esc(STATUS[it.status] || it.status)}</span>` : ''}
+          ${it.platform ? `<span class="pf">${esc(PLATFORM[it.platform] || it.platform)}</span>` : ''}
           ${it.addedBy === 'user' ? '<span class="tag">вручную</span>' : ''}
         </div>
         <p class="title">${esc(it.title)}</p>
         <div class="place">${esc(it.place)}</div>
         ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
         ${it.birds ? `<div class="birds">${Number(it.birds).toLocaleString('ru-RU')} гол.</div>` : ''}
-        ${(it.sources || []).length ? `<div class="src">${it.sources.filter(s => /^https?:\/\//.test(s.url || '')).map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name || new URL(s.url).hostname)}</a>`).join('')}</div>` : ''}
+        ${sourcesHtml(it)}
+        ${findLinks(it.keyword, it.scope)}
       </div>
-    </li>`).join('');
+    </li>`;
+}
+function emptyHtml(pool){
+  if (!loaded) return '<li class="empty">Загружаю записи…</li>';
+  if (!db) return '<li class="empty"><b>Записи недоступны</b>Откройте страницу по ссылке на claude.ai, войдя в свою учётную запись.</li>';
+  return `<li class="empty"><b>Нет записей</b>${pool.length ? 'Снимите фильтр' : 'Расширьте период или измените поиск'}.</li>`;
+}
+const byDate = (a, b) => (b.date || '').localeCompare(a.date || '');
+
+function renderCol(scope){
+  const pool = items.filter(it => it.scope === scope && !isUnofficial(it) && inPeriod(it.date) && matches(it));
+  $('chips-' + scope).innerHTML = TOPICS[scope].map(([k, label]) => {
+    const n = pool.filter(it => it.topic === k).length;
+    return `<button type="button" class="chip" data-scope="${scope}" data-topic="${k}" aria-pressed="${sel[scope].has(k)}">${label}<span class="n">${n}</span></button>`;
+  }).join('');
+  const shown = pool.filter(it => !sel[scope].size || sel[scope].has(it.topic)).sort(byDate);
+  $('feed-' + scope).innerHTML = shown.length ? shown.map(it => itemHtml(it, scope)).join('') : emptyHtml(pool);
+}
+function renderSocial(){
+  const pool = items.filter(it => isUnofficial(it) && inPeriod(it.date) && matches(it));
+  $('chips-social').innerHTML = Object.entries(PLATFORM).map(([k, label]) => {
+    const n = pool.filter(it => it.platform === k).length;
+    return `<button type="button" class="chip" data-scope="social" data-topic="${k}" aria-pressed="${sel.social.has(k)}">${label}<span class="n">${n}</span></button>`;
+  }).join('');
+  const shown = pool.filter(it => !sel.social.size || sel.social.has(it.platform)).sort(byDate);
+  $('feed-social').innerHTML = shown.length ? shown.map(it => itemHtml(it, 'social')).join('') : emptyHtml(pool);
+  const word = $('q').value.trim();
+  $('selfsearch').innerHTML = word
+    ? findLinks(word, 'kz').replace('<div class="find">', '').replace(/<\/div>$/, '') +
+      TG_KZ.slice(3).map(([c, n]) => `<a href="https://t.me/s/${c}?q=${encodeURIComponent(word)}" target="_blank" rel="noopener">Telegram: ${esc(n)}</a>`).join('')
+    : '<span>Введите слово в поиске вверху (например «Шаховское» или «падеж гусей») — здесь появятся ссылки на поиск в TikTok, Instagram и Telegram-каналах.</span>';
+}
+function renderOfficial(){
+  $('pane-official').innerHTML = Object.entries(OFFICIAL).map(([group, list]) => `
+    <section class="panel"><h3>${esc(group)}</h3><ul>${list.map(([n, u, d]) =>
+      `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a><span>${esc(d)}</span></li>`).join('')}</ul></section>`).join('');
 }
 function render(){
-  renderCol('world'); renderCol('kz');
+  renderCol('world'); renderCol('kz'); renderSocial();
   const st = $('stamp');
   if (!loaded) return;
   if (!db){ st.textContent = 'Нет связи с базой записей'; return; }
-  const w = items.filter(i => i.scope === 'world').length, k = items.filter(i => i.scope === 'kz').length;
+  const main = items.filter(i => !isUnofficial(i)), soc = items.length - main.length;
+  $('n-feed').textContent = main.length; $('n-social').textContent = soc;
   const upd = meta && meta.updatedAt ? plainDate(meta.updatedAt) : '—';
-  st.innerHTML = `Обновлено: <b>${esc(upd)}</b><br>в базе: мир <b>${w}</b> · Казахстан <b>${k}</b>`;
+  st.innerHTML = `Обновлено: <b>${esc(upd)}</b><br>мир <b>${main.filter(i => i.scope === 'world').length}</b> · Казахстан <b>${main.filter(i => i.scope === 'kz').length}</b> · неофиц. <b>${soc}</b>`;
+}
+function showTab(t){
+  tab = t;
+  for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.tab === t));
+  $('pane-feed').hidden = t !== 'feed'; $('pane-social').hidden = t !== 'social'; $('pane-official').hidden = t !== 'official';
+  $('bar').hidden = t === 'official';
+  LS.set('epi:tab', t);
 }
 
 document.addEventListener('click', e => {
+  const tb = e.target.closest('.tab');
+  if (tb){ showTab(tb.dataset.tab); return; }
   const c = e.target.closest('.chip');
   if (!c) return;
   const s = c.dataset.scope, t = c.dataset.topic;
@@ -253,19 +392,22 @@ $('f_scope').addEventListener('change', fillTopics);
 $('addBtn').addEventListener('click', () => {
   fillTopics();
   $('f_date').value = new Date().toISOString().slice(0, 10);
+  if (tab === 'social') $('f_kind').value = 'telegram';
   $('form').hidden = false; $('addBtn').hidden = true; $('f_place').focus();
 });
 $('cancelBtn').addEventListener('click', () => { $('form').hidden = true; $('addBtn').hidden = false; $('formNote').textContent = ''; });
 $('form').addEventListener('submit', async e => {
   e.preventDefault();
-  const url = $('f_url').value.trim();
+  const url = $('f_url').value.trim(), kind = $('f_kind').value;
+  const social = !['media','official'].includes(kind);
   const doc = {
     scope: $('f_scope').value, topic: $('f_topic').value, date: $('f_date').value,
     status: $('f_status').value, place: $('f_place').value.trim(), title: $('f_title').value.trim(),
     summary: $('f_sum').value.trim(), birds: $('f_birds').value ? +$('f_birds').value : null,
-    sources: url ? [{name: (() => { try{ return new URL(url).hostname; }catch(_){ return 'источник'; } })(), url}] : [],
+    sources: url ? [social ? {name: host(url), url, kind: 'social', platform: kind} : {name: host(url), url, kind}] : [],
     addedBy: 'user', createdAt: new Date().toISOString()
   };
+  if (social){ doc.unofficial = true; doc.platform = kind; }
   $('formNote').textContent = 'Сохраняю…';
   try{
     await db.collection('episodes').add(doc);
@@ -275,6 +417,8 @@ $('form').addEventListener('submit', async e => {
   }
 });
 
+renderOfficial();
+showTab(location.hash === '#social' || location.hash === '#official' ? location.hash.slice(1) : LS.get('epi:tab', 'feed'));
 render();
 (async () => {
   try{ db = await claude.use('db'); }catch(e){ db = null; }

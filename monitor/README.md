@@ -2,6 +2,7 @@
 
 Страница-лента: слева **Мир** (только высокопатогенный грипп птиц и болезнь Ньюкасла),
 справа **Казахстан** (падеж, массовый падеж, грипп птиц, болезнь Ньюкасла).
+Вкладки: «Лента», «Соцсети и неофициальное», «Официальные источники» (справочник сайтов МСХ РК, НРЦВ, WOAH, FAO, EFSA, USDA и др.).
 Опубликована: https://claude.ai/artifact/6bjciuxMiDnsdHvNFENwEb
 
 | Файл | Для чего |
@@ -19,7 +20,9 @@
 | `date` | `ГГГГ-ММ-ДД` — дата события или публикации |
 | `place`, `country`, `title`, `summary` | текст |
 | `birds` | погибло / уничтожено, голов (или `null`) |
-| `sources` | `[{name, url}]` |
+| `sources` | `[{name, url, kind, platform?}]`; `kind`: `official`, `media`, `social`; `platform`: `telegram`, `instagram`, `tiktok` |
+| `unofficial`, `platform` | `true` — запись уходит во вкладку «Соцсети и неофициальное»; `platform` — `telegram`, `instagram`, `tiktok`, `other` |
+| `keyword` | слово для кнопок «Найти в соцсетях» (TikTok, Instagram, Telegram-каналы) |
 | `addedBy` | `claude` или `user` (добавлено через форму на странице) |
 
 `meta/status.updatedAt` — дата последнего обновления, выводится в шапке.

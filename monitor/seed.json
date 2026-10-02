@@ -12,19 +12,33 @@
   "summary": "Ветеринары СКО назвали причиной гибели птицы (в основном гусей) в 28 подворьях кокцидиоз. Грипп птиц и пастереллёз лабораторно исключены, карантин не вводится. Кокцидиоз не входит в перечень болезней с компенсацией, возмещения владельцам не будет. В селе около 46 тыс. голов птицы в 200 подворьях.",
   "sources": [
    {
+    "name": "tv7.kz",
+    "url": "https://tv7.kz/ru/projects/news-ru/48196-ustanovlena-prichina-gibeli-tysyach-gusej-v-sko/",
+    "kind": "media"
+   },
+   {
     "name": "inform.kz",
-    "url": "https://www.inform.kz/ru/prichinu-massovoy-gibeli-domashney-ptitsi-ustanovili-vsko-dbef9236"
+    "url": "https://www.inform.kz/ru/prichinu-massovoy-gibeli-domashney-ptitsi-ustanovili-vsko-dbef9236",
+    "kind": "media"
    },
    {
     "name": "airpress.kz",
-    "url": "https://airpress.kz/social/sko-shahovskoe-kokczidioz-gibel-pticz/"
+    "url": "https://airpress.kz/social/sko-shahovskoe-kokczidioz-gibel-pticz/",
+    "kind": "media"
    },
    {
     "name": "ulysmedia.kz",
-    "url": "https://ulysmedia.kz/news/81948-massovaia-gibel-ptits-v-sko-selchanam-otkazali-v-kompensatsii/"
+    "url": "https://ulysmedia.kz/news/81948-massovaia-gibel-ptits-v-sko-selchanam-otkazali-v-kompensatsii/",
+    "kind": "media"
+   },
+   {
+    "name": "Ветстанция Кызылжарского района",
+    "url": "https://kvs-kzh.sko.kz/?lang=ru",
+    "kind": "official"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Шаховское гуси"
  },
  {
   "id": "kz-2026-09-16-shakhovskoe-13k",
@@ -36,22 +50,31 @@
   "country": "Казахстан",
   "birds": 13869,
   "title": "Более 13 тыс. гусей, уток и кур погибли в Шаховском, жители требуют карантина",
-  "summary": "Падеж идёт с конца августа, резкий рост с 8 сентября. У птицы слабость, сильный понос, кровоточащие раны; лечение не помогает. В публикациях упоминается, что лаборатория в Алматы выявила ГПГП, местные ветеринары с этим не согласились. Причина на дату публикации не установлена.",
+  "summary": "Падеж идёт с конца августа, резкий рост с 8 сентября. У птицы слабость, сильный понос, кровоточащие раны; лечение не помогает. Первичный лабораторный вывод — пастереллёз, жители с ним не согласны. Падеж в селе повторяется второй год подряд. Причина на дату публикации не установлена.",
   "sources": [
    {
     "name": "kursiv.media",
-    "url": "https://kz.kursiv.media/2026-09-16/tsse-bolee-13-tys-domashnih-pticz-pogibli-v-sko-zhiteli-trebuyut-otveta/"
+    "url": "https://kz.kursiv.media/2026-09-16/tsse-bolee-13-tys-domashnih-pticz-pogibli-v-sko-zhiteli-trebuyut-otveta/",
+    "kind": "media"
    },
    {
     "name": "informburo.kz",
-    "url": "https://informburo.kz/novosti/na-tele-poiavliaiutsia-krovotocashhie-rany-domasniaia-ptica-massovo-gibnet-v-sele-sko"
+    "url": "https://informburo.kz/novosti/na-tele-poiavliaiutsia-krovotocashhie-rany-domasniaia-ptica-massovo-gibnet-v-sele-sko",
+    "kind": "media"
    },
    {
     "name": "inform.kz",
-    "url": "https://www.inform.kz/ru/okolo-14-tisyach-domashnih-ptits-pogiblo-v-sko-5512dea1"
+    "url": "https://www.inform.kz/ru/okolo-14-tisyach-domashnih-ptits-pogiblo-v-sko-5512dea1",
+    "kind": "media"
+   },
+   {
+    "name": "tengrinews.kz",
+    "url": "https://tengrinews.kz/kazakhstan_news/zagadochnuyu-massovuyu-gibel-domashney-ptitsyi-zafiksirovali-608596/",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Шаховское гуси"
  },
  {
   "id": "kz-2026-09-15-shakhovskoe-start",
@@ -63,22 +86,26 @@
   "country": "Казахстан",
   "birds": null,
   "title": "Неизвестная болезнь массово убивает домашнюю птицу в СКО: подозрение на грипп птиц",
-  "summary": "Гибнут в основном гуси — десятками и сотнями в день. Начато расследование причин. Позже (30 сентября) грипп птиц лабораторно исключён, см. запись о кокцидиозе.",
+  "summary": "Гибнут в основном гуси — десятками и сотнями в день. Жители опасаются гриппа птиц: в ноябре 2025 года их независимый анализ показал H5N1, но ветслужба его не признала (см. вкладку «Соцсети и неофициальное»). 30 сентября 2026 года грипп птиц лабораторно исключён, см. запись о кокцидиозе.",
   "sources": [
    {
     "name": "zakon.kz",
-    "url": "https://www.zakon.kz/stati/6531570-neizvestnaya-bolezn-massovo-ubivaet-domashnyuyu-ptitsu-v-sko.html"
+    "url": "https://www.zakon.kz/stati/6531570-neizvestnaya-bolezn-massovo-ubivaet-domashnyuyu-ptitsu-v-sko.html",
+    "kind": "media"
    },
    {
     "name": "tv7.kz",
-    "url": "https://tv7.kz/ru/projects/news-ru/47268-v-sko-rassledujut-prichiny-massovogo-padezha-domashnej-pticy-v-sele-shahovskoe-15-09-2026/"
+    "url": "https://tv7.kz/ru/projects/news-ru/47268-v-sko-rassledujut-prichiny-massovogo-padezha-domashnej-pticy-v-sele-shahovskoe-15-09-2026/",
+    "kind": "media"
    },
    {
     "name": "mtrk.kz",
-    "url": "https://mtrk.kz/ru/2026/09/15/massovyy-padyozh-pticy-snova-zafiksiro/"
+    "url": "https://mtrk.kz/ru/2026/09/15/massovyy-padyozh-pticy-snova-zafiksiro/",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "падеж птицы СКО"
  },
  {
   "id": "kz-2026-09-04-zhaman",
@@ -94,14 +121,23 @@
   "sources": [
    {
     "name": "inform.kz",
-    "url": "https://www.inform.kz/ru/massovaya-gibel-ptits-naozere-zhaman-skostanayskoy-oblasti-inspektsiya-nachala-r-69306dab"
+    "url": "https://www.inform.kz/ru/massovaya-gibel-ptits-naozere-zhaman-skostanayskoy-oblasti-inspektsiya-nachala-r-69306dab",
+    "kind": "media"
    },
    {
     "name": "cmn.kz",
-    "url": "https://cmn.kz/na-ozere-zhaman-v-kostanayskoy-oblasti-obnaruzhili-mnozhestvo-pogibshih-ptits-1cfc3a/"
+    "url": "https://cmn.kz/na-ozere-zhaman-v-kostanayskoy-oblasti-obnaruzhili-mnozhestvo-pogibshih-ptits-1cfc3a/",
+    "kind": "media"
+   },
+   {
+    "name": "ZHEST_KZ",
+    "url": "https://t.me/s/zhest_kz_official?before=18257",
+    "kind": "social",
+    "platform": "telegram"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "озеро Жаман птицы"
  },
  {
   "id": "kz-2026-03-25-aktau-swans",
@@ -117,14 +153,17 @@
   "sources": [
    {
     "name": "baq.kz",
-    "url": "https://rus.baq.kz/na-poberezhe-kaspiya-vozle-aktau-obnaruzhili-massovuyu-gibel-lebedey-320019863/"
+    "url": "https://rus.baq.kz/na-poberezhe-kaspiya-vozle-aktau-obnaruzhili-massovuyu-gibel-lebedey-320019863/",
+    "kind": "media"
    },
    {
     "name": "kznews.kz",
-    "url": "https://ru.kznews.kz/article/massovuiu-gibel-lebedei-obnaruzili-u-poberezia-aktau"
+    "url": "https://ru.kznews.kz/article/massovuiu-gibel-lebedei-obnaruzili-u-poberezia-aktau",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "лебеди Актау"
  },
  {
   "id": "kz-2026-02-10-aktau-swans",
@@ -140,14 +179,17 @@
   "sources": [
    {
     "name": "kursiv.media",
-    "url": "https://kz.kursiv.media/2026-02-10/zhki-ekologi-proveryayut-vodu-kaspiya-posle-gibeli-11-lebedey-v-aktau/"
+    "url": "https://kz.kursiv.media/2026-02-10/zhki-ekologi-proveryayut-vodu-kaspiya-posle-gibeli-11-lebedey-v-aktau/",
+    "kind": "media"
    },
    {
     "name": "inform.kz",
-    "url": "https://www.inform.kz/ru/v-aktau-proverili-vodu-posle-obnaruzheniya-pogibshih-lebedey-3a1f95"
+    "url": "https://www.inform.kz/ru/v-aktau-proverili-vodu-posle-obnaruzheniya-pogibshih-lebedey-3a1f95",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "лебеди Актау"
  },
  {
   "id": "w-2026-09-30-utah-mink",
@@ -163,14 +205,17 @@
   "sources": [
    {
     "name": "natureworldnews.com",
-    "url": "https://natureworldnews.com/articles/73401/20260930/utah-mink-farm-expects-lose-80-its-animals-bird-flu-state-records-show.htm"
+    "url": "https://natureworldnews.com/articles/73401/20260930/utah-mink-farm-expects-lose-80-its-animals-bird-flu-state-records-show.htm",
+    "kind": "media"
    },
    {
     "name": "hoodline.com",
-    "url": "https://hoodline.com/2026/09/utah-mink-farm-s-bird-flu-outbreak-stays-shrouded-as-records-fight-drags-on"
+    "url": "https://hoodline.com/2026/09/utah-mink-farm-s-bird-flu-outbreak-stays-shrouded-as-records-fight-drags-on",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Utah mink bird flu"
  },
  {
   "id": "w-2026-09-27-minnesota",
@@ -186,14 +231,17 @@
   "sources": [
    {
     "name": "mprnews.org",
-    "url": "https://mprnews.org/story/2026/09/27/bird-flu-back-early-in-minnesota"
+    "url": "https://mprnews.org/story/2026/09/27/bird-flu-back-early-in-minnesota",
+    "kind": "media"
    },
    {
     "name": "agweek.com",
-    "url": "https://agweek.com/livestock/poultry/minnesota-leads-nation-in-avian-flu-cases-as-virus-returns-to-turkey-flocks"
+    "url": "https://agweek.com/livestock/poultry/minnesota-leads-nation-in-avian-flu-cases-as-virus-returns-to-turkey-flocks",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Minnesota bird flu turkeys"
  },
  {
   "id": "w-2026-09-22-iowa-boone",
@@ -209,14 +257,17 @@
   "sources": [
    {
     "name": "iowacapitaldispatch.com",
-    "url": "https://iowacapitaldispatch.com/2026/09/22/highly-pathogenic-avian-influenza-detected-in-boone-county/"
+    "url": "https://iowacapitaldispatch.com/2026/09/22/highly-pathogenic-avian-influenza-detected-in-boone-county/",
+    "kind": "media"
    },
    {
     "name": "kcrg.com",
-    "url": "https://www.kcrg.com/2026/09/22/highly-pathogenic-avian-influenza-detected-boone-county-backyard-flock/"
+    "url": "https://www.kcrg.com/2026/09/22/highly-pathogenic-avian-influenza-detected-boone-county-backyard-flock/",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Boone County bird flu"
  },
  {
   "id": "w-2026-09-26-victoria",
@@ -232,14 +283,17 @@
   "sources": [
    {
     "name": "abc.net.au",
-    "url": "https://abc.net.au/news/2026-09-26/caged-egg-rule-change-delayed-victoria-bird-flu/107195078"
+    "url": "https://abc.net.au/news/2026-09-26/caged-egg-rule-change-delayed-victoria-bird-flu/107195078",
+    "kind": "media"
    },
    {
     "name": "agriculture.vic.gov.au",
-    "url": "https://agriculture.vic.gov.au/biosecurity/animal-diseases/poultry-diseases/H5N1-avian-influenza-H5-bird-flu"
+    "url": "https://agriculture.vic.gov.au/biosecurity/animal-diseases/poultry-diseases/H5N1-avian-influenza-H5-bird-flu",
+    "kind": "official"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Victoria H5 bird flu"
  },
  {
   "id": "w-2026-09-efsa-jun-aug",
@@ -255,14 +309,17 @@
   "sources": [
    {
     "name": "ECDC",
-    "url": "https://www.ecdc.europa.eu/en/publications-data/avian-influenza-overview-june-august-2026"
+    "url": "https://www.ecdc.europa.eu/en/publications-data/avian-influenza-overview-june-august-2026",
+    "kind": "official"
    },
    {
     "name": "EFSA Journal",
-    "url": "https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2026.10369"
+    "url": "https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2026.10369",
+    "kind": "official"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "avian influenza Europe"
  },
  {
   "id": "w-2026-09-22-hungary-kerekegyhaza",
@@ -278,10 +335,12 @@
   "sources": [
    {
     "name": "wattagnet.com",
-    "url": "https://www.wattagnet.com/broilers-turkeys/diseases-health/news/15835905/newcastle-disease-hits-fourth-flock-in-hungary"
+    "url": "https://www.wattagnet.com/broilers-turkeys/diseases-health/news/15835905/newcastle-disease-hits-fourth-flock-in-hungary",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Newcastle disease Hungary"
  },
  {
   "id": "w-2026-09-08-hungary-fulophaza",
@@ -297,14 +356,17 @@
   "sources": [
    {
     "name": "poultrymed.com",
-    "url": "https://www.poultrymed.com/ID-Eng-Hung090926"
+    "url": "https://www.poultrymed.com/ID-Eng-Hung090926",
+    "kind": "media"
    },
    {
     "name": "wattagnet.com",
-    "url": "https://www.wattagnet.com/broilers-turkeys/diseases-health/news/15834519/newcastle-disease-strikes-two-hungarian-broiler-flocks"
+    "url": "https://www.wattagnet.com/broilers-turkeys/diseases-health/news/15834519/newcastle-disease-strikes-two-hungarian-broiler-flocks",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Newcastle disease Hungary"
  },
  {
   "id": "w-2026-09-17-poland",
@@ -320,10 +382,12 @@
   "sources": [
    {
     "name": "poultrymed.com",
-    "url": "https://www.poultrymed.com/ID-Eng-Poland180926"
+    "url": "https://www.poultrymed.com/ID-Eng-Poland180926",
+    "kind": "media"
    }
   ],
-  "addedBy": "claude"
+  "addedBy": "claude",
+  "keyword": "Newcastle disease Poland"
  },
  {
   "id": "w-2026-09-12-spain",
@@ -339,11 +403,105 @@
   "sources": [
    {
     "name": "poultrymed.com",
-    "url": "https://www.poultrymed.com/ID-Eng-Spain120926"
+    "url": "https://www.poultrymed.com/ID-Eng-Spain120926",
+    "kind": "media"
    },
    {
     "name": "avinews.com",
-    "url": "https://avinews.com/en/spain-confirms-return-of-newcastle-disease-after-three-years/"
+    "url": "https://avinews.com/en/spain-confirms-return-of-newcastle-disease-after-three-years/",
+    "kind": "media"
+   }
+  ],
+  "addedBy": "claude",
+  "keyword": "Newcastle disease Spain"
+ },
+ {
+  "id": "u-2026-09-04-zhaman-tg",
+  "scope": "kz",
+  "topic": "mass",
+  "date": "2026-09-04",
+  "status": "pending",
+  "unofficial": true,
+  "platform": "telegram",
+  "place": "Костанайская область, озеро Жаман",
+  "country": "Казахстан",
+  "birds": null,
+  "keyword": "озеро Жаман птицы",
+  "title": "Фото погибших птиц на берегу озера Жаман",
+  "summary": "Telegram-канал ZHEST_KZ опубликовал снимки погибших водоплавающих птиц вдоль берега; озеро в ведении областного общества охотников и рыболовов. Ссылка ведёт в ленту канала рядом с постом, точный адрес поста не определён.",
+  "sources": [
+   {
+    "name": "ZHEST_KZ",
+    "url": "https://t.me/s/zhest_kz_official?before=18257",
+    "kind": "social",
+    "platform": "telegram"
+   },
+   {
+    "name": "inform.kz",
+    "url": "https://www.inform.kz/ru/massovaya-gibel-ptits-naozere-zhaman-skostanayskoy-oblasti-inspektsiya-nachala-r-69306dab",
+    "kind": "media"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "u-2025-11-29-shakhovskoe-h5n1",
+  "scope": "kz",
+  "topic": "hpai",
+  "date": "2025-11-29",
+  "status": "suspected",
+  "unofficial": true,
+  "platform": "other",
+  "place": "СКО, Кызылжарский район, с. Шаховское",
+  "country": "Казахстан",
+  "birds": null,
+  "keyword": "Шаховское гуси",
+  "title": "Независимый анализ жителей показал H5N1, ветслужба результат не признала",
+  "summary": "Жители отправили тушку гуся в алматинский Научно-производственный центр микробиологии и вирусологии, там выявили высокопатогенный грипп птиц H5N1. Районная ветслужба настаивала на пастереллёзе; МСХ пояснило, что диагноз по особо опасным болезням ставит только государственная ветслужба, поэтому частный протокол не принят.",
+  "sources": [
+   {
+    "name": "bizmedia.kz",
+    "url": "https://bizmedia.kz/2025-11-29-v-sele-shahovskoe-massovo-gibnet-pticza-zhiteli-poteryali-tysyachi-gusej-i-milliony-tenge/",
+    "kind": "media"
+   },
+   {
+    "name": "informburo.kz",
+    "url": "https://informburo.kz/novosti/massovaia-gibel-pticy-v-sele-saxovskoe-zdat-li-ziteliam-kompensaciiu",
+    "kind": "media"
+   }
+  ],
+  "addedBy": "claude"
+ },
+ {
+  "id": "u-2025-10-07-bugrovoe-tg",
+  "scope": "kz",
+  "topic": "mass",
+  "date": "2025-10-07",
+  "status": "ruled_out",
+  "unofficial": true,
+  "platform": "telegram",
+  "place": "СКО, Кызылжарский район, с. Бугровое",
+  "country": "Казахстан",
+  "birds": 3000,
+  "keyword": "Бугровое птица",
+  "title": "Бугровое: птица слепнет и гибнет за час-два, жители подозревают грипп",
+  "summary": "В Telegram-канале новостей СКО описаны симптомы: слепота, судороги, выделения из клюва, пена из глаз. Погибло более 3 тыс. кур, гусей и индюков. Ветеринары четыре раза проверяли на грипп птиц — результат отрицательный, лаборатория назвала пастереллёз. Ссылка ведёт в ленту канала рядом с постом.",
+  "sources": [
+   {
+    "name": "Новости Петропавловска и СКО",
+    "url": "https://t.me/s/skonews?before=56994",
+    "kind": "social",
+    "platform": "telegram"
+   },
+   {
+    "name": "liter.kz",
+    "url": "https://liter.kz/prichina-massovoi-gibeli-domashnei-ptitsy-v-sko-shokirovala-selchan-1759804766/",
+    "kind": "media"
+   },
+   {
+    "name": "astanatv.kz",
+    "url": "https://astanatv.kz/ru/news/178136/",
+    "kind": "media"
    }
   ],
   "addedBy": "claude"
