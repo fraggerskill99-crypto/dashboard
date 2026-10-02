@@ -9,6 +9,7 @@
   --crit:#b3261e; --crit-bg:#fbe5e3; --warn:#9a5b00; --warn-bg:#fdf0d9;
   --ok:#3f6b48; --ok-bg:#e3efe5; --info-bg:#e9eeed;
   --kz:#1d6fa5; --kz-soft:#e0eef8;
+  --land:#f4f6f2; --water:#b9daf0; --water-line:#3d86c0; --waste:#cfd7c4; --hl:#e0592a;
   --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -19,6 +20,7 @@
   --crit:#ff8a80; --crit-bg:#3a1f1d; --warn:#f2b45a; --warn-bg:#3a2c14;
   --ok:#8fc79a; --ok-bg:#1c3022; --info-bg:#1e2b29;
   --kz:#6cb6ea; --kz-soft:#16304a; color-scheme:dark;
+  --land:#121c1b; --water:#1d4a6b; --water-line:#5aa6dc; --waste:#33402f; --hl:#ff8a5c;
 }}
 :root[data-theme="dark"]{
   --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
@@ -26,8 +28,10 @@
   --crit:#ff8a80; --crit-bg:#3a1f1d; --warn:#f2b45a; --warn-bg:#3a2c14;
   --ok:#8fc79a; --ok-bg:#1c3022; --info-bg:#1e2b29;
   --kz:#6cb6ea; --kz-soft:#16304a; color-scheme:dark;
+  --land:#121c1b; --water:#1d4a6b; --water-line:#5aa6dc; --waste:#33402f; --hl:#ff8a5c;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding:20px 16px 40px}
 .wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
@@ -115,6 +119,55 @@ button{font:inherit;cursor:pointer}
 .dir li span{font-size:13px;color:var(--muted)}
 .dir h3{font:600 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;padding:12px 16px 6px;border-top:1px solid var(--line);background:var(--bg)}
 .dir h3:first-child{border-top:0}
+.kzhead{background:linear-gradient(var(--kz-soft),transparent)!important}
+.kzhead .t{flex-wrap:wrap}
+.btn.sm{padding:4px 10px;font-size:13px}
+.new{font:600 11px var(--f-mono);padding:2px 7px;border-radius:5px;background:var(--crit);color:var(--panel);text-transform:uppercase;letter-spacing:.04em}
+.km{font:600 12px var(--f-mono);color:var(--kz);font-variant-numeric:tabular-nums}
+.stack{display:flex;flex-direction:column;gap:18px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile b{font:600 24px var(--f-display);font-variant-numeric:tabular-nums}
+.tile span{font-size:13px;color:var(--muted)}
+.tile.alert b{color:var(--crit)}
+.mapgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:960px){.mapgrid{grid-template-columns:1fr}}
+.maphead{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.maphead h2{font-size:15px}
+.maphead select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
+.map{display:block;width:100%;aspect-ratio:1/1;max-width:100%;background:var(--land)}
+.map .w-a{fill:var(--water);stroke:var(--water-line);stroke-width:.6;vector-effect:non-scaling-stroke}
+.map .w-a.basin,.map .w-a.wastewater{fill:var(--waste)}
+.map .w-l{fill:none;stroke:var(--water-line);vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.map .w-l.river{stroke-width:1.8}.map .w-l.stream{stroke-width:.7;opacity:.8}.map .w-l.canal{stroke-width:.8;stroke-dasharray:3 2}
+.map .w-p{fill:var(--water-line)}
+.map .ring{fill:none;stroke:var(--muted);stroke-dasharray:5 4;stroke-width:1;vector-effect:non-scaling-stroke}
+.map .farm{fill:var(--accent);fill-opacity:.85;stroke:var(--accent);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.map .st{fill:var(--ink)}
+.map text{font-family:var(--f-body);fill:var(--ink);paint-order:stroke;stroke:var(--land);stroke-width:3px;stroke-linejoin:round}
+.map .ringlbl{fill:var(--muted);font-family:var(--f-mono)}
+.map .ev{fill:var(--crit);stroke:var(--panel);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.map .hl{fill:var(--hl);fill-opacity:.55;stroke:var(--hl);stroke-width:3.5;vector-effect:non-scaling-stroke}
+.map .hl.line{fill:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.lg{display:inline-block;width:14px;height:10px;border-radius:2px}
+.lg.farm{background:var(--accent)}.lg.ev{background:var(--crit);border-radius:50%;width:10px}.lg.st{background:var(--ink);border-radius:50%;width:6px;height:6px}
+.lg.wt{background:var(--water);border:1px solid var(--water-line)}.lg.riv{height:3px;background:var(--water-line)}.lg.hl{background:var(--hl)}
+.lg.ring{height:0;border-top:1px dashed var(--muted)}
+.tablewrap{overflow:auto;max-height:420px}
+.tablewrap.tall{max-height:640px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{position:sticky;top:0;background:var(--panel);text-align:left;font:600 11px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);z-index:1}
+.tbl td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.tbl tr.sel td{background:var(--accent-soft)}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover td{background:var(--info-bg)}
+.tbl a{color:var(--accent)}
+.tbl .sub2{color:var(--muted);font-size:12px}
+.chk{display:inline-flex;gap:6px;align-items:center}
 @media (prefers-reduced-motion:no-preference){.item{animation:in .25s ease both}@keyframes in{from{opacity:.4}to{opacity:1}}}
 </style>
 
@@ -122,13 +175,16 @@ button{font:inherit;cursor:pointer}
   <header class="top">
     <div>
       <h1>Эпизоотический монитор птиц</h1>
-      <p class="sub">Мир — только высокопатогенный грипп птиц и болезнь Ньюкасла. Казахстан — падеж и массовый падеж птицы, грипп птиц, болезнь Ньюкасла. Каждая запись со ссылкой на источник.</p>
+      <p class="sub">Для АО «Усть-Каменогорская птицефабрика». Мир — только высокопатогенный грипп птиц и болезнь Ньюкасла. Казахстан — падеж и массовый падеж птицы, грипп птиц, болезнь Ньюкасла. Каждая запись со ссылкой на источник.</p>
     </div>
     <div class="stamp" id="stamp">Загружаю данные…</div>
   </header>
 
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="feed" aria-selected="true">Лента<span class="n" id="n-feed"></span></button>
+    <button class="tab" role="tab" data-tab="new" aria-selected="false">Новые вспышки РК<span class="n" id="n-new"></span></button>
+    <button class="tab" role="tab" data-tab="zone" aria-selected="false">50 км от УКПФ<span class="n" id="n-zone"></span></button>
+    <button class="tab" role="tab" data-tab="water" aria-selected="false">Водоёмы<span class="n" id="n-water"></span></button>
     <button class="tab" role="tab" data-tab="social" aria-selected="false">Соцсети и неофициальное<span class="n" id="n-social"></span></button>
     <button class="tab" role="tab" data-tab="official" aria-selected="false">Официальные источники</button>
   </nav>
@@ -159,6 +215,8 @@ button{font:inherit;cursor:pointer}
       <option value="media">СМИ</option><option value="official">Официальный</option>
       <option value="telegram">Telegram</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="other">Другое неофициальное</option>
     </select></label>
+    <label>Широта (если известна)<input id="f_lat" type="number" step="any" placeholder="49.95"></label>
+    <label>Долгота<input id="f_lon" type="number" step="any" placeholder="82.63"></label>
     <label class="w4">Заголовок<input id="f_title" required></label>
     <label class="w4">Кратко<textarea id="f_sum"></textarea></label>
     <div class="act"><button class="btn" type="submit">Сохранить</button><button class="btn ghost" type="button" id="cancelBtn">Отмена</button><span class="note" id="formNote"></span></div>
@@ -181,6 +239,60 @@ button{font:inherit;cursor:pointer}
     </section>
   </div>
 
+  <section class="panel" id="pane-new" hidden aria-labelledby="hNew">
+    <div class="col-head kzhead">
+      <div class="t"><h2 id="hNew">Новые вспышки и падеж по Казахстану</h2><button type="button" class="btn ghost sm" id="markSeen">Отметить всё прочитанным</button></div>
+      <p class="note">Все записи по Казахстану, сначала самые свежие: грипп птиц, болезнь Ньюкасла, падеж и массовый падеж, включая неофициальные сигналы. «Новое» — запись появилась после вашего прошлого просмотра. Справа расстояние до Усть-Каменогорской птицефабрики.</p>
+      <div class="chips" id="chips-new"></div>
+    </div>
+    <ul class="feed" id="feed-new"></ul>
+  </section>
+
+  <section id="pane-zone" hidden class="stack">
+    <div class="tiles" id="zoneTiles"></div>
+    <div class="mapgrid">
+      <div class="panel mapbox">
+        <div class="maphead"><h2>Зона 50 км вокруг АО «Усть-Каменогорская птицефабрика»</h2>
+          <label class="note">Масштаб <select id="zoneR"><option value="10">10 км</option><option value="25">25 км</option><option value="50" selected>50 км</option></select></label></div>
+        <svg class="map" id="zoneMap" role="img" aria-label="Карта зоны 50 км вокруг птицефабрики"></svg>
+        <div class="legend"><span><i class="lg farm"></i>птицефабрика</span><span><i class="lg ev"></i>событие из базы</span><span><i class="lg st"></i>населённый пункт</span><span><i class="lg wt"></i>водоёмы и реки</span><span><i class="lg ring"></i>10 / 25 / 50 км</span></div>
+      </div>
+      <div class="panel">
+        <div class="col-head"><div class="t"><h2>События в зоне 50 км</h2></div></div>
+        <ul class="feed" id="zoneEvents"></ul>
+        <div class="col-head" style="border-top:1px solid var(--line)"><div class="t"><h2>Ближайшие события по Казахстану</h2></div></div>
+        <ul class="feed" id="nearEvents"></ul>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="col-head"><div class="t"><h2>Населённые пункты в зоне</h2><span class="scope" id="setCount"></span></div>
+        <p class="note">Подворья с домашней птицей в этих сёлах — первые кандидаты для наблюдения. Население — по открытым данным, где указано.</p></div>
+      <div class="tablewrap"><table class="tbl" id="setTable"></table></div>
+    </div>
+  </section>
+
+  <section id="pane-water" hidden class="stack">
+    <div class="tiles" id="waterTiles"></div>
+    <div class="mapgrid">
+      <div class="panel mapbox">
+        <div class="maphead"><h2>Водоёмы вокруг адреса: пос. Касыма Кайсенова, 033-й учётный квартал, 1</h2>
+          <label class="note">Масштаб <select id="waterR"><option value="5">5 км</option><option value="10">10 км</option><option value="25" selected>25 км</option><option value="50">50 км</option></select></label></div>
+        <svg class="map" id="waterMap" role="img" aria-label="Карта водоёмов вокруг птицефабрики"></svg>
+        <div class="legend"><span><i class="lg farm"></i>птицефабрика</span><span><i class="lg wt"></i>водоём</span><span><i class="lg riv"></i>река, ручей, канал</span><span><i class="lg hl"></i>выбранный объект</span></div>
+      </div>
+      <div class="panel">
+        <div class="col-head">
+          <div class="t"><h2>Список водных объектов</h2><span class="scope" id="waterCount"></span></div>
+          <div class="chips" id="chips-water"></div>
+          <div class="bar"><input id="wq" type="search" placeholder="Название водоёма" aria-label="Поиск водоёма">
+            <label class="note chk"><input type="checkbox" id="wNamed"> только с названием</label></div>
+        </div>
+        <div class="tablewrap tall"><table class="tbl" id="waterTable"></table></div>
+      </div>
+    </div>
+    <p class="foot" id="geoNote"></p>
+  </section>
+
   <section class="panel" id="pane-social" hidden aria-labelledby="hSoc">
     <div class="col-head">
       <div class="t"><h2 id="hSoc">Неофициальные данные</h2><span class="scope">Telegram · Instagram · TikTok</span></div>
@@ -196,7 +308,7 @@ button{font:inherit;cursor:pointer}
 
   <div class="dir" id="pane-official" hidden></div>
 
-  <p class="foot">ГПГП — высокопатогенный грипп птиц, БН — болезнь Ньюкасла. Статус записи отражает то, что сказано в источнике на дату публикации; официальное подтверждение смотрите во вкладке «Официальные источники». У каждой записи ссылки разделены: официальные, СМИ, соцсети. Записи с пометкой «вручную» добавлены пользователями страницы.</p>
+  <p class="foot" id="mainFoot">ГПГП — высокопатогенный грипп птиц, БН — болезнь Ньюкасла. Статус записи отражает то, что сказано в источнике на дату публикации; официальное подтверждение смотрите во вкладке «Официальные источники». У каждой записи ссылки разделены: официальные, СМИ, соцсети. Записи с пометкой «вручную» добавлены пользователями страницы.</p>
 </div>
 
 <script>
@@ -303,14 +415,15 @@ function itemHtml(it, scope){
       <div class="date">${fmtDate(it.date)}</div>
       <div class="body">
         <div class="meta">
-          ${scope === 'social' ? `<span class="tag">${it.scope === 'world' ? 'Мир' : 'Казахстан'}</span>` : ''}
+          ${scope === 'social' || scope === 'new' ? `<span class="tag">${scope === 'new' ? (it.unofficial ? 'неофициально' : 'официально / СМИ') : it.scope === 'world' ? 'Мир' : 'Казахстан'}</span>` : ''}
           <span class="tag">${esc(TOPIC_LABEL[it.topic] || it.topic)}</span>
           ${it.status ? `<span class="st ${esc(it.status)}">${esc(STATUS[it.status] || it.status)}</span>` : ''}
           ${it.platform ? `<span class="pf">${esc(PLATFORM[it.platform] || it.platform)}</span>` : ''}
           ${it.addedBy === 'user' ? '<span class="tag">вручную</span>' : ''}
+          ${scope === 'new' && isNew(it) ? '<span class="new">новое</span>' : ''}
         </div>
         <p class="title">${esc(it.title)}</p>
-        <div class="place">${esc(it.place)}</div>
+        <div class="place">${esc(it.place)}${kmTo(it) != null ? ` · <span class="km">${fmtKm(kmTo(it))} от УКПФ</span>` : ''}</div>
         ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
         ${it.birds ? `<div class="birds">${Number(it.birds).toLocaleString('ru-RU')} гол.</div>` : ''}
         ${sourcesHtml(it)}
@@ -354,7 +467,8 @@ function renderOfficial(){
       `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a><span>${esc(d)}</span></li>`).join('')}</ul></section>`).join('');
 }
 function render(){
-  renderCol('world'); renderCol('kz'); renderSocial();
+  renderCol('world'); renderCol('kz'); renderSocial(); renderNew(); if (tab === 'zone') renderZone();
+  if (GEO) $('n-zone').textContent = eventsWithKm().filter(e => e.km <= GEO.radius && inPeriod(e.date)).length;
   const st = $('stamp');
   if (!loaded) return;
   if (!db){ st.textContent = 'Нет связи с базой записей'; return; }
@@ -363,14 +477,17 @@ function render(){
   const upd = meta && meta.updatedAt ? plainDate(meta.updatedAt) : '—';
   st.innerHTML = `Обновлено: <b>${esc(upd)}</b><br>мир <b>${main.filter(i => i.scope === 'world').length}</b> · Казахстан <b>${main.filter(i => i.scope === 'kz').length}</b> · неофиц. <b>${soc}</b>`;
 }
+const PANES = ['feed','new','zone','water','social','official'];
 function showTab(t){
+  if (!PANES.includes(t)) t = 'feed';
   tab = t;
   for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.tab === t));
-  $('pane-feed').hidden = t !== 'feed'; $('pane-social').hidden = t !== 'social'; $('pane-official').hidden = t !== 'official';
-  $('bar').hidden = t === 'official';
+  for (const p of PANES) $('pane-' + p).hidden = p !== t;
+  $('bar').hidden = t === 'official' || t === 'water';
+  $('mainFoot').hidden = t === 'water' || t === 'zone';
   LS.set('epi:tab', t);
+  if (t === 'zone' || t === 'water') renderGeo();
 }
-
 document.addEventListener('click', e => {
   const tb = e.target.closest('.tab');
   if (tb){ showTab(tb.dataset.tab); return; }
@@ -408,6 +525,8 @@ $('form').addEventListener('submit', async e => {
     addedBy: 'user', createdAt: new Date().toISOString()
   };
   if (social){ doc.unofficial = true; doc.platform = kind; }
+  const la = parseFloat($('f_lat').value), lo = parseFloat($('f_lon').value);
+  if (isFinite(la) && isFinite(lo)){ doc.lat = la; doc.lon = lo; }
   $('formNote').textContent = 'Сохраняю…';
   try{
     await db.collection('episodes').add(doc);
@@ -417,8 +536,217 @@ $('form').addEventListener('submit', async e => {
   }
 });
 
+
+/* ===== география: птицефабрика, зона 50 км, водоёмы ===== */
+let GEO = null, geoErr = false, selWater = null;
+const WCAT = {river:'Река', stream:'Ручей', lake:'Озеро', pond:'Пруд', reservoir:'Водохранилище', basin:'Технический бассейн', water:'Водоём', wastewater:'Очистные / отстойник', canal:'Канал, арык', spring:'Родник'};
+const WORDER = ['reservoir','lake','pond','water','river','stream','canal','basin','wastewater','spring'];
+const selW = new Set(LS.get('epi:wcat', ['reservoir','lake','pond','water','river']));
+const fmtKm = d => d < 1 ? 'на территории' : (d < 10 ? d.toFixed(1) : Math.round(d)) + ' км';
+
+function toKm(lat, lon){ return [(lon - GEO.center.lon) * GEO.kx, (lat - GEO.center.lat) * GEO.ky]; }
+function segDist(px, py, ax, ay, bx, by){
+  const dx = bx - ax, dy = by - ay, l = dx*dx + dy*dy;
+  let t = l ? ((px-ax)*dx + (py-ay)*dy) / l : 0; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - ax - t*dx, py - ay - t*dy);
+}
+function inRing(px, py, r){
+  let c = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++){
+    const [xi, yi] = r[i], [xj, yj] = r[j];
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+/* расстояние от точки до границы участка фабрики, км (0 — внутри) */
+function distFarm(x, y){
+  const ring = GEO.farm[0];
+  if (inRing(x, y, ring)) return 0;
+  let m = Infinity;
+  for (let i = 1; i < ring.length; i++) m = Math.min(m, segDist(x, y, ...ring[i-1], ...ring[i]));
+  return m;
+}
+const kmCache = new Map();
+function kmTo(it){
+  if (!GEO || !isFinite(it.lat) || !isFinite(it.lon)) return null;
+  const k = it.lat + ',' + it.lon;
+  if (!kmCache.has(k)){ const [x, y] = toKm(it.lat, it.lon); kmCache.set(k, distFarm(x, y)); }
+  return kmCache.get(k);
+}
+function compass(x, y){
+  const b = (Math.atan2(x, y) * 180 / Math.PI + 360) % 360;
+  return ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'][Math.round(b / 45) % 8];
+}
+const osm = (lat, lon, z = 15) => `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=${z}/${lat}/${lon}`;
+
+/* SVG: координаты в км, ось Y вверх → в SVG вниз */
+const P = pts => pts.map(([x, y], i) => (i ? 'L' : 'M') + x + ' ' + (-y)).join('');
+function geomPath(kind, g){
+  if (kind === 'P') return null;
+  return g.map(r => P(r) + (kind === 'A' ? 'Z' : '')).join('');
+}
+function drawMap(svg, R, opts){
+  const pad = R * 0.04, vb = [-R - pad, -R - pad, 2*R + 2*pad, 2*R + 2*pad];
+  svg.setAttribute('viewBox', vb.join(' '));
+  const fs = R / 34, inView = (x, y) => Math.abs(x) <= R + pad && Math.abs(y) <= R + pad;
+  let h = '';
+  const ptR = R / 160;
+  for (const [cat, kind, g] of GEO.features){
+    if (opts.cats && !opts.cats.has(cat)) continue;
+    if (kind === 'P'){ if (inView(g[0], g[1])) h += `<circle class="w-p" cx="${g[0]}" cy="${-g[1]}" r="${ptR}"/>`; continue; }
+    h += `<path class="${kind === 'A' ? 'w-a' : 'w-l'} ${cat}" d="${geomPath(kind, g)}"${kind === 'A' ? ' fill-rule="evenodd"' : ''}/>`;
+  }
+  for (const r of ['10','25']) h += `<path class="ring" d="${geomPath('A', GEO.rings[r])}"/>`;
+  h += `<path class="ring" d="${geomPath('A', GEO.zone)}"/>`;
+  for (const r of [10, 25, 50]) if (r <= R) h += `<text class="ringlbl" x="${fs*0.3}" y="${-(r + 1.6) - fs*0.2}" font-size="${fs*0.85}">${r} км</text>`;
+  if (opts.settlements){
+    for (const st of GEO.settlements){
+      if (!inView(st.x, st.y)) continue;
+      h += `<circle class="st" cx="${st.x}" cy="${-st.y}" r="${R/220 + (st.pop > 5000 ? R/260 : 0)}"/>`;
+      const big = (st.pop || 0) >= (R > 30 ? 3000 : R > 12 ? 800 : 0);
+      if (big) h += `<text x="${st.x + R/120}" y="${-st.y - R/120}" font-size="${st.pop > 100000 ? fs*1.15 : fs*0.85}">${esc(st.name)}</text>`;
+    }
+  }
+  h += `<path class="farm" d="${geomPath('A', GEO.farm)}"/>`;
+  h += `<text x="${R/40}" y="${R/9}" font-size="${fs}" font-weight="600">УКПФ</text>`;
+  if (opts.hl){
+    for (const fi of opts.hl.fis){
+      const [, kind, g] = GEO.features[fi];
+      if (kind === 'P') h += `<circle class="hl" cx="${g[0]}" cy="${-g[1]}" r="${R/70}"/>`;
+      else h += `<path class="hl ${kind === 'L' ? 'line' : ''}" d="${geomPath(kind, g)}"/>`;
+    }
+    const [x, y] = toKm(opts.hl.lat, opts.hl.lon);
+    h += `<circle class="hl" cx="${x}" cy="${-y}" r="${R/55}" fill-opacity=".25"/>`;
+  }
+  for (const ev of opts.events || []){
+    const [x, y] = toKm(ev.lat, ev.lon);
+    if (!inView(x, y)) continue;
+    h += `<circle class="ev" cx="${x}" cy="${-y}" r="${R/60}"><title>${esc(ev.title)}</title></circle>`;
+  }
+  svg.innerHTML = h;
+}
+
+function loadGeo(){
+  if (GEO || geoErr) return;
+  geoErr = null;
+  fetch('geo_ukpf.json').then(r => { if (!r.ok) throw 0; return r.json(); }).then(d => {
+    GEO = d; kmCache.clear();
+    $('n-water').textContent = d.water.length;
+    $('geoNote').textContent = `Данные: ${d.source}. Центр — участок «Өскемен құс фабрикасы» АҚ (${d.center.lat}, ${d.center.lon}), по адресу пос. Касыма Кайсенова, 033-й учётный квартал, 1, Уланский район, ВКО. Расстояния считаются от границы участка, направление — от фабрики на объект. Безымянные объекты — это пруды, отстойники и водоёмы, нанесённые на карту без названия; уточняйте на месте. Ссылка «карта» открывает точку на OpenStreetMap.`;
+    render(); renderGeo();
+  }).catch(() => { geoErr = true; renderGeo(); });
+}
+
+function eventsWithKm(){
+  return items.filter(it => it.scope === 'kz' && kmTo(it) != null).map(it => ({...it, km: kmTo(it)}));
+}
+function renderZone(){
+  if (!GEO){ $('zoneTiles').innerHTML = `<div class="tile"><span>${geoErr ? 'Не удалось загрузить карту зоны' : 'Загружаю карту зоны…'}</span></div>`; return; }
+  const evs = eventsWithKm().filter(e => inPeriod(e.date) && matches(e));
+  const inZone = evs.filter(e => e.km <= GEO.radius).sort(byDate);
+  const near = [...evs].sort((a, b) => a.km - b.km).slice(0, 6);
+  const wb = GEO.water.filter(w => ['reservoir','lake','pond','water'].includes(w.cat) && w.ha).length;
+  $('zoneTiles').innerHTML = `
+    <div class="tile ${inZone.length ? 'alert' : ''}"><b>${inZone.length}</b><span>событий в зоне 50 км за выбранный период</span></div>
+    <div class="tile"><b>${near.length ? fmtKm(near[0].km) : '—'}</b><span>до ближайшего события в базе</span></div>
+    <div class="tile"><b>${GEO.settlements.length}</b><span>населённых пунктов в зоне</span></div>
+    <div class="tile"><b>${wb}</b><span>водоёмов-площадей (озёра, пруды, водохранилища)</span></div>`;
+  $('n-zone').textContent = inZone.length;
+  $('setCount').textContent = GEO.settlements.length + ' н. п.';
+  drawMap($('zoneMap'), +$('zoneR').value, {settlements: true, events: evs, cats: new Set(['river','reservoir','lake','pond','water'])});
+  $('zoneEvents').innerHTML = inZone.length ? inZone.map(e => itemHtml(e, 'kz')).join('')
+    : '<li class="empty"><b>В радиусе 50 км событий нет</b>Записи с координатами в зоне появятся здесь и красной точкой на карте.</li>';
+  $('nearEvents').innerHTML = near.length ? near.map(e => `
+    <li class="item"><div class="date">${fmtDate(e.date)}</div><div class="body">
+      <div class="meta"><span class="km">${fmtKm(e.km)}</span><span class="tag">${esc(TOPIC_LABEL[e.topic] || e.topic)}</span>${e.status ? `<span class="st ${esc(e.status)}">${esc(STATUS[e.status] || e.status)}</span>` : ''}</div>
+      <p class="title">${esc(e.title)}</p><div class="place">${esc(e.place)}</div></div></li>`).join('')
+    : '<li class="empty">В базе нет событий по Казахстану с координатами.</li>';
+  if (!$('setTable').dataset.done){
+    $('setTable').innerHTML = `<thead><tr><th>Населённый пункт</th><th>Население</th><th>Расстояние</th><th>Направление</th></tr></thead><tbody>` +
+      GEO.settlements.map(s => { const lat = (GEO.center.lat + s.y / GEO.ky).toFixed(5), lon = (GEO.center.lon + s.x / GEO.kx).toFixed(5);
+        return `<tr><td>${esc(s.name)} <a href="${osm(lat, lon, 14)}" target="_blank" rel="noopener" class="sub2">карта</a></td><td class="n">${s.pop ? Number(s.pop).toLocaleString('ru-RU') : '—'}</td><td class="n">${fmtKm(s.d)}</td><td>${s.dir}</td></tr>`; }).join('') + '</tbody>';
+    $('setTable').dataset.done = 1;
+  }
+}
+function renderWater(){
+  if (!GEO){ $('waterTiles').innerHTML = `<div class="tile"><span>${geoErr ? 'Не удалось загрузить данные о водоёмах' : 'Загружаю данные о водоёмах…'}</span></div>`; return; }
+  const R = +$('waterR').value, q = $('wq').value.trim().toLowerCase(), named = $('wNamed').checked;
+  const inR = GEO.water.filter(w => w.d <= R);
+  const cnt = c => inR.filter(w => w.cat === c).length;
+  const near = (c, r) => GEO.water.filter(w => c.includes(w.cat) && w.d <= r).length;
+  $('waterTiles').innerHTML = `
+    <div class="tile"><b>${near(['reservoir','lake','pond','water','basin','wastewater'], 1)}</b><span>водоёмов на территории и в 1 км</span></div>
+    <div class="tile"><b>${near(['reservoir','lake','pond','water'], 5)}</b><span>озёр, прудов, водохранилищ в 5 км</span></div>
+    <div class="tile"><b>${(GEO.water.find(w => w.name === 'Иртыш') || {d: '—'}).d} км</b><span>до Иртыша</span></div>
+    <div class="tile"><b>${(GEO.water.find(w => /Усть-Каменогорское/.test(w.name || '')) || {d: '—'}).d} км</b><span>до Усть-Каменогорского водохранилища</span></div>`;
+  $('chips-water').innerHTML = WORDER.map(c => `<button type="button" class="chip" data-scope="wcat" data-topic="${c}" aria-pressed="${selW.has(c)}">${WCAT[c]}<span class="n">${cnt(c)}</span></button>`).join('');
+  const rows = inR.filter(w => (!selW.size || selW.has(w.cat)) && (!named || w.name) && (!q || ((w.name || '') + ' ' + (w.alt || '')).toLowerCase().includes(q)));
+  $('waterCount').textContent = rows.length + ' из ' + inR.length + ' в ' + R + ' км';
+  $('waterTable').innerHTML = `<thead><tr><th>Объект</th><th>Тип</th><th>Расст.</th><th>Напр.</th><th>Площадь, га</th></tr></thead><tbody>` +
+    rows.slice(0, 600).map(w => `<tr data-wi="${GEO.water.indexOf(w)}" class="${selWater === w ? 'sel' : ''}">
+      <td>${w.name ? esc(w.name) : '<span class="sub2">без названия</span>'} <a href="${osm(w.lat, w.lon)}" target="_blank" rel="noopener" class="sub2">карта</a>${w.alt ? `<div class="sub2">${esc(w.alt)}</div>` : ''}${w.inter ? '<div class="sub2">пересыхающий</div>' : ''}</td>
+      <td>${WCAT[w.cat]}</td><td class="n">${fmtKm(w.d)}</td><td>${w.dir}</td><td class="n">${w.ha != null ? w.ha.toLocaleString('ru-RU') : ''}</td></tr>`).join('') +
+    (rows.length > 600 ? `<tr><td colspan="5" class="sub2">Показаны первые 600 — сузьте фильтр или радиус.</td></tr>` : '') + '</tbody>';
+  drawMap($('waterMap'), R, {cats: selW.size ? new Set([...selW, 'river']) : null, hl: selWater, settlements: R >= 10});
+}
+function renderGeo(){ if (tab === 'zone') renderZone(); if (tab === 'water') renderWater(); }
+
+/* лента новых вспышек по РК */
+let seen = new Set(LS.get('epi:seen', []));
+const firstVisit = !LS.get('epi:seenInit', false);
+function isNew(it){
+  if (seen.has(it.id)) return false;
+  if (firstVisit){ const t = Date.parse(it.date || ''); return !isNaN(t) && Date.now() - t < 14 * 864e5; }
+  return true;
+}
+function renderNew(){
+  const pool = items.filter(it => it.scope === 'kz' && inPeriod(it.date) && matches(it));
+  const NT = [['new','Только новые'], ...TOPICS.kz];
+  $('chips-new').innerHTML = NT.map(([k, l]) => {
+    const n = k === 'new' ? pool.filter(isNew).length : pool.filter(it => it.topic === k).length;
+    return `<button type="button" class="chip" data-scope="newf" data-topic="${k}" aria-pressed="${selNew.has(k)}">${l}<span class="n">${n}</span></button>`;
+  }).join('');
+  const topicSel = [...selNew].filter(k => k !== 'new');
+  const shown = pool.filter(it => (!selNew.has('new') || isNew(it)) && (!topicSel.length || topicSel.includes(it.topic))).sort(byDate);
+  $('feed-new').innerHTML = shown.length ? shown.map(it => itemHtml(it, 'new')).join('') : emptyHtml(pool);
+  const nn = items.filter(it => it.scope === 'kz' && isNew(it)).length;
+  $('n-new').textContent = nn ? nn + ' нов.' : '';
+}
+const selNew = new Set(LS.get('epi:selnew', []));
+$('markSeen').addEventListener('click', () => {
+  for (const it of items) seen.add(it.id);
+  LS.set('epi:seen', [...seen]); LS.set('epi:seenInit', true);
+  render();
+});
+document.addEventListener('click', e => {
+  const c = e.target.closest('.chip');
+  if (c && c.dataset.scope === 'wcat'){
+    const t = c.dataset.topic; selW.has(t) ? selW.delete(t) : selW.add(t);
+    LS.set('epi:wcat', [...selW]); renderWater(); e.stopImmediatePropagation(); return;
+  }
+  if (c && c.dataset.scope === 'newf'){
+    const t = c.dataset.topic; selNew.has(t) ? selNew.delete(t) : selNew.add(t);
+    LS.set('epi:selnew', [...selNew]); renderNew(); e.stopImmediatePropagation(); return;
+  }
+  const tr = e.target.closest('#waterTable tbody tr[data-wi]');
+  if (tr && !e.target.closest('a')){
+    const w = GEO.water[+tr.dataset.wi];
+    selWater = selWater === w ? null : w;
+    if (selWater && selWater.d > +$('waterR').value * 0.9){
+      $('waterR').value = String([5,10,25,50].find(r => r >= selWater.d * 1.15) || 50);
+    }
+    renderWater();
+    if (selWater && window.innerWidth < 960) $('waterMap').scrollIntoView({behavior: 'smooth', block: 'center'});
+  }
+}, true);
+$('zoneR').addEventListener('change', renderZone);
+$('waterR').addEventListener('change', () => { selWater = null; renderWater(); });
+$('wq').addEventListener('input', renderWater);
+$('wNamed').addEventListener('change', renderWater);
+
 renderOfficial();
-showTab(location.hash === '#social' || location.hash === '#official' ? location.hash.slice(1) : LS.get('epi:tab', 'feed'));
+loadGeo();
+showTab(PANES.includes(location.hash.slice(1)) ? location.hash.slice(1) : LS.get('epi:tab', 'feed'));
 render();
 (async () => {
   try{ db = await claude.use('db'); }catch(e){ db = null; }
