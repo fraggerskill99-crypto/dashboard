@@ -1,0 +1,16 @@
+{
+  "name": "ptitsa-monitor",
+  "productName": "Монитор птиц",
+  "version": "1.0.0",
+  "description": "Эпизоотический монитор птиц для АО «Усть-Каменогорская птицефабрика»",
+  "author": "UKPF",
+  "main": "main.js",
+  "build": {
+    "appId": "kz.ukpf.ptitsamonitor",
+    "productName": "Монитор птиц",
+    "files": ["main.js", "www/**/*"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }], "icon": "www/icon-512.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "Монитор птиц", "artifactName": "monitor-ptits-setup.exe" },
+    "portable": { "artifactName": "monitor-ptits-portable.exe" }
+  }
+}

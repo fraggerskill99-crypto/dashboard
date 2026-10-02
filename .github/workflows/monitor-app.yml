@@ -73,19 +73,54 @@ jobs:
           git add -A && git commit -qm "Веб-версия монитора птиц: ${GITHUB_SHA::7}"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
 
-      - name: Выпуск «monitor-app» с файлами для установки
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cp monitor/dist_app/ptitsa_monitor.html ptitsa_monitor.html
-          gh release delete monitor-app --cleanup-tag -y || true
-          gh release create monitor-app monitor-ptits.apk ptitsa_monitor.html \
-            --target "$GITHUB_SHA" --title "Эпизоотический монитор птиц" \
-            --notes "Android: скачайте monitor-ptits.apk на телефон и откройте (разрешите установку из этого источника). Компьютер без интернета: ptitsa_monitor.html — открыть двойным щелчком. Веб-версия для установки с телефона или ПК: https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/ (после включения GitHub Pages). Сборка ${GITHUB_SHA::7}."
-
       - uses: actions/upload-artifact@v4
         with:
-          name: monitor-app
+          name: android-web
           path: |
             monitor-ptits.apk
             monitor/dist_app/ptitsa_monitor.html
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Веб-версия
+        run: python monitor/build_app.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Сборка .exe (Electron)
+        shell: bash
+        working-directory: monitor/app/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          cp -r ../../dist_app/www ./www
+          npm install --no-audit --no-fund --save-dev electron@33 electron-builder@25
+          npx electron-builder --win --publish never
+          ls dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            monitor/app/desktop/dist/monitor-ptits-setup.exe
+            monitor/app/desktop/dist/monitor-ptits-portable.exe
+
+  release:
+    needs: [build, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Выпуск «monitor-app» с файлами для установки
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          find . -type f | sort
+          cp monitor/dist_app/ptitsa_monitor.html ptitsa_monitor.html
+          gh release delete monitor-app --cleanup-tag -y || true
+          gh release create monitor-app monitor-ptits.apk monitor-ptits-setup.exe monitor-ptits-portable.exe ptitsa_monitor.html \
+            --target "$GITHUB_SHA" --title "Эпизоотический монитор птиц" \
+            --notes "Телефон Android: monitor-ptits.apk — скачать, открыть, разрешить установку из этого источника. Компьютер Windows: monitor-ptits-setup.exe — установщик с ярлыком на рабочем столе; monitor-ptits-portable.exe — запуск без установки. Любой компьютер без установки: ptitsa_monitor.html — открыть двойным щелчком. Сборка ${GITHUB_SHA::7}."

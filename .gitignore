@@ -1,1 +1,4 @@
 monitor/dist_app/
+monitor/app/desktop/node_modules/
+monitor/app/desktop/www/
+monitor/app/desktop/dist/
