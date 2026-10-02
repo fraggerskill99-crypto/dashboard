@@ -414,7 +414,21 @@ const MONTHS_NAME = ym => `${MONTHS_NAME_MAP[+ym.slice(5,7) - 1]} ${ym.slice(0,4
 const MONTHS_NAME_MAP = MONN;
 
 /* ===== расчёт состояния корпусов ===== */
-let HOUSES = [], LEGEND = {}, RANGE = null;
+let HOUSES = [], LEGEND = {}, RANGE = null, COVER = [];
+/* «БП13», «БП 13», «бп 13», латиница B/П… — одна площадка */
+const LAT2CYR = {A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',Y:'У'};
+const normCeh = c => String(c).toUpperCase().replace(/Ё/g, 'Е').replace(/[ABCEHKMOPTXY]/g, ch => LAT2CYR[ch]).replace(/[\s.\-_]+/g, '');
+const prettyCeh = n => n.replace(/^([^\d]+)(\d+)$/, '$1 $2');
+/* все ли дни от a до b покрыты загруженными графиками */
+function covered(a, b){
+  let n = dayNum(a); const end = dayNum(b);
+  while (n <= end){
+    const seg = COVER.find(([f, t]) => n >= f && n <= t);
+    if (!seg) return false;
+    n = seg[1] + 1;
+  }
+  return true;
+}
 function rebuild(){
   const map = new Map();
   LEGEND = Object.assign({}, LEGEND_BASE);
@@ -422,8 +436,9 @@ function rebuild(){
   for (const ym of yms){
     const M = MONTHS[ym];
     Object.assign(LEGEND, M.legend || {});
-    for (const [key, h] of Object.entries(M.houses)){
-      if (!map.has(key)) map.set(key, {key, ceh: h.ceh, fl: h.fl, order: h.order, codes: {}});
+    for (const h of Object.values(M.houses)){
+      const nc = normCeh(h.ceh), key = nc + '|' + h.fl;
+      if (!map.has(key)) map.set(key, {key, ceh: prettyCeh(nc), fl: h.fl, order: h.order, codes: {}});
       const H = map.get(key); H.order = Math.min(H.order, h.order + 0);
       Object.assign(H.codes, h.codes);
     }
@@ -441,6 +456,7 @@ function rebuild(){
     }
   }
   RANGE = yms.length ? {from: MONTHS[yms[0]].from, to: MONTHS[yms[yms.length - 1]].to} : null;
+  COVER = yms.map(ym => [dayNum(MONTHS[ym].from), dayNum(MONTHS[ym].to)]).sort((a, b) => a[0] - b[0]);
   render();
 }
 /* состояние корпуса на дату D */
@@ -453,6 +469,8 @@ function stateOf(H, D){
   if (zsAfterOs){
     const start = settings.zsFrom === 'last' && zsRun.last <= D ? zsRun.last : zsRun.first;
     bird = {since: start, age: dayNum(D) - dayNum(start) + (+settings.ageBase)};
+    // нет графика на какие-то дни между заселением и датой — освобождение могло быть, возраст не считаем
+    if (!covered(start, D)) bird = {since: start, age: null, note: D > (RANGE ? RANGE.to : D) ? 'на эту дату графика нет' : 'в графиках пропущен месяц'};
   } else if (lastOs){
     empty = {since: lastOs, days: dayNum(D) - dayNum(lastOs) + 1};
   } else {
@@ -502,7 +520,7 @@ function rangeWarn(){
 }
 const card = (H, s, val, sub) => `<button type="button" class="card" data-house="${esc(H.key)}"><span class="h">${esc(H.ceh)} <small>·</small> ${esc(H.fl)}${sub ? `<span class="sub">${sub}</span>` : ''}</span><span class="v">${val}</span></button>`;
 const birdCard = ([H, s]) => card(H, s, s.bird.age != null ? `${s.bird.age} дн.` : '?',
-  s.bird.since ? `с ${fmtShort(s.bird.since)}${s.nextOs ? ` · ОС ${fmtShort(s.nextOs)}` : ''}` : 'дата заселения ранее графиков');
+  s.bird.note ? `с ${fmtShort(s.bird.since)} · ${s.bird.note}` : s.bird.since ? `с ${fmtShort(s.bird.since)}${s.nextOs ? ` · ОС ${fmtShort(s.nextOs)}` : ''}` : 'дата заселения ранее графиков');
 function renderAge(){
   if (!HOUSES.length){ $('tilesAge').innerHTML = ''; $('ageList').innerHTML = noData(); return; }
   rangeWarn();
