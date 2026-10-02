@@ -258,7 +258,7 @@ h2{font:500 16px var(--f-display)}
       </div>
       <div class="setrow">
         <span>Многодневное заселение — возраст считать</span>
-        <span class="seg" id="zsFrom"><button type="button" data-v="last">с последнего дня</button><button type="button" data-v="first">с первого дня</button></span>
+        <span class="seg" id="zsFrom"><button type="button" data-v="first">с первого дня</button><button type="button" data-v="last">с последнего дня</button></span>
       </div>
     </div>
     <div class="panel">
@@ -327,8 +327,8 @@ const dn = n => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
 
 /* ===== хранилище: { 'ГГГГ-ММ': {title, file, loadedAt, houses: {key: {ceh, fl, order, codes: {date: [..]}}}, legend} } ===== */
 let MONTHS = LS.get('sr:months', {});
-const SETTINGS_V = 2;
-let settings = Object.assign({ageBase: 0, zsFrom: 'last', v: SETTINGS_V}, (LS.get('sr:settings', {}).v === SETTINGS_V ? LS.get('sr:settings', {}) : {}));
+const SETTINGS_V = 3;
+let settings = Object.assign({ageBase: 0, zsFrom: 'first', v: SETTINGS_V}, (LS.get('sr:settings', {}).v === SETTINGS_V ? LS.get('sr:settings', {}) : {}));
 let view = LS.get('sr:view', 'age');
 if (!['age','proc','houses','files'].includes(view)) view = 'age';
 let ageSort = LS.get('sr:ageSort', 'age');
@@ -486,6 +486,11 @@ function stateOf(H, D){
   return {codes, bird, empty, nextOs, nextZs};
 }
 const hName = H => `${H.ceh} · ${H.fl}`;
+/* площадка и корпус для сводки возраста: «Г 5» → площадка «Г», корпус «Г-5»; «БП 12» и «А» — как есть */
+function siteOf(H){
+  const m = /^([А-ЯЁA-Z])\s*(\d+)$/.exec(H.ceh);
+  return m ? {site: m[1], korp: `${m[1]}-${m[2]}`} : {site: H.ceh, korp: String(H.fl)};
+}
 
 /* ===== отрисовка ===== */
 function render(){
@@ -528,32 +533,31 @@ function renderAge(){
   const ages = birds.map(x => x[1].bird.age).filter(a => a != null);
   const known = birds.filter(x => x[1].bird.age != null);
   const oldest = known[0], youngest = known[known.length - 1];
-  // по площадкам: мин/макс возраст и корпуса
-  const cehs = [...new Set(HOUSES.map(H => H.ceh))];
-  const fmtK = list => list.map(([H]) => H.fl).sort((x, y) => x - y).map(esc).join(', ');
+  // по площадкам: Г 1…Г 5 — одна площадка «Г» с корпусами Г-1…Г-5 (то же для Д)
+  const cehs = [...new Set(HOUSES.map(H => siteOf(H).site))];
+  const fmtK = list => [...new Set(list.map(([H]) => siteOf(H).korp))].sort((x, y) => (parseInt(x.replace(/\D/g, '')) || 0) - (parseInt(y.replace(/\D/g, '')) || 0) || x.localeCompare(y)).map(esc).join(', ');
   $('cehAge').innerHTML = '<thead><tr><th>Площадка</th><th>С птицей</th><th>Самая молодая</th><th>Самая старшая</th></tr></thead><tbody>' +
     cehs.map(c => {
-      const all = HOUSES.filter(H => H.ceh === c).length;
-      const L = known.filter(([H]) => H.ceh === c);
-      const unk = birds.filter(([H, st]) => H.ceh === c && st.bird.age == null).length;
+      const all = HOUSES.filter(H => siteOf(H).site === c).length;
+      const L = known.filter(([H]) => siteOf(H).site === c);
+      const unk = birds.filter(([H, st]) => siteOf(H).site === c && st.bird.age == null).length;
       if (!L.length) return `<tr data-ceh-jump="${esc(c)}"><td class="c">${esc(c)}</td><td>${unk ? unk + ' из ' + all : '0 из ' + all}</td><td colspan="2" class="note">${unk ? 'дата заселения раньше графиков' : 'птицы нет'}</td></tr>`;
       const mn = Math.min(...L.map(x => x[1].bird.age)), mx = Math.max(...L.map(x => x[1].bird.age));
       const kMin = L.filter(x => x[1].bird.age === mn), kMax = L.filter(x => x[1].bird.age === mx);
       return `<tr data-ceh-jump="${esc(c)}"><td class="c">${esc(c)}</td><td>${L.length + unk} из ${all}</td>
-        <td><span class="age">${mn} дн.</span><span class="k">корп. ${fmtK(kMin)}</span></td>
-        <td><span class="age">${mx} дн.</span><span class="k">корп. ${fmtK(kMax)}</span></td></tr>`;
+        <td><span class="age">${mn} дн.</span><span class="k">${kMin.length && siteOf(kMin[0][0]).site !== kMin[0][0].ceh ? '' : 'корп. '}${fmtK(kMin)}</span></td>
+        <td><span class="age">${mx} дн.</span><span class="k">${kMax.length && siteOf(kMax[0][0]).site !== kMax[0][0].ceh ? '' : 'корп. '}${fmtK(kMax)}</span></td></tr>`;
     }).join('') + '</tbody>';
   const soon = birds.filter(([, s]) => s.nextOs).map(([, s]) => dayNum(s.nextOs) - dayNum(day)).filter(n => n >= 0 && n <= 7).length;
   $('tilesAge').innerHTML = `
     <div class="tile bird"><b>${birds.length}</b><span>корпусов с птицей</span></div>
-    <div class="tile"><b>${oldest ? oldest[1].bird.age + ' дн.' : '—'}</b><span>самая старшая птица</span>${oldest ? `<small>${esc(oldest[0].ceh)} · корпус ${esc(oldest[0].fl)}</small>` : ''}</div>
-    <div class="tile"><b>${youngest ? youngest[1].bird.age + ' дн.' : '—'}</b><span>самая молодая птица</span>${youngest ? `<small>${esc(youngest[0].ceh)} · корпус ${esc(youngest[0].fl)}</small>` : ''}</div>
+    <div class="tile"><b>${oldest ? oldest[1].bird.age + ' дн.' : '—'}</b><span>самая старшая птица</span>${oldest ? `<small>${esc(siteOf(oldest[0]).site)} · корпус ${esc(siteOf(oldest[0]).korp)}</small>` : ''}</div>
+    <div class="tile"><b>${youngest ? youngest[1].bird.age + ' дн.' : '—'}</b><span>самая молодая птица</span>${youngest ? `<small>${esc(siteOf(youngest[0]).site)} · корпус ${esc(siteOf(youngest[0]).korp)}</small>` : ''}</div>
     <div class="tile"><b>${soon}</b><span>освобождение в ближайшие 7 дней</span></div>`;
   for (const b of $('ageSort').children) b.setAttribute('aria-pressed', String(b.dataset.v === ageSort));
   if (!birds.length){ $('ageList').innerHTML = '<div class="empty">На этот день корпусов с птицей нет.</div>'; return; }
   if (ageSort === 'ceh'){
-    const cehs = [...new Set(HOUSES.map(H => H.ceh))];
-    $('ageList').innerHTML = cehs.map(c => { const list = birds.filter(([H]) => H.ceh === c).sort((a, b) => a[0].order - b[0].order);
+    $('ageList').innerHTML = cehs.map(c => { const list = birds.filter(([H]) => siteOf(H).site === c).sort((a, b) => a[0].order - b[0].order);
       const ag = list.map(x => x[1].bird.age).filter(a => a != null);
       return list.length ? `<div class="agegrp" id="grp-${esc(c)}"><h3>${esc(c)} · ${list.length} корп. <span>${ag.length ? `· от ${Math.min(...ag)} до ${Math.max(...ag)} дн.` : ''}</span></h3><div class="agegrid">${list.map(birdCard).join('')}</div></div>` : ''; }).join('');
   } else $('ageList').innerHTML = `<div class="agegrid">${birds.map(birdCard).join('')}</div>`;
