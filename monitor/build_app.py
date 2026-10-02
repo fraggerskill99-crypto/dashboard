@@ -9,7 +9,8 @@ dist_app/ptitsa_monitor.html — один файл: открывается с д
                      (по умолчанию seed.json этой ветки на raw.githubusercontent.com)
   GITHUB_REF_NAME  — ветка, из которой строится ссылка по умолчанию
 """
-import json, os, pathlib, re, shutil, time
+import json, os, pathlib, re, shutil, sys, time
+sys.stdout.reconfigure(encoding="utf-8")
 
 ROOT = pathlib.Path(__file__).parent
 OUT = ROOT / 'dist_app'
