@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-02",
+ "updatedAt": "2026-10-03",
  "episodes": [
   {
    "id": "w-2026-09-29-indiana-jay",
@@ -115,6 +115,11 @@
      "name": "Ветстанция Кызылжарского района",
      "url": "https://kvs-kzh.sko.kz/?lang=ru",
      "kind": "official"
+    },
+    {
+     "name": "astanatv.kz",
+     "url": "https://astanatv.kz/kz/news/179430/",
+     "kind": "media"
     }
    ],
    "addedBy": "claude",
@@ -220,6 +225,11 @@
      "url": "https://t.me/s/zhest_kz_official?before=18257",
      "kind": "social",
      "platform": "telegram"
+    },
+    {
+     "name": "kaz.nur.kz",
+     "url": "https://kaz.nur.kz/society/2423370-qostanai-oblysyndagy-zhaman-kolinde-qustar-zhappai-qyryldy-inspektsiia-tekseru-zhurgizip-zhatyr/",
+     "kind": "media"
     }
    ],
    "addedBy": "claude",
