@@ -80,6 +80,26 @@ h2{font:500 16px var(--f-display)}
 .hl button{border:0;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .prow.p-zs .pn{color:var(--ok)} .prow.p-os .pn{color:var(--crit)}
 @media (max-width:720px){.prow{grid-template-columns:1fr;padding:9px 12px}.procbar .seg{width:100%;display:flex}.procbar .seg button{flex:1}}
+.flow .track{position:relative;display:flex;gap:10px;overflow-x:auto;padding:30px 14px 14px;scrollbar-width:none;scroll-behavior:smooth}
+.flow .track::-webkit-scrollbar{display:none}
+.flow .line{position:absolute;left:14px;width:0;top:43.5px;height:3px;background:var(--line);border-radius:2px}
+.flow .fill{position:absolute;left:0;top:0;bottom:0;background:var(--bird);border-radius:2px;transition:width .9s ease}
+.node{flex:0 0 auto;min-width:92px;position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:0;background:none;padding:0;cursor:pointer}
+.node .dot{width:30px;height:30px;border-radius:50%;background:var(--panel);border:3px solid var(--line);display:flex;align-items:center;justify-content:center;font:600 12px var(--f-body);color:var(--muted);transition:all .4s}
+.node .nm{font:600 15px var(--f-body)}
+.node .rg{font:600 12px var(--f-mono);color:var(--muted);white-space:nowrap}
+.node.done .dot{border-color:var(--bird);color:var(--bird)}
+.node.on .dot{background:var(--bird);border-color:var(--bird);color:var(--panel);transform:scale(1.25)}
+.node.on .rg{color:var(--bird)}
+.chick{position:absolute;top:3px;left:0;width:30px;height:24px;z-index:2;transition:transform .9s ease;pointer-events:none}
+.zsbox{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.zsbox h2{font:600 15px var(--f-body);color:var(--ok);display:flex;gap:8px;align-items:center}
+.zsbox h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--ok)}
+.zsbox .zl{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:15px}
+.zsbox .zl b{font-weight:600}
+@media (prefers-reduced-motion:reduce){.chick,.flow .fill,.node .dot{transition:none}}
+.tile small.zl{display:flex;flex-wrap:wrap;gap:0 10px}
+.tile small.zl span b{display:inline;font:700 13px var(--f-body);color:var(--ink)}
 .tile small{display:block;font-size:13px;color:var(--ink);font-weight:600}
 @media (max-width:720px){.agegrid{grid-template-columns:1fr 1fr;padding:8px;gap:6px}.sechead .seg{margin-left:0}}
 .warnbox{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:0}
@@ -205,7 +225,12 @@ h2{font:500 16px var(--f-display)}
   </nav>
 
   <section id="v-age" class="houses">
+    <div class="panel flow" id="flow" hidden>
+      <div class="sechead"><h2>Путь по площадкам</h2><span class="note">от самой молодой птицы к самой старшей</span></div>
+      <div class="track" id="track"></div>
+    </div>
     <div class="tiles" id="tilesAge"></div>
+    <div class="panel zsbox" id="zsBox"></div>
     <p class="warnbox rangeWarn" hidden></p>
     <div class="panel">
       <div class="sechead"><h2>По площадкам</h2><span class="note">самая молодая и самая старшая птица</span></div>
@@ -526,6 +551,43 @@ function rangeWarn(){
 const card = (H, s, val, sub) => `<button type="button" class="card" data-house="${esc(H.key)}"><span class="h">${esc(H.ceh)} <small>·</small> ${esc(H.fl)}${sub ? `<span class="sub">${sub}</span>` : ''}</span><span class="v">${val}</span></button>`;
 const birdCard = ([H, s]) => card(H, s, s.bird.age != null ? `${s.bird.age} дн.` : '?',
   s.bird.note ? `с ${fmtShort(s.bird.since)} · ${s.bird.note}` : s.bird.since ? `с ${fmtShort(s.bird.since)}${s.nextOs ? ` · ОС ${fmtShort(s.nextOs)}` : ''}` : 'дата заселения ранее графиков');
+/* «Б: 3, 4, 5» или «Г-1, Г-2» — корпуса по площадкам */
+function fmtSites(list){
+  const m = new Map();
+  for (const H of list){ const {site, korp} = siteOf(H); if (!m.has(site)) m.set(site, new Set()); m.get(site).add(korp); }
+  const num = x => parseInt(String(x).replace(/\D/g, '')) || 0;
+  return [...m].map(([site, ks]) => { const arr = [...ks].sort((a, b) => num(a) - num(b));
+    return arr[0].includes('-') ? `<span><b>${esc(site)}:</b> ${arr.map(esc).join(', ')}</span>` : `<span><b>${esc(site)}:</b> корп. ${arr.map(esc).join(', ')}</span>`; }).join('');
+}
+let flowTimer = null;
+function renderFlow(known){
+  clearInterval(flowTimer);
+  const sites = new Map();
+  for (const [H, st] of known){ const {site} = siteOf(H); const a = st.bird.age; const v = sites.get(site) || {site, mn: a, mx: a}; v.mn = Math.min(v.mn, a); v.mx = Math.max(v.mx, a); sites.set(site, v); }
+  const list = [...sites.values()].sort((a, b) => a.mn - b.mn || a.mx - b.mx);
+  $('flow').hidden = list.length < 2;
+  if (list.length < 2) return;
+  $('track').innerHTML = `<div class="line"><div class="fill" id="flowFill"></div></div>
+    <svg class="chick" id="chick" viewBox="0 0 30 24" aria-hidden="true"><ellipse cx="13" cy="15" rx="9" ry="7.5" fill="#f2c94c"/><circle cx="21" cy="9" r="5.5" fill="#f2c94c"/><circle cx="22.5" cy="8" r="1" fill="#221e1a"/><path d="M26 9l3.5 1.2-3.5 1.3z" fill="#e0592a"/><path d="M8 13q4 3 8 0" stroke="#d9a82e" stroke-width="1.4" fill="none"/></svg>` +
+    list.map((v, i) => `<button type="button" class="node" data-ceh-jump="${esc(v.site)}"><span class="dot">${i + 1}</span><span class="nm">${esc(v.site)}</span><span class="rg">${v.mn === v.mx ? v.mn : v.mn + '–' + v.mx} дн.</span></button>`).join('');
+  const nodes = [...$('track').querySelectorAll('.node')];
+  const center = n => n.offsetLeft + n.offsetWidth / 2;
+  const line = $('track').querySelector('.line');
+  line.style.left = center(nodes[0]) + 'px'; line.style.width = (center(nodes[nodes.length - 1]) - center(nodes[0])) + 'px';
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let i = 0;
+  const step = () => {
+    nodes.forEach((n, k) => { n.classList.toggle('on', k === i); n.classList.toggle('done', k < i); });
+    const n = nodes[i]; if (!n) return;
+    const cx = center(n);
+    $('chick').style.transform = `translateX(${cx - 15}px)`;
+    $('flowFill').style.width = Math.max(0, cx - center(nodes[0])) + 'px';
+    if ($('track').scrollWidth > $('track').clientWidth) $('track').scrollLeft = Math.max(0, cx - $('track').clientWidth / 2);
+    i = (i + 1) % nodes.length;
+  };
+  step();
+  if (!reduce) flowTimer = setInterval(() => { if (view !== 'age' || document.hidden) return; step(); }, 1400);
+}
 function renderAge(){
   if (!HOUSES.length){ $('tilesAge').innerHTML = ''; $('ageList').innerHTML = noData(); return; }
   rangeWarn();
@@ -548,11 +610,22 @@ function renderAge(){
         <td><span class="age">${mn} дн.</span><span class="k">${kMin.length && siteOf(kMin[0][0]).site !== kMin[0][0].ceh ? '' : 'корп. '}${fmtK(kMin)}</span></td>
         <td><span class="age">${mx} дн.</span><span class="k">${kMax.length && siteOf(kMax[0][0]).site !== kMax[0][0].ceh ? '' : 'корп. '}${fmtK(kMax)}</span></td></tr>`;
     }).join('') + '</tbody>';
+  renderFlow(known);
+  // заселение на выбранный день, иначе ближайшее по графику
+  const zsNow = HOUSES.filter(H => (H.codes[day] || []).includes('ЗС'));
+  let zsHtml;
+  if (zsNow.length) zsHtml = `<h2>Заселение ${fmtD(day)} · ${zsNow.length} корп.</h2><div class="zl">${fmtSites(zsNow)}</div>`;
+  else {
+    const next = [...new Set(HOUSES.flatMap(H => H.days.filter(d => d > day && H.codes[d].includes('ЗС'))))].sort()[0];
+    const zsNext = next ? HOUSES.filter(H => (H.codes[next] || []).includes('ЗС')) : [];
+    zsHtml = `<h2>Заселения ${fmtD(day)} нет</h2>` + (next ? `<div class="note">Ближайшее по графику — ${fmtD(next)}, ${dn(dayNum(next) - dayNum(day)).replace(/^/, 'через ')}:</div><div class="zl">${fmtSites(zsNext)}</div>` : '<div class="note">В загруженных графиках дальше заселений нет.</div>');
+  }
+  $('zsBox').innerHTML = zsHtml;
   const soon = birds.filter(([, s]) => s.nextOs).map(([, s]) => dayNum(s.nextOs) - dayNum(day)).filter(n => n >= 0 && n <= 7).length;
   $('tilesAge').innerHTML = `
     <div class="tile bird"><b>${birds.length}</b><span>корпусов с птицей</span></div>
-    <div class="tile"><b>${oldest ? oldest[1].bird.age + ' дн.' : '—'}</b><span>самая старшая птица</span>${oldest ? `<small>${esc(siteOf(oldest[0]).site)} · корпус ${esc(siteOf(oldest[0]).korp)}</small>` : ''}</div>
-    <div class="tile"><b>${youngest ? youngest[1].bird.age + ' дн.' : '—'}</b><span>самая молодая птица</span>${youngest ? `<small>${esc(siteOf(youngest[0]).site)} · корпус ${esc(siteOf(youngest[0]).korp)}</small>` : ''}</div>
+    <div class="tile"><b>${oldest ? oldest[1].bird.age + ' дн.' : '—'}</b><span>самая старшая птица</span>${oldest ? `<small class="zl">${fmtSites(known.filter(x => x[1].bird.age === oldest[1].bird.age).map(x => x[0]))}</small>` : ''}</div>
+    <div class="tile"><b>${youngest ? youngest[1].bird.age + ' дн.' : '—'}</b><span>самая молодая птица</span>${youngest ? `<small class="zl">${fmtSites(known.filter(x => x[1].bird.age === youngest[1].bird.age).map(x => x[0]))}</small>` : ''}</div>
     <div class="tile"><b>${soon}</b><span>освобождение в ближайшие 7 дней</span></div>`;
   for (const b of $('ageSort').children) b.setAttribute('aria-pressed', String(b.dataset.v === ageSort));
   if (!birds.length){ $('ageList').innerHTML = '<div class="empty">На этот день корпусов с птицей нет.</div>'; return; }
