@@ -1,6 +1,42 @@
 {
- "updatedAt": "2026-10-03",
+ "updatedAt": "2026-10-04",
  "episodes": [
+  {
+   "id": "w-2026-10-02-suriname",
+   "scope": "world",
+   "topic": "hpai",
+   "date": "2026-10-02",
+   "status": "confirmed",
+   "place": "Суринам, округ Ваника (район Парамарибо)",
+   "country": "Суринам",
+   "birds": 6000,
+   "title": "Суринам: грипп птиц H5 на бройлерной ферме, около 5 тыс. кур погибло",
+   "summary": "В сентябре власти Суринама подтвердили H5 на коммерческой бройлерной ферме: из примерно 6 тыс. кур около 5 тыс. погибли, оставшиеся 1 тыс. уничтожены; пробы отобраны 17 сентября. Ферма закрыта на 28 дней после обеззараживания, ведётся отслеживание вывезенной птицы (Коммевейне). Пробы у контактных людей отрицательные. Барбадос и Гайана усилили контроль.",
+   "sources": [
+    {
+     "name": "surinametimes.com",
+     "url": "https://www.surinametimes.com/artikel/h5-bird-flu-detected-at-poultry-farm-in-wanica-district",
+     "kind": "media"
+    },
+    {
+     "name": "keynews.sr",
+     "url": "https://keynews.sr/en/avian-influenza-in-suriname-bog-monitors-exposed-persons-after-mass-chicken-deaths/",
+     "kind": "media"
+    },
+    {
+     "name": "barbadostoday.bb",
+     "url": "https://barbadostoday.bb/2026/10/02/port-checks-stepped-up-after-suriname-bird-flu-outbreak/",
+     "kind": "media"
+    },
+    {
+     "name": "inewsguyana.com",
+     "url": "https://inewsguyana.com/guyana-heightens-bird-flu-surveillance-as-suriname-outbreak-kills-5000-chickens/",
+     "kind": "media"
+    }
+   ],
+   "keyword": "Suriname bird flu",
+   "addedBy": "claude"
+  },
   {
    "id": "w-2026-09-29-indiana-jay",
    "addedBy": "claude",
@@ -20,10 +56,15 @@
      "kind": "media",
      "name": "wwbl.com",
      "url": "https://www.wwbl.com/2026/09/29/hpai-detected-in-commercial-duck-flock-in-jay-county/"
+    },
+    {
+     "name": "wattagnet.com",
+     "url": "https://www.wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15836549/avian-influenza-returns-to-indiana",
+     "kind": "media"
     }
    ],
    "status": "confirmed",
-   "summary": "Высокопатогенный грипп птиц выявлен на ферме мясных уток (около 24 330 голов, ферма «Jay 14»), птица уничтожена. Установлена зона контроля около 6,2 мили и зона наблюдения свыше 12 миль в частях округов Джей, Адамс и Уэллс. Ветслужба штата отмечает, что миграция диких птиц в разгаре.",
+   "summary": "Высокопатогенный грипп птиц выявлен на ферме мясных уток (около 24 330 голов, ферма «Jay 14»), птица уничтожена. Установлена зона контроля около 6,2 мили и зона наблюдения свыше 12 миль в частях округов Джей, Адамс и Уэллс. Ветслужба штата отмечает, что миграция диких птиц в разгаре. По данным WATTPoultry, это 50-е коммерческое стадо в Индиане, поражённое в 2026 году.",
    "title": "Грипп птиц на коммерческой утиной ферме в Индиане — первый случай в штате с мая",
    "topic": "hpai"
   },
