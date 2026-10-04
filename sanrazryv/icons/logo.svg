@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- «Санитарный разрыв»: цыплёнок в стрелке цикла; цвета aitas ukpf -->
+  <defs>
+    <radialGradient id="spbg" cx="50%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#efe7d0"/><stop offset="1" stop-color="#ddd1b0"/>
+    </radialGradient>
+    <linearGradient id="spbody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd966"/><stop offset="1" stop-color="#f2b531"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#spbg)"/>
+  <g id="sp-ring" fill="none" stroke="#221e1a" stroke-width="22" stroke-linecap="round">
+    <!-- дуга цикла: 300°, разрыв вверху справа -->
+    <path id="sp-arc" d="M 330.9 126.3 A 150 150 0 1 1 215.8 111.5" pathLength="100"/>
+  </g>
+  <!-- наконечник -->
+  <path id="sp-head" d="M 250 104 L 196 80 L 206 138 Z" fill="#221e1a" stroke="#221e1a" stroke-width="8" stroke-linejoin="round"/>
+  <!-- этапы цикла на кольце -->
+  <g stroke="#221e1a" stroke-width="10">
+    <circle class="st s1" cx="401" cy="290" r="17" fill="#efe7d0"/>
+    <circle class="st s2" cx="256" cy="406" r="17" fill="#efe7d0"/>
+    <circle class="st s3" cx="111" cy="290" r="17" fill="#e0592a"/>
+  </g>
+  <!-- цыплёнок -->
+  <g id="sp-chick">
+    <ellipse cx="256" cy="372" rx="62" ry="9" fill="#221e1a" opacity=".12"/>
+    <g stroke="#221e1a" stroke-width="14" stroke-linecap="round">
+      <line x1="236" y1="330" x2="236" y2="362"/><line x1="276" y1="330" x2="276" y2="362"/>
+      <line x1="222" y1="362" x2="246" y2="362"/><line x1="262" y1="362" x2="286" y2="362"/>
+    </g>
+    <ellipse cx="248" cy="272" rx="78" ry="66" fill="url(#spbody)" stroke="#221e1a" stroke-width="14"/>
+    <circle cx="300" cy="206" r="44" fill="url(#spbody)" stroke="#221e1a" stroke-width="14"/>
+    <ellipse cx="248" cy="272" rx="70" ry="58" fill="url(#spbody)"/>
+    <path d="M 340 200 L 380 214 L 340 228 Z" fill="#e0592a" stroke="#221e1a" stroke-width="6" stroke-linejoin="round"/>
+    <circle cx="312" cy="198" r="9" fill="#221e1a"/><circle cx="315" cy="195" r="3" fill="#fff"/>
+    <path d="M 196 262 Q 230 312 272 266" fill="none" stroke="#221e1a" stroke-width="12" stroke-linecap="round"/>
+    <path d="M 288 164 Q 284 140 300 132 M 300 164 Q 304 142 320 140" fill="none" stroke="#221e1a" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="322" cy="222" r="9" fill="#f08a6a" opacity=".55"/>
+  </g>
+</svg>

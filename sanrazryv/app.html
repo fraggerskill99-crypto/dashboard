@@ -99,6 +99,22 @@ h2{font:500 16px var(--f-display)}
 .zsbox .zl{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:15px}
 .zsbox .zl b{font-weight:600}
 @media (prefers-reduced-motion:reduce){.chick,.flow .fill,.node .dot{transition:none}}
+.splash{position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 50% 42%,#efe7d0,#e0d5b6 70%);display:flex;align-items:center;justify-content:center;transition:opacity .45s ease}
+.splash.out{opacity:0;pointer-events:none}
+.splash-in{display:flex;flex-direction:column;align-items:center;gap:10px}
+.splash svg{width:min(46vw,210px);height:auto;border-radius:28%;box-shadow:0 18px 40px rgba(60,45,20,.18)}
+.splash-t{font:700 20px var(--f-display);color:var(--ink);opacity:0;animation:spT .5s .95s ease forwards}
+.splash-s{font:600 13px var(--f-mono);letter-spacing:.12em;color:var(--muted);opacity:0;animation:spT .5s 1.1s ease forwards}
+.splash #sp-arc{stroke-dasharray:100;stroke-dashoffset:100;animation:spArc .9s .1s cubic-bezier(.6,0,.3,1) forwards}
+.splash #sp-head{opacity:0;transform-origin:223px 109px;animation:spPop .35s .85s ease-out forwards}
+.splash .st{transform-box:fill-box;transform-origin:center;transform:scale(0);animation:spPop .35s ease-out forwards}
+.splash .s1{animation-delay:.35s}.splash .s2{animation-delay:.55s}.splash .s3{animation-delay:.75s}
+.splash #sp-chick{transform-box:fill-box;transform-origin:50% 100%;animation:spHop .9s .25s ease-in-out 2}
+@keyframes spArc{to{stroke-dashoffset:0}}
+@keyframes spPop{0%{opacity:0;transform:scale(0)}70%{opacity:1;transform:scale(1.25)}100%{opacity:1;transform:scale(1)}}
+@keyframes spHop{0%,100%{transform:translateY(0) scaleY(1)}20%{transform:translateY(0) scaleY(.92)}45%{transform:translateY(-26px) scaleY(1.04)}70%{transform:translateY(0) scaleY(.95)}}
+@keyframes spT{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.splash *{animation:none!important;opacity:1!important;transform:none!important;stroke-dashoffset:0!important}}
 .tile small.zl{display:flex;flex-wrap:wrap;gap:0 10px}
 .tile small.zl span b{display:inline;font:700 13px var(--f-body);color:var(--ink)}
 .tile small{display:block;font-size:13px;color:var(--ink);font-weight:600}
@@ -200,6 +216,9 @@ h2{font:500 16px var(--f-display)}
 @media (prefers-reduced-motion:no-preference){.card,.hrow{transition:border-color .15s}}
 </style>
 
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="splash-in">{{SPLASH_SVG}}<div class="splash-t">Санитарный разрыв</div><div class="splash-s">aitas ukpf</div></div>
+</div>
 <nav class="bnav" aria-label="Разделы">
   <button type="button" data-view="age"><svg viewBox="0 0 24 24"><path d="M7 14c0-4 2.5-8 6-8 2.5 0 4 1.6 4 3.5 0 1.3-.7 2.2-1.7 2.7L19 14h-4"/><path d="M7 14c0 3.3 2.7 6 6 6 1.5 0 2.8-.5 3.8-1.4"/><circle cx="13.5" cy="9" r=".8"/></svg><span>Возраст</span></button>
   <button type="button" data-view="proc"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg><span>Процессы</span></button>
@@ -778,4 +797,10 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && da
 $('day').addEventListener('input', () => $('day').dataset.auto = '0');
 
 rebuild();
+(() => {
+  const sp = $('splash'); if (!sp) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 500); }, reduce ? 500 : 2100);
+  sp.addEventListener('click', () => { sp.classList.add('out'); setTimeout(() => sp.remove(), 500); });
+})();
 </script>

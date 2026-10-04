@@ -14,6 +14,9 @@ page = (ROOT / 'app.html').read_text(encoding='utf-8')
 xlsx = (ROOT / 'vendor/xlsx.full.min.js').read_text(encoding='utf-8')
 title = re.search(r'<title>(.*?)</title>', page).group(1)
 body = page.replace(f'<title>{title}</title>', '', 1)
+svg = (ROOT / 'icons/logo.svg').read_text(encoding='utf-8')
+svg = svg[svg.index('<svg'):]
+body = body.replace('{{SPLASH_SVG}}', svg)
 body = body.replace('{{LOGO}}', 'data:image/png;base64,' + (ROOT / 'icons/logo-ukpf.b64').read_text().strip())
 
 def doc(head_extra, lib):
