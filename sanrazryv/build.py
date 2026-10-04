@@ -31,7 +31,9 @@ WWW.mkdir(parents=True)
 sw = ("<script>if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor)"
       " addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>\n")
 (WWW / 'index.html').write_text(doc('<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icon-192.png">\n'
-    '<link rel="apple-touch-icon" href="icon-192.png">\n<meta name="apple-mobile-web-app-capable" content="yes">\n' + sw,
+    '<link rel="apple-touch-icon" href="icon-maskable-512.png">\n<meta name="apple-mobile-web-app-capable" content="yes">\n'
+    '<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Санразрыв">\n'
+    '<meta name="apple-mobile-web-app-status-bar-style" content="default">\n' + sw,
     '<script src="xlsx.full.min.js"></script>'), encoding='utf-8')
 shutil.copy(ROOT / 'vendor/xlsx.full.min.js', WWW / 'xlsx.full.min.js')
 for f in ('icon-192.png', 'icon-512.png', 'icon-maskable-512.png'): shutil.copy(ROOT / 'icons' / f, WWW / f)
