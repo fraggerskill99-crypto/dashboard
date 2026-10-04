@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Эпизоотический монитор птиц</title>
+<meta name="theme-color" content="#0f6b5c">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+</head>
+<body>
+<script>window.__DATA_URL__ = "https://raw.githubusercontent.com/fraggerskill99-crypto/dashboard/claude/happy-euler-0ic2lm/monitor/seed.json";</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Раскладка: сводная строка сверху, ниже две колонки-ленты — «Мир» и «Казахстан», на телефоне друг под другом */
+:root{
+  --bg:#eef2f1; --panel:#ffffff; --ink:#15211f; --muted:#5b6b68; --line:#d5dedb;
+  --accent:#0f6b5c; --accent-soft:#dcefea;
+  --crit:#b3261e; --crit-bg:#fbe5e3; --warn:#9a5b00; --warn-bg:#fdf0d9;
+  --ok:#3f6b48; --ok-bg:#e3efe5; --info-bg:#e9eeed;
+  --kz:#1d6fa5; --kz-soft:#e0eef8;
+  --land:#f4f6f2; --water:#b9daf0; --water-line:#3d86c0; --waste:#cfd7c4; --hl:#e0592a;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
+  --accent:#5cc3ad; --accent-soft:#183a34;
+  --crit:#ff8a80; --crit-bg:#3a1f1d; --warn:#f2b45a; --warn-bg:#3a2c14;
+  --ok:#8fc79a; --ok-bg:#1c3022; --info-bg:#1e2b29;
+  --kz:#6cb6ea; --kz-soft:#16304a; color-scheme:dark;
+  --land:#121c1b; --water:#1d4a6b; --water-line:#5aa6dc; --waste:#33402f; --hl:#ff8a5c;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1716; --panel:#162220; --ink:#e3ecea; --muted:#94a7a3; --line:#2a3a37;
+  --accent:#5cc3ad; --accent-soft:#183a34;
+  --crit:#ff8a80; --crit-bg:#3a1f1d; --warn:#f2b45a; --warn-bg:#3a2c14;
+  --ok:#8fc79a; --ok-bg:#1c3022; --info-bg:#1e2b29;
+  --kz:#6cb6ea; --kz-soft:#16304a; color-scheme:dark;
+  --land:#121c1b; --water:#1d4a6b; --water-line:#5aa6dc; --waste:#33402f; --hl:#ff8a5c;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding:20px 16px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(20px,3vw,28px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:17px;font-weight:500}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.sub{color:var(--muted);margin:4px 0 0;max-width:68ch}
+.stamp{font:12px var(--f-mono);color:var(--muted);text-align:right}
+.stamp b{color:var(--ink);font-weight:600}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.bar input,.bar select,.form input,.form select,.form textarea{
+  font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.bar input{flex:1 1 220px;min-width:0}
+#bar{justify-content:flex-end}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--panel);border-radius:8px;padding:7px 14px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0;overflow:hidden}
+.col-head{padding:14px 16px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.col-head .t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.col-head .scope{font:600 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.col.kz .col-head .scope{color:var(--kz)}
+.col.kz .col-head{background:linear-gradient(var(--kz-soft),transparent)}
+.col.world .col-head{background:linear-gradient(var(--accent-soft),transparent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 10px;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.chip .n{font:600 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.chip[aria-pressed="true"] .n{color:var(--panel)}
+.feed{list-style:none;margin:0;padding:0}
+.item{padding:14px 16px;border-top:1px solid var(--line);display:grid;grid-template-columns:76px 1fr;gap:4px 14px}
+.item:first-child{border-top:0}
+.date{font:12px/1.35 var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;padding-top:2px}
+.date b{display:block;font-size:15px;color:var(--ink);font-weight:600}
+.body{min-width:0;display:flex;flex-direction:column;gap:5px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tag{font:600 11px var(--f-mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:var(--info-bg);color:var(--muted)}
+.st{font-size:12px;padding:1px 8px;border-radius:999px;font-weight:500}
+.st.confirmed{background:var(--crit-bg);color:var(--crit)}
+.st.suspected,.st.pending{background:var(--warn-bg);color:var(--warn)}
+.st.ruled_out{background:var(--ok-bg);color:var(--ok)}
+.st.info{background:var(--info-bg);color:var(--muted)}
+.place{font-size:13px;color:var(--muted)}
+.title{font-weight:600;font-size:15px;line-height:1.35;margin:0;text-wrap:pretty}
+.sum{margin:0;color:var(--ink);font-size:14px;max-width:68ch}
+.birds{font:600 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.src{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px}
+.src a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+.col.kz .src a{color:var(--kz);border-bottom-color:var(--kz-soft)}
+.src a:hover{border-bottom-color:currentColor}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+.empty b{display:block;color:var(--ink);margin-bottom:4px}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.form .w2{grid-column:span 2}.form .w4{grid-column:1/-1}
+.form textarea{min-height:70px;resize:vertical}
+.form .act{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (max-width:640px){.form{grid-template-columns:1fr 1fr}.form .w2{grid-column:1/-1}}
+.note{font-size:13px;color:var(--muted)}
+.foot{font-size:12px;color:var(--muted);max-width:90ch}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
+.tab{border:0;background:transparent;color:var(--muted);padding:9px 14px;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .n{font:600 12px var(--f-mono);margin-left:6px;color:var(--muted)}
+.src{flex-direction:column;gap:3px}
+.src .row{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.src .k{font:600 10px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-width:78px}
+.src .k.official{color:var(--ok)}
+.src .k.social{color:var(--warn)}
+.find{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.find a{color:var(--muted)}
+.pf{font:600 11px var(--f-mono);padding:2px 7px;border-radius:5px;background:var(--warn-bg);color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0;overflow:hidden}
+.panel .col-head{background:linear-gradient(var(--warn-bg),transparent)}
+.warnbox{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:0}
+.dir{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+@media (max-width:860px){.dir{grid-template-columns:1fr}}
+.dir ul{list-style:none;margin:0;padding:0}
+.dir li{padding:11px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.dir li:first-child{border-top:0}
+.dir li a{color:var(--accent);font-weight:600;text-decoration:none}
+.dir li a:hover{text-decoration:underline}
+.dir li span{font-size:13px;color:var(--muted)}
+.dir h3{font:600 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;padding:12px 16px 6px;border-top:1px solid var(--line);background:var(--bg)}
+.dir h3:first-child{border-top:0}
+.kzhead{background:linear-gradient(var(--kz-soft),transparent)!important}
+.kzhead .t{flex-wrap:wrap}
+.btn.sm{padding:4px 10px;font-size:13px}
+.new{font:600 11px var(--f-mono);padding:2px 7px;border-radius:5px;background:var(--crit);color:var(--panel);text-transform:uppercase;letter-spacing:.04em}
+.km{font:600 12px var(--f-mono);color:var(--kz);font-variant-numeric:tabular-nums}
+.stack{display:flex;flex-direction:column;gap:18px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile b{font:600 24px var(--f-display);font-variant-numeric:tabular-nums}
+.tile span{font-size:13px;color:var(--muted)}
+.tile.alert b{color:var(--crit)}
+.mapgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:960px){.mapgrid{grid-template-columns:1fr}}
+.maphead{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.maphead h2{font-size:15px}
+.maphead select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
+.map{display:block;width:100%;aspect-ratio:1/1;max-width:100%;background:var(--land)}
+.map .w-a{fill:var(--water);stroke:var(--water-line);stroke-width:.6;vector-effect:non-scaling-stroke}
+.map .w-a.basin,.map .w-a.wastewater{fill:var(--waste)}
+.map .w-l{fill:none;stroke:var(--water-line);vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.map .w-l.river{stroke-width:1.8}.map .w-l.stream{stroke-width:.7;opacity:.8}.map .w-l.canal{stroke-width:.8;stroke-dasharray:3 2}
+.map .w-p{fill:var(--water-line)}
+.map .ring{fill:none;stroke:var(--muted);stroke-dasharray:5 4;stroke-width:1;vector-effect:non-scaling-stroke}
+.map .farm{fill:var(--accent);fill-opacity:.85;stroke:var(--accent);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.map .st{fill:var(--ink)}
+.map text{font-family:var(--f-body);fill:var(--ink);paint-order:stroke;stroke:var(--land);stroke-width:3px;stroke-linejoin:round}
+.map .ringlbl{fill:var(--muted);font-family:var(--f-mono)}
+.map .ev{fill:var(--crit);stroke:var(--panel);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.map .hl{fill:var(--hl);fill-opacity:.55;stroke:var(--hl);stroke-width:3.5;vector-effect:non-scaling-stroke}
+.map .hl.line{fill:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.lg{display:inline-block;width:14px;height:10px;border-radius:2px}
+.lg.farm{background:var(--accent)}.lg.ev{background:var(--crit);border-radius:50%;width:10px}.lg.st{background:var(--ink);border-radius:50%;width:6px;height:6px}
+.lg.wt{background:var(--water);border:1px solid var(--water-line)}.lg.riv{height:3px;background:var(--water-line)}.lg.hl{background:var(--hl)}
+.lg.ring{height:0;border-top:1px dashed var(--muted)}
+.tablewrap{overflow:auto;max-height:420px}
+.tablewrap.tall{max-height:640px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{position:sticky;top:0;background:var(--panel);text-align:left;font:600 11px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);z-index:1}
+.tbl td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.tbl tr.sel td{background:var(--accent-soft)}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover td{background:var(--info-bg)}
+.tbl a{color:var(--accent)}
+.tbl .sub2{color:var(--muted);font-size:12px}
+.chk{display:inline-flex;gap:6px;align-items:center}
+.farmsw{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;align-self:flex-start;background:var(--panel)}
+.fsw{border:0;background:transparent;color:var(--ink);padding:8px 16px;font-weight:500}
+.fsw+.fsw{border-left:1px solid var(--line)}
+.fsw[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+/* ---- телефон ---- */
+h1 .short{display:none}
+.bnav,.fab,.segm{display:none}
+.srcbox summary{cursor:pointer;font-size:13px;color:var(--muted);list-style:none;display:inline-flex;align-items:center;gap:6px;padding:2px 0}
+.srcbox summary::-webkit-details-marker{display:none}
+.srcbox summary::before{content:"▸";font-size:11px;transition:transform .15s}
+.srcbox[open] summary::before{transform:rotate(90deg)}
+.srcbox[open] summary{margin-bottom:4px}
+.srcbox{display:flex;flex-direction:column;gap:4px}
+.mob{display:none}
+.bar input[type=checkbox]{flex:none}
+.fsw small{font-size:12px;opacity:.8;font-weight:400}
+@media (max-width:720px){
+  body{padding:0 12px calc(76px + env(safe-area-inset-bottom,0px));font-size:15px}
+  .wrap{gap:12px}
+  .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin:0 -12px;padding:10px 12px 8px;border-bottom:1px solid var(--line);flex-wrap:nowrap;align-items:center}
+  h1{font-size:19px}
+  h1 .full,.top .sub{display:none}
+  h1 .short{display:inline}
+  .stamp{font-size:11px;line-height:1.35;white-space:nowrap}
+  .nomob{display:none}
+  h1{white-space:nowrap}
+  #pane-feed .col-head .t{display:none}
+  .fsw{display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.25}
+  .tabs{display:none}
+  #addBtn{display:none}
+  .bar{justify-content:flex-start}
+  .bar select{padding:6px 8px}
+  .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
+  .bnav button{flex:1;border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;font-size:11px;position:relative;min-height:52px}
+  .bnav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .bnav button[aria-current="page"]{color:var(--accent);font-weight:600}
+  .bnav button[aria-current="page"] svg{stroke-width:2.3}
+  .bnav .dot{position:absolute;top:6px;left:calc(50% + 8px);width:9px;height:9px;border-radius:50%;background:var(--crit);border:2px solid var(--panel)}
+  .moremenu{position:fixed;right:8px;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:31;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);display:flex;flex-direction:column;min-width:240px;overflow:hidden}
+  .moremenu button{border:0;background:transparent;color:var(--ink);text-align:left;padding:14px 16px;font-size:15px}
+  .moremenu button+button{border-top:1px solid var(--line)}
+  .fab{display:flex;position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:29;width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:var(--panel);font-size:30px;line-height:1;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .fab[hidden]{display:none!important}
+  .segm{display:flex;background:var(--info-bg);border-radius:10px;padding:3px;gap:3px}
+  .segm button{flex:1;border:0;background:transparent;color:var(--muted);padding:9px 0;border-radius:8px;font-weight:500;font-size:15px}
+  .segm button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  #pane-feed[data-show="kz"] .col.world,#pane-feed[data-show="world"] .col.kz{display:none}
+  .col-head{padding:12px 12px 10px}
+  .col-head .t h2{font-size:16px}
+  .chips{flex-wrap:nowrap;overflow-x:auto;margin:0 -12px;padding:0 12px 2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;padding:6px 12px;font-size:14px}
+  .item{grid-template-columns:1fr;padding:12px;gap:4px}
+  .item .date{display:flex;gap:6px;align-items:baseline;padding:0}
+  .item .date b{display:inline;font-size:13px}
+  .title{font-size:16px}
+  .sum{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+  .sum.open{display:block}
+  .src .k{min-width:0;width:100%}
+  .src .row{gap:2px 12px}
+  .src a,.find a{padding:4px 0;display:inline-block}
+  .tiles{gap:8px}
+  .tile{padding:10px 12px}
+  .tile b{font-size:19px}
+  .tile span{font-size:12px}
+  .maphead{padding:10px 12px}
+  .maphead h2{font-size:14px}
+  .legend{padding:8px 12px;gap:4px 10px}
+  .farmsw{align-self:stretch;display:flex}
+  .fsw{flex:1;padding:10px 6px;font-size:14px}
+  #waterTable th:nth-child(2),#waterTable td:nth-child(2),#waterTable th:nth-child(4),#waterTable td:nth-child(4),#waterTable th:nth-child(5),#waterTable td:nth-child(5){display:none}
+  #setTable th:nth-child(4),#setTable td:nth-child(4){display:table-cell}
+  .mob{display:block}
+  .tablewrap,.tablewrap.tall{max-height:none}
+  .tbl td{padding:9px 10px}
+  .form{grid-template-columns:1fr;padding:14px}
+  .form .w2,.form .w4{grid-column:1}
+  .dir{gap:12px}
+  .foot{font-size:11px}
+}
+@media (prefers-reduced-motion:no-preference){.item{animation:in .25s ease both}@keyframes in{from{opacity:.4}to{opacity:1}}}
+</style>
+
+<nav class="bnav" aria-label="Разделы">
+  <button type="button" data-tab="feed"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span>Лента</span></button>
+  <button type="button" data-tab="new"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M5 12H2M22 12h-3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/><circle cx="12" cy="12" r="3"/></svg><span>Новые</span><i class="dot" id="bnNew" hidden></i></button>
+  <button type="button" data-tab="zone"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><span>50 км</span></button>
+  <button type="button" data-tab="water"><svg viewBox="0 0 24 24"><path d="M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z"/></svg><span>Водоёмы</span></button>
+  <button type="button" data-tab="more" id="bnMore"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Ещё</span></button>
+</nav>
+<div class="moremenu" id="moreMenu" hidden>
+  <button type="button" data-tab="social">Соцсети и неофициальное</button>
+  <button type="button" data-tab="official">Официальные источники</button>
+</div>
+<button type="button" class="fab" id="fab" hidden aria-label="Добавить эпизод">+</button>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1><span class="full">Эпизоотический монитор птиц</span><span class="short">Монитор птиц</span></h1>
+      <p class="sub">Для АО «Усть-Каменогорская птицефабрика» (УКПФ) и ТОО «Макинская птицефабрика» (МПФ). Мир — только высокопатогенный грипп птиц и болезнь Ньюкасла. Казахстан — падеж и массовый падеж птицы, грипп птиц, болезнь Ньюкасла. Каждая запись со ссылкой на источник.</p>
+    </div>
+    <div class="stamp" id="stamp">Загружаю данные…</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="feed" aria-selected="true">Лента<span class="n" id="n-feed"></span></button>
+    <button class="tab" role="tab" data-tab="new" aria-selected="false">Новые вспышки РК<span class="n" id="n-new"></span></button>
+    <button class="tab" role="tab" data-tab="zone" aria-selected="false">50 км от фабрики<span class="n" id="n-zone"></span></button>
+    <button class="tab" role="tab" data-tab="water" aria-selected="false">Водоёмы<span class="n" id="n-water"></span></button>
+    <button class="tab" role="tab" data-tab="social" aria-selected="false">Соцсети и неофициальное<span class="n" id="n-social"></span></button>
+    <button class="tab" role="tab" data-tab="official" aria-selected="false">Официальные источники</button>
+  </nav>
+
+  <div class="bar" id="bar">
+    <select id="period" aria-label="Период">
+      <option value="30">За 30 дней</option>
+      <option value="90" selected>За 90 дней</option>
+      <option value="365">За год</option>
+      <option value="0">Всё время</option>
+    </select>
+    <button class="btn ghost" id="addBtn" hidden>Добавить эпизод</button>
+  </div>
+
+  <form class="form" id="form" hidden>
+    <label>Колонка<select id="f_scope"><option value="kz">Казахстан</option><option value="world">Мир</option></select></label>
+    <label>Тема<select id="f_topic"></select></label>
+    <label>Дата<input id="f_date" type="date" required></label>
+    <label>Статус<select id="f_status">
+      <option value="pending">Выясняется</option><option value="suspected">Подозрение</option>
+      <option value="confirmed">Подтверждено</option><option value="ruled_out">Исключено</option><option value="info">Сводка</option>
+    </select></label>
+    <label class="w2">Место (страна, область, район, населённый пункт)<input id="f_place" required></label>
+    <label>Погибло / уничтожено, голов<input id="f_birds" type="number" min="0" inputmode="numeric"></label>
+    <label>Источник (ссылка)<input id="f_url" type="url" placeholder="https://…"></label>
+    <label>Тип источника<select id="f_kind">
+      <option value="media">СМИ</option><option value="official">Официальный</option>
+      <option value="telegram">Telegram</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="other">Другое неофициальное</option>
+    </select></label>
+    <label>Широта (если известна)<input id="f_lat" type="number" step="any" placeholder="49.95"></label>
+    <label>Долгота<input id="f_lon" type="number" step="any" placeholder="82.63"></label>
+    <label class="w4">Заголовок<input id="f_title" required></label>
+    <label class="w4">Кратко<textarea id="f_sum"></textarea></label>
+    <div class="act"><button class="btn" type="submit">Сохранить</button><button class="btn ghost" type="button" id="cancelBtn">Отмена</button><span class="note" id="formNote"></span></div>
+  </form>
+
+  <div class="segm" id="feedSeg" role="group" aria-label="Что показать"><button type="button" data-col="kz" aria-pressed="true">Казахстан</button><button type="button" data-col="world" aria-pressed="false">Мир</button></div>
+  <div class="cols" id="pane-feed" data-show="kz">
+    <section class="col world" aria-labelledby="hWorld">
+      <div class="col-head">
+        <div class="t"><h2 id="hWorld">Мир</h2><span class="scope">ГПГП · БН</span></div>
+        <div class="chips" id="chips-world"></div>
+      </div>
+      <ul class="feed" id="feed-world"></ul>
+    </section>
+    <section class="col kz" aria-labelledby="hKz">
+      <div class="col-head">
+        <div class="t"><h2 id="hKz">Казахстан</h2><span class="scope">РК</span></div>
+        <div class="chips" id="chips-kz"></div>
+      </div>
+      <ul class="feed" id="feed-kz"></ul>
+    </section>
+  </div>
+
+  <section class="panel" id="pane-new" hidden aria-labelledby="hNew">
+    <div class="col-head kzhead">
+      <div class="t"><h2 id="hNew">Новые вспышки и падеж по Казахстану</h2><button type="button" class="btn ghost sm" id="markSeen">Отметить всё прочитанным</button></div>
+      <p class="note">Все записи по Казахстану, сначала самые свежие: грипп птиц, болезнь Ньюкасла, падеж и массовый падеж, включая неофициальные сигналы. «Новое» — запись появилась после вашего прошлого просмотра. У записей с координатами указано расстояние до УКПФ и МПФ.</p>
+      <div class="chips" id="chips-new"></div>
+    </div>
+    <ul class="feed" id="feed-new"></ul>
+  </section>
+
+  <section id="pane-zone" hidden class="stack">
+    <div class="farmsw" role="group" aria-label="Птицефабрика"><button type="button" class="fsw" data-farm="ukpf"><b>УКПФ</b> <small>Усть-Каменогорск</small></button><button type="button" class="fsw" data-farm="mpf"><b>МПФ</b> <small>Макинск</small></button></div>
+        <div class="tiles" id="zoneTiles"></div>
+    <div class="mapgrid">
+      <div class="panel mapbox">
+        <div class="maphead"><h2>Зона 50 км вокруг <span class="farmName"></span></h2>
+          <label class="note">Масштаб <select id="zoneR"><option value="10">10 км</option><option value="25">25 км</option><option value="50" selected>50 км</option></select></label></div>
+        <svg class="map" id="zoneMap" role="img" aria-label="Карта зоны 50 км вокруг птицефабрики"></svg>
+        <div class="legend"><span><i class="lg farm"></i>птицефабрика</span><span><i class="lg ev"></i>событие из базы</span><span><i class="lg st"></i>населённый пункт</span><span><i class="lg wt"></i>водоёмы и реки</span><span><i class="lg ring"></i>10 / 25 / 50 км</span></div>
+      </div>
+      <div class="panel">
+        <div class="col-head"><div class="t"><h2>События в зоне 50 км</h2></div></div>
+        <ul class="feed" id="zoneEvents"></ul>
+        <div class="col-head" style="border-top:1px solid var(--line)"><div class="t"><h2>Ближайшие события по Казахстану</h2></div></div>
+        <ul class="feed" id="nearEvents"></ul>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="col-head"><div class="t"><h2>Населённые пункты в зоне</h2><span class="scope" id="setCount"></span></div>
+        <p class="note">Подворья с домашней птицей в этих сёлах — первые кандидаты для наблюдения. Население — по открытым данным, где указано.</p></div>
+      <div class="tablewrap"><table class="tbl" id="setTable"></table></div>
+    </div>
+  </section>
+
+  <section id="pane-water" hidden class="stack">
+    <div class="farmsw" role="group" aria-label="Птицефабрика"><button type="button" class="fsw" data-farm="ukpf"><b>УКПФ</b> <small>Усть-Каменогорск</small></button><button type="button" class="fsw" data-farm="mpf"><b>МПФ</b> <small>Макинск</small></button></div>
+        <div class="tiles" id="waterTiles"></div>
+    <div class="mapgrid">
+      <div class="panel mapbox">
+        <div class="maphead"><h2>Водоёмы вокруг адреса: <span class="farmAddr"></span></h2>
+          <label class="note">Масштаб <select id="waterR"><option value="5">5 км</option><option value="10">10 км</option><option value="25" selected>25 км</option><option value="50">50 км</option></select></label></div>
+        <svg class="map" id="waterMap" role="img" aria-label="Карта водоёмов вокруг птицефабрики"></svg>
+        <div class="legend"><span><i class="lg farm"></i>птицефабрика</span><span><i class="lg wt"></i>водоём</span><span><i class="lg riv"></i>река, ручей, канал</span><span><i class="lg hl"></i>выбранный объект</span></div>
+      </div>
+      <div class="panel">
+        <div class="col-head">
+          <div class="t"><h2>Список водных объектов</h2><span class="scope" id="waterCount"></span></div>
+          <div class="chips" id="chips-water"></div>
+          <div class="bar"><input id="wq" type="search" placeholder="Название водоёма" aria-label="Поиск водоёма">
+            <label class="note chk"><input type="checkbox" id="wNamed"> только с названием</label></div>
+        </div>
+        <div class="tablewrap tall"><table class="tbl" id="waterTable"></table></div>
+      </div>
+    </div>
+    <p class="foot" id="geoNote"></p>
+  </section>
+
+  <section class="panel" id="pane-social" hidden aria-labelledby="hSoc">
+    <div class="col-head">
+      <div class="t"><h2 id="hSoc">Неофициальные данные</h2><span class="scope">Telegram · Instagram · TikTok</span></div>
+      <p class="warnbox">Сообщения из соцсетей и анализы, которые государственная ветслужба не признала. Это сигналы для проверки, а не подтверждённые факты.</p>
+      <div class="chips" id="chips-social"></div>
+    </div>
+    <ul class="feed" id="feed-social"></ul>
+  </section>
+
+  <div class="dir" id="pane-official" hidden></div>
+
+  <p class="foot" id="mainFoot">ГПГП — высокопатогенный грипп птиц, БН — болезнь Ньюкасла. Статус записи отражает то, что сказано в источнике на дату публикации; официальное подтверждение смотрите во вкладке «Официальные источники». У каждой записи ссылки разделены: официальные, СМИ, соцсети. Записи с пометкой «вручную» добавлены на этом устройстве и видны только здесь.</p>
+</div>
+
+<script>
+const TOPICS = {
+  world: [['hpai','Грипп птиц'],['nd','Ньюкасл']],
+  kz:    [['padezh','Падеж'],['mass','Массовый падеж'],['hpai','Грипп птиц'],['nd','Ньюкасл']]
+};
+const TOPIC_LABEL = {hpai:'Грипп птиц', nd:'Ньюкасл', padezh:'Падеж', mass:'Массовый падеж'};
+const STATUS = {confirmed:'Подтверждено', suspected:'Подозрение', pending:'Выясняется', ruled_out:'Исключено', info:'Сводка'};
+const KIND = {official:'Официально', media:'СМИ', social:'Соцсети'};
+const PLATFORM = {telegram:'Telegram', instagram:'Instagram', tiktok:'TikTok', other:'Неофиц. данные'};
+const MONTHS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+
+/* Telegram-каналы, где ищем по слову: у Telegram нет общего веб-поиска, только по каналу */
+const TG_KZ = [['skonews','Новости СКО'],['zakonkz','Zakon.kz'],['orda_kz','ORDA'],['agropresskz','AGROPRESS'],['zhest_kz_official','ZHEST_KZ']];
+
+/* Справочник официальных источников */
+const OFFICIAL = {
+  'Казахстан': [
+    ['Министерство сельского хозяйства РК — новости','https://www.gov.kz/memleket/entities/moa/press/news','Официальные сообщения о вспышках, карантинах, вакцинации. В составе МСХ — Комитет ветеринарного контроля и надзора.'],
+    ['Национальный референтный центр по ветеринарии (НРЦВ)','https://nrcv.kz/ru/o-nas/','Государственная лаборатория, которая официально ставит диагноз по особо опасным болезням.'],
+    ['Ветстанция Кызылжарского района (СКО)','https://kvs-kzh.sko.kz/?lang=ru','Районная служба по селу Шаховское и соседним сёлам.'],
+    ['МСХ РК в Facebook','https://www.facebook.com/minagri.gov.kz/','Официальная страница министерства.']
+  ],
+  'Мир': [
+    ['WOAH WAHIS — уведомления о вспышках','https://wahis.woah.org','Официальные уведомления стран во Всемирную организацию здравоохранения животных, включая Казахстан.'],
+    ['WOAH — грипп птиц, ситуационные отчёты','https://www.woah.org/en/disease/avian-influenza/','Ежемесячные обзоры ГПГП по миру.'],
+    ['WOAH — болезнь Ньюкасла','https://www.woah.org/en/disease/newcastle-disease/','Описание болезни и ссылки на отчёты.'],
+    ['FAO EMPRES-i — карта вспышек','https://empres-i.apps.fao.org','База и карта вспышек болезней животных.'],
+    ['FAO — обзор гриппа птиц','https://www.fao.org/animal-health/situation-updates/global-aiv-with-zoonotic-potential/en','Регулярные сводки по гриппу птиц с зоонозным потенциалом.'],
+    ['EFSA — грипп птиц','https://www.efsa.europa.eu/en/topics/topic/avian-influenza','Квартальные обзоры по Европе вместе с ECDC.'],
+    ['ЕС — система ADIS','https://food.ec.europa.eu/animals/animal-diseases/animal-disease-information-system-adis_en','Вспышки в странах ЕС, в том числе болезнь Ньюкасла.'],
+    ['USDA APHIS — выявления ГПГП в США','https://www.aphis.usda.gov/livestock-poultry-disease/avian/avian-influenza/hpai-detections','Список поражённых коммерческих и приусадебных стад.'],
+    ['Россельхознадзор','https://fsvps.gov.ru','Ситуация в России и сообщения о зарубежных вспышках.'],
+    ['Agriculture Victoria — H5N1','https://agriculture.vic.gov.au/biosecurity/animal-diseases/poultry-diseases/H5N1-avian-influenza-H5-bird-flu','Австралия, штат Виктория.']
+  ],
+  'Telegram и Instagram (неофициально)': [
+    ['Новости Петропавловска и СКО','https://t.me/skonews','Telegram-канал, писал о падеже в Бугровом и Шаховском.'],
+    ['Zakon.kz','https://t.me/zakonkz','Telegram-канал издания.'],
+    ['ORDA','https://t.me/orda_kz','Telegram-канал издания.'],
+    ['AGROPRESS','https://t.me/agropresskz','Аграрные новости Казахстана.'],
+    ['ZHEST_KZ','https://t.me/zhest_kz_official','Публиковал фото погибших птиц на озере Жаман.'],
+    ['АСБК (BirdLife Kazakhstan)','https://www.instagram.com/acbk.kz/','Instagram орнитологов: гибель диких птиц.']
+  ]
+};
+
+let items = [], meta = null, loaded = false, db = null, tab = 'feed';
+const sel = {world:new Set(), kz:new Set(), social:new Set()};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+$('period').value = String(LS.get('epi:period', 90));
+for (const s of ['world','kz','social']) for (const t of LS.get('epi:sel:'+s, [])) sel[s].add(t);
+
+function fmtDate(d){
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(d || '');
+  if (!m) return '<b>—</b>';
+  return m[3] ? `<b>${+m[3]} ${MONTHS[+m[2]-1]}</b>${m[1]}` : `<b>${MONTHS[+m[2]-1]}</b>${m[1]}`;
+}
+function plainDate(d){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
+  return m ? `${+m[3]} ${MONTHS[+m[2]-1]} ${m[1]}` : String(d || '—');
+}
+function inPeriod(d){
+  const days = +$('period').value;
+  if (!days) return true;
+  const t = Date.parse((d || '').length === 7 ? d + '-28' : d);
+  return !isNaN(t) && Date.now() - t <= days * 864e5;
+}
+function matches(it){ return true; }
+const host = u => { try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return 'источник'; } };
+const isUnofficial = it => !!it.unofficial;
+
+function sourcesHtml(it){
+  const list = (it.sources || []).filter(s => /^https?:\/\//.test(s.url || ''));
+  if (!list.length) return '';
+  const groups = {official:[], media:[], social:[]};
+  for (const s of list) (groups[s.kind] || groups.media).push(s);
+  return '<div class="src">' + Object.keys(groups).filter(k => groups[k].length).map(k =>
+    `<div class="row"><span class="k ${k}">${KIND[k]}</span>${groups[k].map(s =>
+      `<a href="${esc(s.url)}" target="_blank" rel="noopener">${s.platform ? esc(PLATFORM[s.platform] || s.platform) + ': ' : ''}${esc(s.name || host(s.url))}</a>`).join('')}</div>`
+  ).join('') + '</div>';
+}
+function srcBlock(it){
+  const src = sourcesHtml(it), find = findLinks(it.keyword, it.scope);
+  if (!src && !find) return '';
+  const n = (it.sources || []).length;
+  return `<details class="srcbox"${MOBILE() ? '' : ' open'}><summary>Источники${n ? ` · ${n}` : ''}</summary>${src}${find}</details>`;
+}
+const MOBILE = () => window.matchMedia('(max-width: 720px)').matches;
+function findLinks(word, scope){
+  if (!word) return '';
+  const q = encodeURIComponent(word);
+  let h = `<span>Найти в соцсетях:</span>
+    <a href="https://www.tiktok.com/search?q=${q}" target="_blank" rel="noopener">TikTok</a>
+    <a href="https://www.instagram.com/explore/search/keyword/?q=${q}" target="_blank" rel="noopener">Instagram</a>`;
+  if (scope !== 'world') h += TG_KZ.slice(0, 3).map(([c, n]) => `<a href="https://t.me/s/${c}?q=${q}" target="_blank" rel="noopener">Telegram: ${esc(n)}</a>`).join('');
+  return `<div class="find">${h}</div>`;
+}
+function itemHtml(it, scope){
+  return `
+    <li class="item">
+      <div class="date">${fmtDate(it.date)}</div>
+      <div class="body">
+        <div class="meta">
+          ${scope === 'social' || scope === 'new' ? `<span class="tag">${scope === 'new' ? (it.unofficial ? 'неофициально' : 'официально / СМИ') : it.scope === 'world' ? 'Мир' : 'Казахстан'}</span>` : ''}
+          <span class="tag">${esc(TOPIC_LABEL[it.topic] || it.topic)}</span>
+          ${it.status ? `<span class="st ${esc(it.status)}">${esc(STATUS[it.status] || it.status)}</span>` : ''}
+          ${it.platform ? `<span class="pf">${esc(PLATFORM[it.platform] || it.platform)}</span>` : ''}
+          ${it.addedBy === 'user' ? '<span class="tag">вручную</span>' : ''}
+          ${scope === 'new' && isNew(it) ? '<span class="new">новое</span>' : ''}
+        </div>
+        <p class="title">${esc(it.title)}</p>
+        <div class="place">${esc(it.place)}${kmBoth(it)}</div>
+        ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
+        ${it.birds ? `<div class="birds">${Number(it.birds).toLocaleString('ru-RU')} гол.</div>` : ''}
+        ${srcBlock(it)}
+      </div>
+    </li>`;
+}
+function emptyHtml(pool){
+  if (!loaded) return '<li class="empty">Загружаю записи…</li>';
+  if (!db) return '<li class="empty"><b>Записи недоступны</b>Откройте страницу по ссылке на claude.ai, войдя в свою учётную запись.</li>';
+  return `<li class="empty"><b>Нет записей</b>${pool.length ? 'Снимите фильтр' : 'Расширьте период'}.</li>`;
+}
+const byDate = (a, b) => (b.date || '').localeCompare(a.date || '');
+
+function renderCol(scope){
+  const pool = items.filter(it => it.scope === scope && !isUnofficial(it) && inPeriod(it.date) && matches(it));
+  $('chips-' + scope).innerHTML = TOPICS[scope].map(([k, label]) => {
+    const n = pool.filter(it => it.topic === k).length;
+    return `<button type="button" class="chip" data-scope="${scope}" data-topic="${k}" aria-pressed="${sel[scope].has(k)}">${label}<span class="n">${n}</span></button>`;
+  }).join('');
+  const shown = pool.filter(it => !sel[scope].size || sel[scope].has(it.topic)).sort(byDate);
+  $('feed-' + scope).innerHTML = shown.length ? shown.map(it => itemHtml(it, scope)).join('') : emptyHtml(pool);
+}
+function renderSocial(){
+  const pool = items.filter(it => isUnofficial(it) && inPeriod(it.date) && matches(it));
+  $('chips-social').innerHTML = Object.entries(PLATFORM).map(([k, label]) => {
+    const n = pool.filter(it => it.platform === k).length;
+    return `<button type="button" class="chip" data-scope="social" data-topic="${k}" aria-pressed="${sel.social.has(k)}">${label}<span class="n">${n}</span></button>`;
+  }).join('');
+  const shown = pool.filter(it => !sel.social.size || sel.social.has(it.platform)).sort(byDate);
+  $('feed-social').innerHTML = shown.length ? shown.map(it => itemHtml(it, 'social')).join('') : emptyHtml(pool);
+}
+function renderOfficial(){
+  $('pane-official').innerHTML = Object.entries(OFFICIAL).map(([group, list]) => `
+    <section class="panel"><h3>${esc(group)}</h3><ul>${list.map(([n, u, d]) =>
+      `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a><span>${esc(d)}</span></li>`).join('')}</ul></section>`).join('');
+}
+function render(){
+  if (typeof syncNav === 'function') setTimeout(syncNav);
+  renderCol('world'); renderCol('kz'); renderSocial(); renderNew(); if (tab === 'zone') renderZone();
+  if (GEO) $('n-zone').textContent = eventsWithKm().filter(e => e.km <= GEO.radius && inPeriod(e.date)).length || '';
+  const st = $('stamp');
+  if (!loaded) return;
+  if (!db){ st.textContent = 'Нет связи с базой записей'; return; }
+  const main = items.filter(i => !isUnofficial(i)), soc = items.length - main.length;
+  $('n-feed').textContent = main.length; $('n-social').textContent = soc;
+  const upd = meta && meta.updatedAt ? plainDate(meta.updatedAt) : '—';
+  st.innerHTML = `Обновлено: <b>${esc(upd)}</b><br class="nomob"><span class="nomob">мир <b>${main.filter(i => i.scope === 'world').length}</b> · Казахстан <b>${main.filter(i => i.scope === 'kz').length}</b> · неофиц. <b>${soc}</b></span>`;
+}
+const PANES = ['feed','new','zone','water','social','official'];
+function showTab(t){
+  if (!PANES.includes(t)) t = 'feed';
+  tab = t;
+  for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.tab === t));
+  for (const p of PANES) $('pane-' + p).hidden = p !== t;
+  $('bar').hidden = t === 'official' || t === 'water';
+  $('mainFoot').hidden = t === 'water' || t === 'zone';
+  LS.set('epi:tab', t);
+  $('feedSeg').hidden = t !== 'feed';
+  if (typeof syncNav === 'function') syncNav();
+  if (t === 'zone' || t === 'water') renderGeo();
+}
+document.addEventListener('click', e => {
+  const tb = e.target.closest('.tab');
+  if (tb){ showTab(tb.dataset.tab); return; }
+  const c = e.target.closest('.chip');
+  if (!c) return;
+  const s = c.dataset.scope, t = c.dataset.topic;
+  sel[s].has(t) ? sel[s].delete(t) : sel[s].add(t);
+  LS.set('epi:sel:' + s, [...sel[s]]);
+  render();
+});
+$('period').addEventListener('change', () => { LS.set('epi:period', +$('period').value); render(); });
+
+/* форма ручного добавления */
+function fillTopics(){
+  $('f_topic').innerHTML = TOPICS[$('f_scope').value].map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
+}
+$('f_scope').addEventListener('change', fillTopics);
+$('addBtn').addEventListener('click', () => {
+  fillTopics();
+  $('f_date').value = new Date().toISOString().slice(0, 10);
+  if (tab === 'social') $('f_kind').value = 'telegram';
+  $('form').hidden = false; $('addBtn').hidden = true; $('f_place').focus();
+});
+$('cancelBtn').addEventListener('click', () => { $('form').hidden = true; $('addBtn').hidden = false; $('formNote').textContent = ''; });
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const url = $('f_url').value.trim(), kind = $('f_kind').value;
+  const social = !['media','official'].includes(kind);
+  const doc = {
+    scope: $('f_scope').value, topic: $('f_topic').value, date: $('f_date').value,
+    status: $('f_status').value, place: $('f_place').value.trim(), title: $('f_title').value.trim(),
+    summary: $('f_sum').value.trim(), birds: $('f_birds').value ? +$('f_birds').value : null,
+    sources: url ? [social ? {name: host(url), url, kind: 'social', platform: kind} : {name: host(url), url, kind}] : [],
+    addedBy: 'user', createdAt: new Date().toISOString()
+  };
+  if (social){ doc.unofficial = true; doc.platform = kind; }
+  const la = parseFloat($('f_lat').value), lo = parseFloat($('f_lon').value);
+  if (isFinite(la) && isFinite(lo)){ doc.lat = la; doc.lon = lo; }
+  $('formNote').textContent = 'Сохраняю…';
+  try{
+    await db.collection('episodes').add(doc);
+    $('form').reset(); $('form').hidden = true; $('addBtn').hidden = false; $('formNote').textContent = '';
+  }catch(err){
+    $('formNote').textContent = 'Не сохранилось: у вас нет прав на запись в эту страницу или нет связи. Попросите владельца дать доступ.';
+  }
+});
+
+
+/* ===== география: птицефабрика, зона 50 км, водоёмы ===== */
+const FARMS = {ukpf: 'geo_ukpf.json', mpf: 'geo_mpf.json'};
+const GEOS = {};
+let farmKey = FARMS[LS.get('epi:farm', 'ukpf')] ? LS.get('epi:farm', 'ukpf') : 'ukpf';
+let GEO = null, geoErr = false, selWater = null;
+const WCAT = {river:'Река', stream:'Ручей', lake:'Озеро', pond:'Пруд', reservoir:'Водохранилище', basin:'Технический бассейн', water:'Водоём', wastewater:'Очистные / отстойник', canal:'Канал, арык', spring:'Родник'};
+const WORDER = ['reservoir','lake','pond','water','river','stream','canal','basin','wastewater','spring'];
+const selW = new Set(LS.get('epi:wcat', ['reservoir','lake','pond','water','river']));
+const fmtKm = d => d < 1 ? 'на территории' : (d < 10 ? d.toFixed(1) : Math.round(d)) + ' км';
+
+function toKm(lat, lon, G = GEO){ return [(lon - G.center.lon) * G.kx, (lat - G.center.lat) * G.ky]; }
+function segDist(px, py, ax, ay, bx, by){
+  const dx = bx - ax, dy = by - ay, l = dx*dx + dy*dy;
+  let t = l ? ((px-ax)*dx + (py-ay)*dy) / l : 0; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - ax - t*dx, py - ay - t*dy);
+}
+function inRing(px, py, r){
+  let c = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++){
+    const [xi, yi] = r[i], [xj, yj] = r[j];
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+/* расстояние от точки до границы участка фабрики, км (0 — внутри) */
+function distFarm(x, y, G = GEO){
+  const ring = G.farm[0];
+  if (inRing(x, y, ring)) return 0;
+  let m = Infinity;
+  for (let i = 1; i < ring.length; i++) m = Math.min(m, segDist(x, y, ...ring[i-1], ...ring[i]));
+  return m;
+}
+const kmCache = new Map();
+function kmTo(it, G = GEO){
+  if (!G || !isFinite(it.lat) || !isFinite(it.lon)) return null;
+  const k = G.short + ':' + it.lat + ',' + it.lon;
+  if (!kmCache.has(k)){ const [x, y] = toKm(it.lat, it.lon, G); kmCache.set(k, distFarm(x, y, G)); }
+  return kmCache.get(k);
+}
+function kmBoth(it){
+  const parts = Object.values(GEOS).map(G => { const d = kmTo(it, G); return d == null ? '' : `${fmtKm(d)} от ${G.short}`; }).filter(Boolean);
+  return parts.length ? ` · <span class="km">${parts.join(' · ')}</span>` : '';
+}
+function compass(x, y){
+  const b = (Math.atan2(x, y) * 180 / Math.PI + 360) % 360;
+  return ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'][Math.round(b / 45) % 8];
+}
+const osm = (lat, lon, z = 15) => `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=${z}/${lat}/${lon}`;
+
+/* SVG: координаты в км, ось Y вверх → в SVG вниз */
+const P = pts => pts.map(([x, y], i) => (i ? 'L' : 'M') + x + ' ' + (-y)).join('');
+function geomPath(kind, g){
+  if (kind === 'P') return null;
+  return g.map(r => P(r) + (kind === 'A' ? 'Z' : '')).join('');
+}
+function drawMap(svg, R, opts){
+  const pad = R * 0.04, vb = [-R - pad, -R - pad, 2*R + 2*pad, 2*R + 2*pad];
+  svg.setAttribute('viewBox', vb.join(' '));
+  const fs = R / (MOBILE() ? 20 : 34), inView = (x, y) => Math.abs(x) <= R + pad && Math.abs(y) <= R + pad;
+  let h = '';
+  const ptR = R / 160;
+  for (const [cat, kind, g] of GEO.features){
+    if (opts.cats && !opts.cats.has(cat)) continue;
+    if (kind === 'P'){ if (inView(g[0], g[1])) h += `<circle class="w-p" cx="${g[0]}" cy="${-g[1]}" r="${ptR}"/>`; continue; }
+    h += `<path class="${kind === 'A' ? 'w-a' : 'w-l'} ${cat}" d="${geomPath(kind, g)}"${kind === 'A' ? ' fill-rule="evenodd"' : ''}/>`;
+  }
+  for (const r of ['10','25']) h += `<path class="ring" d="${geomPath('A', GEO.rings[r])}"/>`;
+  h += `<path class="ring" d="${geomPath('A', GEO.zone)}"/>`;
+  for (const r of [10, 25, 50]) if (r <= R) h += `<text class="ringlbl" x="${fs*0.3}" y="${-(r + 1.6) - fs*0.2}" font-size="${fs*0.85}">${r} км</text>`;
+  if (opts.settlements){
+    for (const st of GEO.settlements){
+      if (!inView(st.x, st.y)) continue;
+      h += `<circle class="st" cx="${st.x}" cy="${-st.y}" r="${R/220 + (st.pop > 5000 ? R/260 : 0)}"/>`;
+      const big = (st.pop || 0) >= (MOBILE() ? (R > 30 ? 15000 : R > 12 ? 3000 : 400) : (R > 30 ? 3000 : R > 12 ? 800 : 0));
+      if (big) h += `<text x="${st.x + R/120}" y="${-st.y - R/120}" font-size="${st.pop > 100000 ? fs*1.15 : fs*0.85}">${esc(st.name)}</text>`;
+    }
+  }
+  h += `<path class="farm" d="${geomPath('A', GEO.farm)}"/>`;
+  h += `<text x="${R/40}" y="${R/9}" font-size="${fs}" font-weight="600">${esc(GEO.short)}</text>`;
+  if (opts.hl){
+    for (const fi of opts.hl.fis){
+      const [, kind, g] = GEO.features[fi];
+      if (kind === 'P') h += `<circle class="hl" cx="${g[0]}" cy="${-g[1]}" r="${R/70}"/>`;
+      else h += `<path class="hl ${kind === 'L' ? 'line' : ''}" d="${geomPath(kind, g)}"/>`;
+    }
+    const [x, y] = toKm(opts.hl.lat, opts.hl.lon);
+    h += `<circle class="hl" cx="${x}" cy="${-y}" r="${R/55}" fill-opacity=".25"/>`;
+  }
+  for (const ev of opts.events || []){
+    const [x, y] = toKm(ev.lat, ev.lon);
+    if (!inView(x, y)) continue;
+    h += `<circle class="ev" cx="${x}" cy="${-y}" r="${R/60}"><title>${esc(ev.title)}</title></circle>`;
+  }
+  svg.innerHTML = h;
+}
+
+function geoSource(key){
+  if (window.__GEOS__ && window.__GEOS__[key]) return Promise.resolve(window.__GEOS__[key]);
+  return fetch(FARMS[key]).then(r => { if (!r.ok) throw 0; return r.json(); });
+}
+function loadGeo(){
+  if (geoErr === null) return;
+  geoErr = null;
+  Promise.all(Object.keys(FARMS).map(k => geoSource(k).then(d => { GEOS[k] = d; }).catch(() => {}))).then(() => {
+    if (!GEOS[farmKey]) farmKey = Object.keys(GEOS)[0];
+    geoErr = !farmKey || !GEOS[farmKey];
+    kmCache.clear();
+    if (!geoErr) setFarm(farmKey, true);
+    render(); renderGeo();
+  });
+}
+function setFarm(key, quiet){
+  if (!GEOS[key]) return;
+  farmKey = key; GEO = GEOS[key]; selWater = null; LS.set('epi:farm', key);
+  for (const b of document.querySelectorAll('.fsw')) b.setAttribute('aria-pressed', String(b.dataset.farm === key));
+  for (const el of document.querySelectorAll('.farmName')) el.textContent = GEO.name;
+  for (const el of document.querySelectorAll('.farmAddr')) el.textContent = GEO.address;
+  $('n-water').textContent = GEO.water.length;
+  $('setTable').dataset.done = '';
+  $('geoNote').textContent = `Данные: ${GEO.source}. Центр — площадка ${GEO.name} (${GEO.center.lat}, ${GEO.center.lon}), адрес: ${GEO.address}. Расстояния считаются от границы площадки, направление — от фабрики на объект. Безымянные объекты — пруды, отстойники и водоёмы, нанесённые на карту без названия; уточняйте на месте. Ссылка «карта» открывает точку на OpenStreetMap.`;
+  if (!quiet){ render(); renderGeo(); }
+}
+document.addEventListener('click', e => { const b = e.target.closest('.fsw'); if (b) setFarm(b.dataset.farm); });
+
+function eventsWithKm(){
+  return items.filter(it => it.scope === 'kz' && kmTo(it) != null).map(it => ({...it, km: kmTo(it)}));
+}
+function renderZone(){
+  if (!GEO){ $('zoneTiles').innerHTML = `<div class="tile"><span>${geoErr ? 'Не удалось загрузить карту зоны' : 'Загружаю карту зоны…'}</span></div>`; return; }
+  const evs = eventsWithKm().filter(e => inPeriod(e.date) && matches(e));
+  const inZone = evs.filter(e => e.km <= GEO.radius).sort(byDate);
+  const near = [...evs].sort((a, b) => a.km - b.km).slice(0, 6);
+  const wb = GEO.water.filter(w => ['reservoir','lake','pond','water'].includes(w.cat) && w.ha).length;
+  $('zoneTiles').innerHTML = `
+    <div class="tile ${inZone.length ? 'alert' : ''}"><b>${inZone.length}</b><span>событий в зоне 50 км за выбранный период</span></div>
+    <div class="tile"><b>${near.length ? fmtKm(near[0].km) : '—'}</b><span>до ближайшего события в базе</span></div>
+    <div class="tile"><b>${GEO.settlements.length}</b><span>населённых пунктов в зоне</span></div>
+    <div class="tile"><b>${wb}</b><span>водоёмов-площадей (озёра, пруды, водохранилища)</span></div>`;
+  $('n-zone').textContent = inZone.length;
+  $('setCount').textContent = GEO.settlements.length + ' н. п.';
+  drawMap($('zoneMap'), +$('zoneR').value, {settlements: true, events: evs, cats: new Set(['river','reservoir','lake','pond','water'])});
+  $('zoneEvents').innerHTML = inZone.length ? inZone.map(e => itemHtml(e, 'kz')).join('')
+    : '<li class="empty"><b>В радиусе 50 км событий нет</b>Записи с координатами в зоне появятся здесь и красной точкой на карте.</li>';
+  $('nearEvents').innerHTML = near.length ? near.map(e => `
+    <li class="item"><div class="date">${fmtDate(e.date)}</div><div class="body">
+      <div class="meta"><span class="km">${fmtKm(e.km)}</span><span class="tag">${esc(TOPIC_LABEL[e.topic] || e.topic)}</span>${e.status ? `<span class="st ${esc(e.status)}">${esc(STATUS[e.status] || e.status)}</span>` : ''}</div>
+      <p class="title">${esc(e.title)}</p><div class="place">${esc(e.place)}</div></div></li>`).join('')
+    : '<li class="empty">В базе нет событий по Казахстану с координатами.</li>';
+  if (!$('setTable').dataset.done){
+    $('setTable').innerHTML = `<thead><tr><th>Населённый пункт</th><th>Население</th><th>Расстояние</th><th>Направление</th></tr></thead><tbody>` +
+      GEO.settlements.map(s => { const lat = (GEO.center.lat + s.y / GEO.ky).toFixed(5), lon = (GEO.center.lon + s.x / GEO.kx).toFixed(5);
+        return `<tr><td>${esc(s.name)} <a href="${osm(lat, lon, 14)}" target="_blank" rel="noopener" class="sub2">карта</a></td><td class="n">${s.pop ? Number(s.pop).toLocaleString('ru-RU') : '—'}</td><td class="n">${fmtKm(s.d)}</td><td>${s.dir}</td></tr>`; }).join('') + '</tbody>';
+    $('setTable').dataset.done = 1;
+  }
+}
+function renderWater(){
+  if (!GEO){ $('waterTiles').innerHTML = `<div class="tile"><span>${geoErr ? 'Не удалось загрузить данные о водоёмах' : 'Загружаю данные о водоёмах…'}</span></div>`; return; }
+  const R = +$('waterR').value, q = $('wq').value.trim().toLowerCase(), named = $('wNamed').checked;
+  const inR = GEO.water.filter(w => w.d <= R);
+  const cnt = c => inR.filter(w => w.cat === c).length;
+  const near = (c, r) => GEO.water.filter(w => c.includes(w.cat) && w.d <= r).length;
+  $('waterTiles').innerHTML = `
+    <div class="tile"><b>${near(['reservoir','lake','pond','water','basin','wastewater'], 1)}</b><span>водоёмов на территории и в 1 км</span></div>
+    <div class="tile"><b>${near(['reservoir','lake','pond','water'], 5)}</b><span>озёр, прудов, водохранилищ в 5 км</span></div>
+    ${keyTile(GEO.water.find(w => w.cat === 'river' && w.name), 'до реки')}
+    ${keyTile(GEO.water.find(w => ['lake','reservoir','water'].includes(w.cat) && w.name && w.ha >= 100), 'до крупного водоёма (от 100 га)')}`;
+  $('chips-water').innerHTML = WORDER.map(c => `<button type="button" class="chip" data-scope="wcat" data-topic="${c}" aria-pressed="${selW.has(c)}">${WCAT[c]}<span class="n">${cnt(c)}</span></button>`).join('');
+  const rows = inR.filter(w => (!selW.size || selW.has(w.cat)) && (!named || w.name) && (!q || ((w.name || '') + ' ' + (w.alt || '')).toLowerCase().includes(q)));
+  $('waterCount').textContent = rows.length + ' из ' + inR.length + ' в ' + R + ' км';
+  $('waterTable').innerHTML = `<thead><tr><th>Объект</th><th>Тип</th><th>Расст.</th><th>Напр.</th><th>Площадь, га</th></tr></thead><tbody>` +
+    rows.slice(0, 600).map(w => `<tr data-wi="${GEO.water.indexOf(w)}" class="${selWater === w ? 'sel' : ''}">
+      <td>${w.name ? esc(w.name) : '<span class="sub2">без названия</span>'} <a href="${osm(w.lat, w.lon)}" target="_blank" rel="noopener" class="sub2">карта</a>${w.alt ? `<div class="sub2">${esc(w.alt)}</div>` : ''}${w.inter ? '<div class="sub2">пересыхающий</div>' : ''}<div class="sub2 mob">${WCAT[w.cat]} · ${w.dir}${w.ha != null ? ' · ' + w.ha.toLocaleString('ru-RU') + ' га' : ''}</div></td>
+      <td>${WCAT[w.cat]}</td><td class="n">${fmtKm(w.d)}</td><td>${w.dir}</td><td class="n">${w.ha != null ? w.ha.toLocaleString('ru-RU') : ''}</td></tr>`).join('') +
+    (rows.length > 600 ? `<tr><td colspan="5" class="sub2">Показаны первые 600 — сузьте фильтр или радиус.</td></tr>` : '') + '</tbody>';
+  drawMap($('waterMap'), R, {cats: selW.size ? new Set([...selW, 'river']) : null, hl: selWater, settlements: R >= 10});
+}
+function keyTile(w, label){
+  return `<div class="tile"><b>${w ? fmtKm(w.d) : '—'}</b><span>${label}${w ? ': ' + esc(w.name) + (w.ha ? `, ${Math.round(w.ha).toLocaleString('ru-RU')} га` : '') : ''}</span></div>`;
+}
+function renderGeo(){ if (tab === 'zone') renderZone(); if (tab === 'water') renderWater(); }
+
+/* лента новых вспышек по РК */
+let seen = new Set(LS.get('epi:seen', []));
+const firstVisit = !LS.get('epi:seenInit', false);
+function isNew(it){
+  if (seen.has(it.id)) return false;
+  if (firstVisit){ const t = Date.parse(it.date || ''); return !isNaN(t) && Date.now() - t < 14 * 864e5; }
+  return true;
+}
+function renderNew(){
+  const pool = items.filter(it => it.scope === 'kz' && inPeriod(it.date) && matches(it));
+  const NT = [['new','Только новые'], ...TOPICS.kz];
+  $('chips-new').innerHTML = NT.map(([k, l]) => {
+    const n = k === 'new' ? pool.filter(isNew).length : pool.filter(it => it.topic === k).length;
+    return `<button type="button" class="chip" data-scope="newf" data-topic="${k}" aria-pressed="${selNew.has(k)}">${l}<span class="n">${n}</span></button>`;
+  }).join('');
+  const topicSel = [...selNew].filter(k => k !== 'new');
+  const shown = pool.filter(it => (!selNew.has('new') || isNew(it)) && (!topicSel.length || topicSel.includes(it.topic))).sort(byDate);
+  $('feed-new').innerHTML = shown.length ? shown.map(it => itemHtml(it, 'new')).join('') : emptyHtml(pool);
+  const nn = items.filter(it => it.scope === 'kz' && isNew(it)).length;
+  $('n-new').textContent = nn ? nn + ' нов.' : '';
+}
+const selNew = new Set(LS.get('epi:selnew', []));
+$('markSeen').addEventListener('click', () => {
+  for (const it of items) seen.add(it.id);
+  LS.set('epi:seen', [...seen]); LS.set('epi:seenInit', true);
+  render();
+});
+document.addEventListener('click', e => {
+  const c = e.target.closest('.chip');
+  if (c && c.dataset.scope === 'wcat'){
+    const t = c.dataset.topic; selW.has(t) ? selW.delete(t) : selW.add(t);
+    LS.set('epi:wcat', [...selW]); renderWater(); e.stopImmediatePropagation(); return;
+  }
+  if (c && c.dataset.scope === 'newf'){
+    const t = c.dataset.topic; selNew.has(t) ? selNew.delete(t) : selNew.add(t);
+    LS.set('epi:selnew', [...selNew]); renderNew(); e.stopImmediatePropagation(); return;
+  }
+  const tr = e.target.closest('#waterTable tbody tr[data-wi]');
+  if (tr && !e.target.closest('a')){
+    const w = GEO.water[+tr.dataset.wi];
+    selWater = selWater === w ? null : w;
+    if (selWater && selWater.d > +$('waterR').value * 0.9){
+      $('waterR').value = String([5,10,25,50].find(r => r >= selWater.d * 1.15) || 50);
+    }
+    renderWater();
+    if (selWater && window.innerWidth < 960) $('waterMap').scrollIntoView({behavior: 'smooth', block: 'center'});
+  }
+}, true);
+$('zoneR').addEventListener('change', renderZone);
+$('waterR').addEventListener('change', () => { selWater = null; renderWater(); });
+$('wq').addEventListener('input', renderWater);
+$('wNamed').addEventListener('change', renderWater);
+
+/* ---- телефон: нижняя панель, «Ещё», кнопка «+», Мир/Казахстан ---- */
+function syncNav(){
+  for (const b of document.querySelectorAll('.bnav button')){
+    const on = b.dataset.tab === tab || (b.dataset.tab === 'more' && (tab === 'social' || tab === 'official'));
+    on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+  }
+  $('fab').hidden = !(['feed','new','social'].includes(tab)) || $('addBtn').dataset.allowed !== '1';
+  $('bnNew').hidden = !items.some(it => it.scope === 'kz' && isNew(it));
+}
+document.addEventListener('click', e => {
+  const nb = e.target.closest('.bnav button, .moremenu button');
+  if (nb){
+    if (nb.dataset.tab === 'more'){ $('moreMenu').hidden = !$('moreMenu').hidden; return; }
+    $('moreMenu').hidden = true;
+    showTab(nb.dataset.tab); window.scrollTo(0, 0); return;
+  }
+  if (!e.target.closest('#moreMenu')) $('moreMenu').hidden = true;
+  const sg = e.target.closest('#feedSeg button');
+  if (sg){
+    $('pane-feed').dataset.show = sg.dataset.col; LS.set('epi:col', sg.dataset.col);
+    for (const b of document.querySelectorAll('#feedSeg button')) b.setAttribute('aria-pressed', String(b === sg));
+    return;
+  }
+  const sm = e.target.closest('.sum');
+  if (sm && MOBILE()) sm.classList.toggle('open');
+});
+$('fab').addEventListener('click', () => { $('addBtn').click(); $('form').scrollIntoView({behavior: 'smooth', block: 'start'}); });
+(() => { const c = LS.get('epi:col', 'kz'); const b = document.querySelector(`#feedSeg button[data-col="${c}"]`); if (b) b.click(); })();
+
+renderOfficial();
+loadGeo();
+showTab(PANES.includes(location.hash.slice(1)) ? location.hash.slice(1) : LS.get('epi:tab', 'feed'));
+render();
+/* Источник записей для устанавливаемого приложения (вместо базы claude.ai).
+   1) записи, вшитые при сборке; 2) свежий список из репозитория, если есть интернет;
+   3) эпизоды, добавленные на этом устройстве (хранятся только здесь). */
+(async () => {
+  const LOCAL_KEY = 'epi:local', CACHE_KEY = 'epi:remote';
+  const readLS = (k, d) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } };
+  const writeLS = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+  const norm = d => Array.isArray(d) ? {updatedAt: null, episodes: d} : d;
+  let base = norm(window.__EPISODES__ || await fetch('data/seed.json').then(r => r.json()).catch(() => ({episodes: []})));
+  const cached = readLS(CACHE_KEY, null);
+  if (cached && (cached.updatedAt || '') >= (base.updatedAt || '')) base = cached;
+  let local = readLS(LOCAL_KEY, []);
+  const publish = () => {
+    items = [...base.episodes, ...local];
+    meta = {updatedAt: base.updatedAt};
+    loaded = true; render();
+  };
+  db = {
+    collection: () => ({
+      add: async doc => {
+        local.push({...doc, id: 'local-' + Date.now()});
+        writeLS(LOCAL_KEY, local); publish();
+      }
+    })
+  };
+  $('addBtn').hidden = false; $('addBtn').dataset.allowed = '1';
+  publish();
+  if (window.__DATA_URL__ && navigator.onLine !== false){
+    try{
+      const r = await fetch(window.__DATA_URL__ + '?t=' + Date.now(), {cache: 'no-store'});
+      if (r.ok){
+        const fresh = norm(await r.json());
+        if (fresh && Array.isArray(fresh.episodes) && (fresh.updatedAt || '') >= (base.updatedAt || '')){
+          base = fresh; writeLS(CACHE_KEY, fresh); publish();
+        }
+      }
+    }catch(e){ /* нет сети — работаем на сохранённых данных */ }
+  }
+})();
+
+</script>
+
+</body>
+</html>
