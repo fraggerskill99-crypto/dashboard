@@ -92,6 +92,7 @@ h2{font:500 16px var(--f-display)}
 .node.on .dot{background:var(--bird);border-color:var(--bird);color:var(--panel);transform:scale(1.25)}
 .node.on .rg{color:var(--bird)}
 .chick{position:absolute;top:3px;left:0;width:30px;height:24px;z-index:2;transition:transform .9s ease;pointer-events:none}
+.tbl .zsnote{color:var(--ok);font-weight:600}
 .zsbox{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
 .zsbox h2{font:600 15px var(--f-body);color:var(--ok);display:flex;gap:8px;align-items:center}
 .zsbox h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--ok)}
@@ -550,7 +551,7 @@ function rangeWarn(){
 }
 const card = (H, s, val, sub) => `<button type="button" class="card" data-house="${esc(H.key)}"><span class="h">${esc(H.ceh)} <small>·</small> ${esc(H.fl)}${sub ? `<span class="sub">${sub}</span>` : ''}</span><span class="v">${val}</span></button>`;
 const birdCard = ([H, s]) => card(H, s, s.bird.age != null ? `${s.bird.age} дн.` : '?',
-  s.bird.note ? `с ${fmtShort(s.bird.since)} · ${s.bird.note}` : s.bird.since ? `с ${fmtShort(s.bird.since)}${s.nextOs ? ` · ОС ${fmtShort(s.nextOs)}` : ''}` : 'дата заселения ранее графиков');
+  s.codes.includes('ЗС') ? 'идёт заселение' : s.bird.note ? `с ${fmtShort(s.bird.since)} · ${s.bird.note}` : s.bird.since ? `с ${fmtShort(s.bird.since)}${s.nextOs ? ` · ОС ${fmtShort(s.nextOs)}` : ''}` : 'дата заселения ранее графиков');
 /* «Б: 3, 4, 5» или «Г-1, Г-2» — корпуса по площадкам */
 function fmtSites(list){
   const m = new Map();
@@ -593,7 +594,8 @@ function renderAge(){
   rangeWarn();
   const {birds} = dayData();
   const ages = birds.map(x => x[1].bird.age).filter(a => a != null);
-  const known = birds.filter(x => x[1].bird.age != null);
+  const placing = birds.filter(([, st]) => st.codes.includes('ЗС'));
+  const known = birds.filter(x => x[1].bird.age != null && !x[1].codes.includes('ЗС'));
   const oldest = known[0], youngest = known[known.length - 1];
   // по площадкам: Г 1…Г 5 — одна площадка «Г» с корпусами Г-1…Г-5 (то же для Д)
   const cehs = [...new Set(HOUSES.map(H => siteOf(H).site))];
@@ -603,10 +605,12 @@ function renderAge(){
       const all = HOUSES.filter(H => siteOf(H).site === c).length;
       const L = known.filter(([H]) => siteOf(H).site === c);
       const unk = birds.filter(([H, st]) => siteOf(H).site === c && st.bird.age == null).length;
-      if (!L.length) return `<tr data-ceh-jump="${esc(c)}"><td class="c">${esc(c)}</td><td>${unk ? unk + ' из ' + all : '0 из ' + all}</td><td colspan="2" class="note">${unk ? 'дата заселения раньше графиков' : 'птицы нет'}</td></tr>`;
+      const pl = placing.filter(([H]) => siteOf(H).site === c).map(([H]) => H);
+      const plNote = pl.length ? `<span class="k zsnote">заселяются сегодня: ${fmtSites(pl).replace(/<[^>]+>/g, '').replace(/^[^:]+:\s*/, '')}</span>` : '';
+      if (!L.length) return `<tr data-ceh-jump="${esc(c)}"><td class="c">${esc(c)}</td><td>${unk + pl.length} из ${all}</td><td colspan="2" class="note">${pl.length ? '' : unk ? 'дата заселения раньше графиков' : 'птицы нет'}${plNote}</td></tr>`;
       const mn = Math.min(...L.map(x => x[1].bird.age)), mx = Math.max(...L.map(x => x[1].bird.age));
       const kMin = L.filter(x => x[1].bird.age === mn), kMax = L.filter(x => x[1].bird.age === mx);
-      return `<tr data-ceh-jump="${esc(c)}"><td class="c">${esc(c)}</td><td>${L.length + unk} из ${all}</td>
+      return `<tr data-ceh-jump="${esc(c)}"><td class="c">${esc(c)}</td><td>${L.length + unk + pl.length} из ${all}${plNote}</td>
         <td><span class="age">${mn} дн.</span><span class="k">${kMin.length && siteOf(kMin[0][0]).site !== kMin[0][0].ceh ? '' : 'корп. '}${fmtK(kMin)}</span></td>
         <td><span class="age">${mx} дн.</span><span class="k">${kMax.length && siteOf(kMax[0][0]).site !== kMax[0][0].ceh ? '' : 'корп. '}${fmtK(kMax)}</span></td></tr>`;
     }).join('') + '</tbody>';
