@@ -115,6 +115,9 @@ h2{font:500 16px var(--f-display)}
 @keyframes spHop{0%,100%{transform:translateY(0) scaleY(1)}20%{transform:translateY(0) scaleY(.92)}45%{transform:translateY(-26px) scaleY(1.04)}70%{transform:translateY(0) scaleY(.95)}}
 @keyframes spT{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.splash *{animation:none!important;opacity:1!important;transform:none!important;stroke-dashoffset:0!important}}
+.folderbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--info-bg)}
+.folderbox code{font:13px var(--f-mono);word-break:break-all}
+.folderbox .row{display:flex;flex-wrap:wrap;gap:8px}
 .tile small.zl{display:flex;flex-wrap:wrap;gap:0 10px}
 .tile small.zl span b{display:inline;font:700 13px var(--f-body);color:var(--ink)}
 .tile small{display:block;font-size:13px;color:var(--ink);font-weight:600}
@@ -292,6 +295,12 @@ h2{font:500 16px var(--f-display)}
           <input type="file" id="file" accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden>
         </label>
         <p class="note" id="uplNote"></p>
+        <div class="folderbox" id="folderBox" hidden>
+          <b>Папка с графиками</b>
+          <span class="note">Положите сюда файлы Excel — программа подхватывает их при каждом запуске и сама обновляется, когда в папке появляется новый или изменённый график.</span>
+          <code id="folderPath"></code>
+          <div class="row"><button type="button" class="btn" id="openFolder">Открыть папку</button><button type="button" class="btn ghost" id="reloadFolder">Обновить из папки</button></div>
+        </div>
       </div>
       <ul class="mlist" id="months"></ul>
     </div>
@@ -372,6 +381,11 @@ const dn = n => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
 
 /* ===== хранилище: { 'ГГГГ-ММ': {title, file, loadedAt, houses: {key: {ceh, fl, order, codes: {date: [..]}}}, legend} } ===== */
 let MONTHS = LS.get('sr:months', {});
+function saveMonths(){
+  const ok = LS.set('sr:months', MONTHS);
+  if (window.desktop) window.desktop.saveData(JSON.stringify(MONTHS)).catch(() => {});
+  return ok || !!window.desktop;
+}
 const SETTINGS_V = 3;
 let settings = Object.assign({ageBase: 0, zsFrom: 'first', v: SETTINGS_V}, (LS.get('sr:settings', {}).v === SETTINGS_V ? LS.get('sr:settings', {}) : {}));
 let view = LS.get('sr:view', 'age');
@@ -434,7 +448,7 @@ async function readFile(file){
   for (const name of wb.SheetNames){ const p = parseSheet(wb.Sheets[name]); if (p) out.push(p); }
   return out;
 }
-async function handleFiles(files){
+async function handleFiles(files, quiet){
   if (typeof XLSX === 'undefined'){ toast('Не загрузилась библиотека чтения Excel'); return; }
   const done = [], bad = [];
   for (const f of files){
@@ -450,8 +464,9 @@ async function handleFiles(files){
       }
     }catch(e){ bad.push(f.name); }
   }
-  if (!LS.set('sr:months', MONTHS)) toast('Не хватило памяти устройства, чтобы сохранить графики');
+  if (!saveMonths()) toast('Не хватило памяти устройства, чтобы сохранить графики');
   rebuild();
+  if (quiet){ if (bad.length) toast('Не удалось прочитать: ' + bad.join(', ')); return done.length; }
   $('uplNote').textContent = (done.length ? 'Загружено — ' + done.join('; ') + '. ' : '') + (bad.length ? 'Не удалось прочитать: ' + bad.join(', ') + ' (нет строки «Цех — Этаж» с датами).' : '');
   if (done.length){ toast('Графики загружены'); if (view === 'files') setView('age'); }
 }
@@ -772,7 +787,7 @@ document.addEventListener('click', e => {
   const d = e.target.closest('[data-del]');
   if (d){
     if (d.dataset.confirm !== '1'){ d.dataset.confirm = '1'; d.textContent = 'Точно удалить?'; setTimeout(() => { d.dataset.confirm = ''; d.textContent = 'Удалить'; }, 3000); return; }
-    delete MONTHS[d.dataset.del]; LS.set('sr:months', MONTHS); rebuild(); toast('График удалён'); return;
+    delete MONTHS[d.dataset.del]; saveMonths(); rebuild(); toast('График удалён'); return;
   }
   const a = e.target.closest('#ageBase button'); if (a){ settings.ageBase = +a.dataset.v; LS.set('sr:settings', settings); render(); return; }
   const cj = e.target.closest('[data-ceh-jump]');
@@ -797,6 +812,30 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && da
 $('day').addEventListener('input', () => $('day').dataset.auto = '0');
 
 rebuild();
+/* ПК: восстановить сохранённое с диска и подтянуть графики из папки */
+async function loadFolder(quiet){
+  if (!window.desktop) return;
+  try{
+    const list = await window.desktop.listGraphs();
+    const files = list.map(f => new File([f.data], f.name));
+    if (files.length){ const n = await handleFiles(files, true); if (!quiet && n) toast('Графики из папки обновлены'); }
+    else if (!quiet) toast('В папке пока нет файлов Excel');
+  }catch(e){ if (!quiet) toast('Не удалось прочитать папку с графиками'); }
+}
+(async () => {
+  try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+  if (!window.desktop) return;
+  try{
+    const saved = await window.desktop.loadData();
+    if (saved && !Object.keys(MONTHS).length){ MONTHS = JSON.parse(saved) || {}; LS.set('sr:months', MONTHS); rebuild(); }
+  }catch(e){}
+  $('folderBox').hidden = false;
+  try{ $('folderPath').textContent = await window.desktop.folder(); }catch(e){}
+  $('openFolder').addEventListener('click', () => window.desktop.openFolder());
+  $('reloadFolder').addEventListener('click', () => loadFolder(false));
+  window.desktop.onGraphsChanged(() => loadFolder(false));
+  await loadFolder(true);
+})();
 (() => {
   const sp = $('splash'); if (!sp) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
