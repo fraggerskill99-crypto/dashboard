@@ -1,6 +1,42 @@
 {
- "updatedAt": "2026-10-05",
+ "updatedAt": "2026-10-06",
  "episodes": [
+  {
+   "id": "w-2026-10-02-uk-lewis",
+   "scope": "world",
+   "topic": "hpai",
+   "date": "2026-10-02",
+   "status": "confirmed",
+   "place": "Великобритания, Шотландия, о. Льюис, Нокэрд (Несс)",
+   "country": "Великобритания",
+   "birds": null,
+   "title": "Первая вспышка сезона в Великобритании: H5N5 у приусадебных кур на о. Льюис",
+   "summary": "2 октября высокопатогенный грипп птиц H5N5 подтверждён в небольшом приусадебном стаде кур в Нокэрде (Несс, о. Льюис). Введены защитная зона 3 км и зона наблюдения 10 км. 3 октября Defra сообщило, что Великобритания утратила официальный статус свободы от ГПГП. Первая вспышка сезона 2026/27.",
+   "sources": [
+    {
+     "name": "gov.scot",
+     "url": "https://www.gov.scot/publications/avian-influenza-outbreaks/",
+     "kind": "official"
+    },
+    {
+     "name": "farminguk.com",
+     "url": "https://www.farminguk.com/news/uk-s-first-bird-flu-outbreak-of-2026-27-confirmed-on-isle-of-lewis_69241.html",
+     "kind": "media"
+    },
+    {
+     "name": "thescottishfarmer.co.uk",
+     "url": "https://www.thescottishfarmer.co.uk/news/26609078.bird-flu-confirmed-isle-lewis-h5n5-detected/",
+     "kind": "media"
+    },
+    {
+     "name": "poultrynews.co.uk",
+     "url": "https://www.poultrynews.co.uk/health-welfare/h5n5-bird-flu-confirmed-on-isle-of-lewis.html",
+     "kind": "media"
+    }
+   ],
+   "keyword": "Isle of Lewis H5N5",
+   "addedBy": "claude"
+  },
   {
    "id": "w-2026-10-02-suriname",
    "scope": "world",
