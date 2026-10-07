@@ -1,6 +1,37 @@
 {
- "updatedAt": "2026-10-06",
+ "updatedAt": "2026-10-07",
  "episodes": [
+  {
+   "id": "w-2026-10-06-wisconsin-racine",
+   "scope": "world",
+   "topic": "hpai",
+   "date": "2026-10-06",
+   "status": "confirmed",
+   "place": "США, штат Висконсин, округ Расин",
+   "country": "США",
+   "birds": null,
+   "title": "Висконсин: грипп птиц в приусадебном стаде в округе Расин",
+   "summary": "6 октября ветеринарное ведомство Висконсина (DATCP) сообщило о ГПГП в приусадебном стаде домашней птицы в округе Расин; птица уничтожена и в пищевую цепочку не попадёт. Это второй случай в штате этой осенью после коммерческого стада в округе Баррон в сентябре.",
+   "sources": [
+    {
+     "name": "DATCP Wisconsin",
+     "url": "https://datcp.wi.gov/Pages/HighlyPathogenicAvianInfluenzaConfirmedinRacineCounty.aspx",
+     "kind": "official"
+    },
+    {
+     "name": "brownfieldagnews.com",
+     "url": "https://www.brownfieldagnews.com/news/wisconsin-reports-new-hpai-case-in-backyard-flock/",
+     "kind": "media"
+    },
+    {
+     "name": "spectrumnews1.com",
+     "url": "https://spectrumnews1.com/wi/madison/news/2026/10/06/avian-flu-racine-county",
+     "kind": "media"
+    }
+   ],
+   "keyword": "Racine County bird flu",
+   "addedBy": "claude"
+  },
   {
    "id": "w-2026-10-02-uk-lewis",
    "scope": "world",
@@ -128,10 +159,15 @@
      "kind": "official",
      "name": "inspection.canada.ca",
      "url": "https://inspection.canada.ca/en/animal-health/terrestrial-animals/diseases/reportable/avian-influenza/latest-bird-flu-situation/status-province"
+    },
+    {
+     "name": "wattagnet.com",
+     "url": "https://www.wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15836628/avian-influenza-detected-again-in-manitoba",
+     "kind": "media"
     }
    ],
    "status": "confirmed",
-   "summary": "С 10 сентября CFIA подтвердило очаги на коммерческих птицеводческих фермах Манитобы (De Salaberry, Rhineland, Rockwood, Cartier, Woodlands, Bifrost-Riverton; очаги MB-IP33–IP38). Ещё один случай подтверждён 29 сентября; источники расходятся в общем числе (шесть или семь за 2026 г.). Число птиц в источниках не уточнено.",
+   "summary": "С 10 сентября CFIA подтвердило очаги на коммерческих птицеводческих фермах Манитобы (De Salaberry, Rhineland, Rockwood, Cartier, Woodlands, Bifrost-Riverton; очаги MB-IP33–IP38). Ещё один случай подтверждён 29 сентября; источники расходятся в общем числе (шесть или семь за 2026 г.). Число птиц в источниках не уточнено. 2 октября подтверждён ещё один очаг на коммерческой ферме в муниципалитете Пембина; за последний месяц 8 из 10 поражённых стад в Канаде — в Манитобе (остальные два — в Альберте).",
    "title": "Манитоба: новые очаги гриппа птиц на коммерческих фермах",
    "topic": "hpai"
   },
@@ -166,7 +202,7 @@
    "country": "Казахстан",
    "birds": 15537,
    "title": "Причина массового падежа в Шаховском — кокцидиоз, грипп птиц исключён",
-   "summary": "Ветеринары СКО назвали причиной гибели птицы (в основном гусей) в 28 подворьях кокцидиоз. Грипп птиц и пастереллёз лабораторно исключены, карантин не вводится. Кокцидиоз не входит в перечень болезней с компенсацией, возмещения владельцам не будет. В селе около 46 тыс. голов птицы в 200 подворьях.",
+   "summary": "Ветеринары СКО назвали причиной гибели птицы (в основном гусей) в 28 подворьях кокцидиоз. Грипп птиц и пастереллёз лабораторно исключены, карантин не вводится. Кокцидиоз не входит в перечень болезней с компенсацией, возмещения владельцам не будет. В селе около 46 тыс. голов птицы в 200 подворьях. По данным облветуправления, падеж в Шаховском шёл с августа; похожий случай был там осенью прошлого года (более 7 тыс. птиц у 21 семьи).",
    "sources": [
     {
      "name": "tv7.kz",
@@ -196,6 +232,11 @@
     {
      "name": "astanatv.kz",
      "url": "https://astanatv.kz/kz/news/179430/",
+     "kind": "media"
+    },
+    {
+     "name": "inform.kz",
+     "url": "https://www.inform.kz/ru/pogiblo-155tis-golov-ptitsi-pochemu-vsko-povtorilsya-proshlogodniy-padezh-f1a247f0",
      "kind": "media"
     }
    ],
