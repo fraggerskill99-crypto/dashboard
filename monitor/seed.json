@@ -1,6 +1,37 @@
 {
- "updatedAt": "2026-10-07",
+ "updatedAt": "2026-10-08",
  "episodes": [
+  {
+   "id": "w-2026-10-01-alberta",
+   "scope": "world",
+   "topic": "hpai",
+   "date": "2026-10-01",
+   "status": "confirmed",
+   "place": "Канада, провинция Альберта, округа Ту-Хиллс и Вермилион-Ривер",
+   "country": "Канада",
+   "birds": null,
+   "title": "Альберта: грипп птиц вернулся на коммерческие фермы",
+   "summary": "CFIA подтвердило ГПГП на коммерческой птицеферме в округе Ту-Хиллс 1 октября; до этого, 26 сентября, — в округе Вермилион-Ривер. Подробности (вид и число птиц) CFIA не раскрывает. За последний месяц в Канаде поражено 10 стад: 8 в Манитобе и 2 в Альберте.",
+   "sources": [
+    {
+     "name": "wattagnet.com",
+     "url": "https://www.wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15836026/hpai-returns-to-alberta-poultry",
+     "kind": "media"
+    },
+    {
+     "name": "wattagnet.com",
+     "url": "https://www.wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15836628/avian-influenza-detected-again-in-manitoba",
+     "kind": "media"
+    },
+    {
+     "name": "inspection.canada.ca",
+     "url": "https://inspection.canada.ca/en/animal-health/terrestrial-animals/diseases/reportable/avian-influenza/latest-bird-flu-situation/status-province/ai-zones",
+     "kind": "official"
+    }
+   ],
+   "keyword": "Alberta avian influenza",
+   "addedBy": "claude"
+  },
   {
    "id": "w-2026-10-06-wisconsin-racine",
    "scope": "world",
