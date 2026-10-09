@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Уровни и сигналы</title>
+<style>
+:root{
+  --bg:#0f1218; --panel:#161b24; --panel2:#1c2330; --line:#2a3242; --text:#e6e9ef; --muted:#8b94a7;
+  --buy:#22c55e; --buy-bg:rgba(34,197,94,.14); --sell:#ef4444; --sell-bg:rgba(239,68,68,.14);
+  --wait:#eab308; --wait-bg:rgba(234,179,8,.13); --info:#3b82f6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,select,input{font:inherit;color:inherit}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:16px;margin:0 8px 0 0;white-space:nowrap}
+.ctl{display:flex;gap:6px;align-items:center}
+.ctl label{color:var(--muted);font-size:12px}
+select,input[type=number],input[type=text]{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+input[type=number]{width:96px}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:#41506a}
+button.on{background:var(--info);border-color:var(--info)}
+#src{font-size:12px;color:var(--muted);margin-left:auto}
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;height:calc(100vh - 53px)}
+#chartWrap{position:relative;min-height:360px}
+#chart{position:absolute;inset:0}
+#hint{position:absolute;left:10px;top:8px;z-index:3;background:rgba(15,18,24,.85);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--muted);pointer-events:none}
+aside{border-left:1px solid var(--line);overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.card h3{margin:0 0 6px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+#now{border-width:2px}
+#now.buy{border-color:var(--buy);background:var(--buy-bg)}
+#now.sell{border-color:var(--sell);background:var(--sell-bg)}
+#now.wait{border-color:var(--wait);background:var(--wait-bg)}
+#nowTitle{font-size:22px;font-weight:700;margin:2px 0}
+#now.buy #nowTitle{color:var(--buy)} #now.sell #nowTitle{color:var(--sell)} #now.wait #nowTitle{color:var(--wait)}
+#nowText{margin:4px 0}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.grid3 div{background:rgba(0,0,0,.25);border-radius:6px;padding:4px 6px}
+.grid3 b{display:block;font-size:15px}
+.grid3 span{font-size:11px;color:var(--muted)}
+.why{margin:6px 0 0;padding-left:18px;font-size:13px}
+.why li.minus{color:#f0a0a0}
+.plan{border-left:3px solid var(--line);padding:4px 0 4px 8px;margin:6px 0}
+.plan.r{border-color:var(--sell)} .plan.s{border-color:var(--buy)}
+.plan .lv{font-weight:700}
+.plan p{margin:3px 0;font-size:13px}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);margin-left:4px}
+.buyc{color:var(--buy)} .sellc{color:var(--sell)} .waitc{color:var(--wait)} .muted{color:var(--muted)}
+#log{max-height:260px;overflow-y:auto;font-size:13px}
+#log div{padding:4px 0;border-bottom:1px solid var(--line)}
+#log div:last-child{border-bottom:0}
+.row{display:flex;gap:8px;align-items:center;margin:4px 0;flex-wrap:wrap}
+.row label{flex:1 1 140px;color:var(--muted);font-size:13px}
+details summary{cursor:pointer;color:var(--muted)}
+#manualList span{display:inline-flex;gap:4px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:1px 4px 1px 8px;margin:2px}
+#manualList button{padding:0 6px;border:0;background:none;color:var(--sell)}
+.legend{font-size:12px;color:var(--muted)}
+.legend p{margin:4px 0}
+.err{color:var(--sell);font-size:13px}
+footer{font-size:11px;color:var(--muted);padding:2px}
+footer a{color:var(--muted)}
+@media (max-width:900px){
+  main{grid-template-columns:1fr;height:auto}
+  #chartWrap{height:62vh}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  #src{margin-left:0;width:100%}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>📈 Уровни и сигналы</h1>
+  <div class="ctl"><label for="inst">Инструмент</label>
+    <select id="inst">
+      <option value="gold">Золото XAUUSD</option>
+      <option value="btc">Bitcoin BTCUSDT</option>
+      <option value="eth">Ethereum ETHUSDT</option>
+      <option value="custom">Свой тикер Binance…</option>
+      <option value="csv">Файл CSV из TradingView…</option>
+      <option value="demo">Демо (без интернета)</option>
+    </select>
+  </div>
+  <div class="ctl"><label for="tf">Свечи входа</label>
+    <select id="tf"><option>1m</option><option selected>5m</option><option>15m</option><option>1h</option></select>
+  </div>
+  <div class="ctl"><label for="ltf">Уровни с</label>
+    <select id="ltf"><option value="auto" selected>авто</option><option>15m</option><option>1h</option><option>4h</option></select>
+  </div>
+  <button id="addLevelBtn" title="Нажми, потом кликни по графику">➕ Свой уровень</button>
+  <input type="file" id="csvFile" accept=".csv,.txt" hidden>
+  <span id="src">—</span>
+</header>
+<main>
+  <div id="chartWrap"><div id="chart"></div><div id="hint">Загрузка…</div></div>
+  <aside>
+    <div class="card wait" id="now">
+      <h3>Что делать сейчас</h3>
+      <div id="nowTitle">ЖДАТЬ</div>
+      <div id="nowText">Загружаю данные…</div>
+      <div id="nowNums"></div>
+      <ul class="why" id="nowWhy"></ul>
+    </div>
+
+    <div class="card">
+      <h3>План по ближайшим уровням</h3>
+      <div id="plan" class="muted">—</div>
+    </div>
+
+    <div class="card">
+      <h3>Размер позиции</h3>
+      <div class="row"><label for="dep">Депозит, $</label><input type="number" id="dep" value="1000" min="0"></div>
+      <div class="row"><label for="riskPct">Риск на сделку, %</label><input type="number" id="riskPct" value="1" min="0.1" step="0.1"></div>
+      <div class="row"><label for="contract">Размер контракта (лот)</label><input type="number" id="contract" value="100" min="0"></div>
+      <div id="lotOut" class="muted">Появится, когда будет сигнал.</div>
+    </div>
+
+    <div class="card">
+      <h3>Сигналы <span class="tag" id="stats"></span></h3>
+      <div id="log" class="muted">Пока нет.</div>
+    </div>
+
+    <div class="card">
+      <h3>Настройки</h3>
+      <div class="row"><label for="brokerPrice">Цена у моего брокера сейчас</label><input type="number" id="brokerPrice" step="0.001" placeholder="напр. 4191.90"><button id="syncBtn">Сверить</button></div>
+      <div class="muted" id="offsetInfo" style="font-size:12px"></div>
+      <div class="row"><label for="entryMode">Как входить</label>
+        <select id="entryMode">
+          <option value="confirm" selected>Ждать подтверждающую свечу (надёжнее)</option>
+          <option value="instant">Сразу на закрытии сигнальной свечи</option>
+        </select></div>
+      <div class="row"><label for="minRR">Мин. прибыль/риск</label><input type="number" id="minRR" value="1.5" step="0.1" min="0.5"></div>
+      <div class="row"><label for="roundOn">Круглые уровни (4200, 4250…)</label><input type="checkbox" id="roundOn" checked></div>
+      <div class="row"><label for="soundOn">Звук и уведомление при сигнале</label><input type="checkbox" id="soundOn" checked></div>
+      <div class="row"><label for="customSym">Свой тикер Binance Futures</label><input type="text" id="customSym" value="XAUUSDT" style="width:110px"></div>
+      <div id="manualWrap" style="margin-top:6px"><span class="muted" style="font-size:13px">Мои уровни:</span> <span id="manualList" class="muted">нет</span></div>
+    </div>
+
+    <div class="card legend">
+      <h3>Как читать</h3>
+      <p><b class="sellc">Красная линия</b> — сопротивление (выше цены), <b class="buyc">зелёная</b> — поддержка (ниже). Чем толще линия и больше ★, тем сильнее уровень.</p>
+      <p><b>Пробой</b> — свеча <u>закрылась</u> за уровнем сильным телом. Сразу не входим: ждём, пока цена вернётся к уровню (ретест) и оттолкнётся — тогда вход по направлению пробоя.</p>
+      <p><b>Отбой фитилём</b> — цена коснулась уровня тенью, а свеча закрылась обратно. Это разворот. Если тень проколола уровень и вернулась — <b>ложный пробой</b> (сняли стопы), сигнал ещё сильнее.</p>
+      <p><b>Ловушка</b> — был пробой, но цена закрылась обратно за уровень. Входим в обратную сторону.</p>
+      <p>Стоп всегда за уровнем/тенью, тейк — у следующего уровня. Если до следующего уровня мало места (прибыль/риск ниже минимума) — сигнал помечается «пропустить».</p>
+      <p>Решения принимаются только по <u>закрытым</u> свечам. Это помощник, а не гарантия: сначала проверь на демо-счёте.</p>
+    </div>
+    <footer>Графики: <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView Lightweight Charts</a></footer>
+  </aside>
+</main>
+
+<script>
+/*{{LWC}}*/
+</script>
+<script>
+'use strict';
+// ───────────────────────── хранилище ─────────────────────────
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('lvl_'+k); return v===null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('lvl_'+k, JSON.stringify(v)); }catch(e){} }
+};
+const $ = id => document.getElementById(id);
+
+// ───────────────────────── источники данных ─────────────────────────
+const TF_SEC = {'1m':60,'5m':300,'15m':900,'1h':3600,'4h':14400};
+const AUTO_LTF = {'1m':'15m','5m':'1h','15m':'1h','1h':'4h'};
+const BYBIT_TF = {'1m':'1','5m':'5','15m':'15','1h':'60','4h':'240'};
+const OKX_TF = {'1m':'1m','5m':'5m','15m':'15m','1h':'1H','4h':'4H'};
+
+const FEEDS = {
+  gold: [
+    {name:'Binance Futures XAUUSDT', kind:'binance', url:'https://fapi.binance.com/fapi/v1/klines', sym:'XAUUSDT', contract:100},
+    {name:'Bybit XAUTUSDT', kind:'bybit', cat:'linear', sym:'XAUTUSDT', contract:100},
+    {name:'OKX XAUT-USDT', kind:'okx', sym:'XAUT-USDT', contract:100},
+    {name:'Binance PAXGUSDT', kind:'binance', url:'https://data-api.binance.vision/api/v3/klines', sym:'PAXGUSDT', contract:100},
+  ],
+  btc: [
+    {name:'Binance BTCUSDT', kind:'binance', url:'https://data-api.binance.vision/api/v3/klines', sym:'BTCUSDT', contract:1},
+    {name:'Bybit BTCUSDT', kind:'bybit', cat:'spot', sym:'BTCUSDT', contract:1},
+    {name:'OKX BTC-USDT', kind:'okx', sym:'BTC-USDT', contract:1},
+  ],
+  eth: [
+    {name:'Binance ETHUSDT', kind:'binance', url:'https://data-api.binance.vision/api/v3/klines', sym:'ETHUSDT', contract:1},
+    {name:'Bybit ETHUSDT', kind:'bybit', cat:'spot', sym:'ETHUSDT', contract:1},
+    {name:'OKX ETH-USDT', kind:'okx', sym:'ETH-USDT', contract:1},
+  ],
+};
+
+async function getJSON(url){
+  const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 8000);
+  try{ const r = await fetch(url, {signal:ctl.signal}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); }
+  finally{ clearTimeout(t); }
+}
+const num = x => +x;
+
+async function fetchKlines(feed, tf, limit){
+  if(feed.kind==='binance'){
+    const d = await getJSON(`${feed.url}?symbol=${feed.sym}&interval=${tf}&limit=${limit}`);
+    if(!Array.isArray(d) || !d.length) throw new Error('пустой ответ');
+    return d.map(k=>({time:k[0]/1000, open:num(k[1]), high:num(k[2]), low:num(k[3]), close:num(k[4]), volume:num(k[5])}));
+  }
+  if(feed.kind==='bybit'){
+    const d = await getJSON(`https://api.bybit.com/v5/market/kline?category=${feed.cat}&symbol=${feed.sym}&interval=${BYBIT_TF[tf]}&limit=${Math.min(limit,1000)}`);
+    const list = d && d.result && d.result.list; if(!list || !list.length) throw new Error('пустой ответ');
+    return list.map(k=>({time:k[0]/1000, open:num(k[1]), high:num(k[2]), low:num(k[3]), close:num(k[4]), volume:num(k[5])})).reverse();
+  }
+  if(feed.kind==='okx'){
+    const d = await getJSON(`https://www.okx.com/api/v5/market/candles?instId=${feed.sym}&bar=${OKX_TF[tf]}&limit=${Math.min(limit,300)}`);
+    const list = d && d.data; if(!list || !list.length) throw new Error('пустой ответ');
+    return list.map(k=>({time:k[0]/1000, open:num(k[1]), high:num(k[2]), low:num(k[3]), close:num(k[4]), volume:num(k[5])})).reverse();
+  }
+  throw new Error('неизвестный источник');
+}
+
+// склеивает свечи младшего ТФ в старший (для CSV и демо)
+function aggregate(c, sec){
+  const out = [];
+  for(const b of c){
+    const t = Math.floor(b.time/sec)*sec, last = out[out.length-1];
+    if(last && last.time===t){ last.high=Math.max(last.high,b.high); last.low=Math.min(last.low,b.low); last.close=b.close; last.volume+=b.volume||0; }
+    else out.push({time:t, open:b.open, high:b.high, low:b.low, close:b.close, volume:b.volume||0});
+  }
+  return out;
+}
+
+// демо: случайное блуждание с «памятью» уровней, чтобы были отбои и пробои
+function makeDemo(n){
+  let p = 4190, t = Math.floor(Date.now()/60000)*60 - n*60, seed = 7;
+  const rnd = ()=>{ seed = (seed*16807)%2147483647; return seed/2147483647; };
+  const out = [], magnets = [4170,4182.5,4195,4207.5,4220];
+  let drift = 0;
+  for(let i=0;i<n;i++){
+    if(i%180===0) drift = (rnd()-.5)*0.08;
+    const o = p; let h = o, l = o, c = o;
+    for(let k=0;k<6;k++){
+      let step = (rnd()-.5)*0.9 + drift;
+      for(const m of magnets){ const d = c-m; if(Math.abs(d)<1.2 && rnd()<0.35) step += (d>0?0.5:-0.5); }
+      c += step; h = Math.max(h,c); l = Math.min(l,c);
+    }
+    out.push({time:t, open:o, high:h+rnd()*0.3, low:l-rnd()*0.3, close:c, volume:50+rnd()*100});
+    p = c; t += 60;
+  }
+  return out;
+}
+
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/); const head = lines[0].toLowerCase().split(/[,;\t]/).map(s=>s.trim().replace(/"/g,''));
+  const ix = name => head.findIndex(h=>h===name || h.startsWith(name));
+  let it = ix('time'); if(it<0) it = ix('date'); if(it<0) it = 0;
+  const io=ix('open'), ih=ix('high'), il=ix('low'), ic=ix('close'), iv=ix('vol');
+  if(io<0||ih<0||il<0||ic<0) throw new Error('нужны колонки time, open, high, low, close');
+  const out = [];
+  for(const line of lines.slice(1)){
+    const f = line.split(/[,;\t]/).map(s=>s.trim().replace(/"/g,'')); if(f.length<5) continue;
+    let t = f[it]; t = /^\d+(\.\d+)?$/.test(t) ? +t : Date.parse(t)/1000; if(t>1e12) t/=1000;
+    const b = {time:Math.floor(t), open:+f[io], high:+f[ih], low:+f[il], close:+f[ic], volume: iv>=0 ? +f[iv]||0 : 0};
+    if(isFinite(b.time) && isFinite(b.close)) out.push(b);
+  }
+  out.sort((a,b)=>a.time-b.time);
+  return out;
+}
+
+// ───────────────────────── индикаторы ─────────────────────────
+function atr(c, n=14){
+  const out = new Array(c.length).fill(0); let a = 0;
+  for(let i=0;i<c.length;i++){
+    const b = c[i], pc = i ? c[i-1].close : b.open;
+    const tr = Math.max(b.high-b.low, Math.abs(b.high-pc), Math.abs(b.low-pc));
+    a = i<n ? (a*i+tr)/(i+1) : (a*(n-1)+tr)/n; out[i] = a;
+  }
+  return out;
+}
+function ema(vals, n){ const k = 2/(n+1); let e = vals[0]; return vals.map(v=> e = v*k + e*(1-k)); }
+
+// ───────────────────────── уровни ─────────────────────────
+function niceStep(price){
+  const raw = price*0.0025, pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  for(const m of [1,2.5,5,10]) if(raw <= m*pow*1.5) return m*pow;
+  return 10*pow;
+}
+
+function findLevels(L, aE, manual, opts){
+  const n = L.length, aLarr = atr(L), aL = aLarr[n-1], k = 3, ltfSec = opts.ltfSec;
+  const pts = [];
+  for(let i=k;i<n-k;i++){
+    let isH = true, isL = true;
+    for(let j=i-k;j<=i+k;j++){ if(j===i) continue; if(L[j].high>L[i].high) isH=false; if(L[j].low<L[i].low) isL=false; }
+    const since = L[i].time + (k+1)*ltfSec; // уровень «известен» только после k свечей справа
+    if(isH) pts.push({p:L[i].high, t:since, w:1, tag:'swing'});
+    if(isL) pts.push({p:L[i].low, t:since, w:1, tag:'swing'});
+  }
+  // максимум/минимум прошлого дня
+  const days = {}; for(const b of L){ const d = Math.floor(b.time/86400); (days[d] = days[d] || {h:-Infinity,l:Infinity,end:0}); days[d].h=Math.max(days[d].h,b.high); days[d].l=Math.min(days[d].l,b.low); days[d].end=(d+1)*86400; }
+  const dk = Object.keys(days).map(Number).sort((a,b)=>a-b);
+  if(dk.length>=2){ const pd = days[dk[dk.length-2]]; pts.push({p:pd.h, t:pd.end, w:2, tag:'макс. вчера'}); pts.push({p:pd.l, t:pd.end, w:2, tag:'мин. вчера'}); }
+  for(const m of manual) pts.push({p:m, t:0, w:3, tag:'мой', manual:true});
+
+  pts.sort((a,b)=>a.p-b.p);
+  const tol = 0.35*aL, cl = [];
+  for(const pt of pts){
+    const c = cl[cl.length-1];
+    if(c && pt.p - c.sum/c.cnt <= tol){ c.sum+=pt.p; c.cnt++; c.w+=pt.w; c.t=Math.min(c.t,pt.t); c.tLast=Math.max(c.tLast,pt.t); c.tags.add(pt.tag); if(pt.manual) c.manual=pt.p; }
+    else cl.push({sum:pt.p, cnt:1, w:pt.w, t:pt.t, tLast:pt.t, tags:new Set([pt.tag]), manual: pt.manual ? pt.p : null});
+  }
+  const tRecent = L[Math.floor(n*0.75)].time;
+  let levels = cl.map(c=>{
+    const score = c.w + (c.tLast>=tRecent ? 1 : 0);
+    return {price: c.manual!=null ? c.manual : c.sum/c.cnt, touches:c.cnt, since:c.t, tags:[...c.tags], score,
+            stars: score>=4 ? 3 : score>=2 ? 2 : 1, manual:c.manual!=null};
+  });
+  if(opts.round){
+    const last = L[n-1].close, st = niceStep(last);
+    for(let r = Math.floor((last-12*aL)/st)*st; r <= last+12*aL; r += st){
+      if(!levels.some(l=>Math.abs(l.price-r) <= tol*1.5)) levels.push({price:r, touches:0, since:0, tags:['круглое'], score:1, stars:1, round:true});
+    }
+  }
+  // показываем ближайшие 4 сверху и 4 снизу, слабые одиночные — только если они свежие
+  const last = L[n-1].close;
+  levels = levels.filter(l=> l.stars>=2 || l.round || l.since>=tRecent);
+  const above = levels.filter(l=>l.price>last).sort((a,b)=>a.price-b.price).slice(0,4);
+  const below = levels.filter(l=>l.price<=last).sort((a,b)=>b.price-a.price).slice(0,4);
+  const zone = Math.max(0.12*aL, 0.3*aE);
+  return [...below.reverse(), ...above].map(l=>({...l, zone}));
+}
+
+// ───────────────────────── движок сигналов ─────────────────────────
+// Смотрит только закрытые свечи. Возвращает события и состояние по каждому уровню.
+function runEngine(E, levels, ctx){
+  const n = E.length, A = atr(E), lastClosed = ctx.closedUpTo;
+  const vols = E.map(b=>b.volume||0), hasVol = vols.some(v=>v>0);
+  const events = [], state = levels.map(()=>({dir:0, at:-1, extreme:0, cool:-99}));
+  const pending = [];
+  const RETEST_BARS = 24, start = Math.max(20, lastClosed-400);
+
+  const nextLevel = (price, dir) => {
+    const c = levels.filter(l=> dir>0 ? l.price - l.zone > price : l.price + l.zone < price)
+                    .sort((a,b)=> dir>0 ? a.price-b.price : b.price-a.price)[0];
+    return c ? (dir>0 ? c.price - c.zone : c.price + c.zone) : null;
+  };
+  const grade = (s, i) => {
+    const lv = s.level, why = [];
+    let sc = 1;
+    if(lv.stars>=2){ sc++; why.push(`+ уровень ${'★'.repeat(lv.stars)} (${lv.tags.join(', ')})`); }
+    if(lv.stars>=3) sc++;
+    if(ctx.trend===s.dir){ sc++; why.push('+ по тренду старшего ТФ'); }
+    else if(ctx.trend===-s.dir){ sc--; why.push('− против тренда старшего ТФ'); }
+    if(s.kind==='sweep' || s.kind==='trap'){ sc++; why.push('+ сняли стопы за уровнем (ложный пробой)'); }
+    if(hasVol){
+      let av = 0; for(let j=Math.max(0,s.i-20);j<s.i;j++) av+=vols[j]; av/=Math.min(20,s.i)||1;
+      if(vols[s.i] > 1.3*av){ sc++; why.push('+ повышенный объём на сигнальной свече'); }
+    }
+    if(s.rr>=2){ sc++; why.push(`+ прибыль/риск ${s.rr.toFixed(1)}`); }
+    if(s.rr < ctx.minRR){ sc-=3; why.push(`− до следующего уровня мало места (П/Р ${s.rr.toFixed(1)})`); }
+    return {score:sc, label: sc>=4 ? 'Сильный' : sc>=2 ? 'Нормальный' : 'Слабый — пропустить', why};
+  };
+  const emit = (s, i) => {
+    const b = E[i], entry = b.close, risk = Math.abs(entry - s.sl);
+    if(risk <= 0 || (s.dir>0 ? s.sl>=entry : s.sl<=entry)) return;
+    let tp = nextLevel(entry, s.dir);
+    if(tp===null || Math.abs(tp-entry) < 0.3*risk) tp = entry + s.dir*2*risk;
+    const ev = {...s, type: s.dir>0 ? 'buy' : 'sell', i, time:b.time, entry, tp, rr: Math.abs(tp-entry)/risk};
+    Object.assign(ev, grade(ev, i));
+    // результат по истории: что было раньше — стоп или тейк
+    ev.result = 'open';
+    for(let j=i+1;j<=lastClosed;j++){
+      const hitSL = s.dir>0 ? E[j].low<=ev.sl : E[j].high>=ev.sl, hitTP = s.dir>0 ? E[j].high>=tp : E[j].low<=tp;
+      if(hitSL){ ev.result='sl'; ev.closedAt=j; break; } if(hitTP){ ev.result='tp'; ev.closedAt=j; break; }
+    }
+    events.push(ev);
+  };
+  const setup = (s, i) => {
+    const st = state[s.li]; if(i - st.cool < 6) return; st.cool = i;
+    if(ctx.mode==='instant') emit(s, i);
+    else { pending.push({...s, i, expire:i+3}); events.push({type:'watch', i, time:E[i].time, dir:s.dir, level:s.level, kind:s.kind}); }
+  };
+
+  for(let i=start;i<=lastClosed;i++){
+    const b = E[i], pb = E[i-1], a = A[i];
+    const body = Math.abs(b.close-b.open), range = b.high-b.low || 1e-9;
+    const upW = b.high - Math.max(b.open,b.close), loW = Math.min(b.open,b.close) - b.low;
+
+    // подтверждения отложенных сигналов
+    for(let q=pending.length-1;q>=0;q--){
+      const s = pending[q];
+      if(i===s.i) continue;
+      const broke = s.dir>0 ? b.low<=s.sl : b.high>=s.sl;
+      const ok = s.dir>0 ? (b.close>b.open && b.close>E[s.i].close) : (b.close<b.open && b.close<E[s.i].close);
+      if(broke){ events.push({type:'cancel', i, time:b.time, dir:s.dir, level:s.level, why:'цена ушла за стоп'}); pending.splice(q,1); }
+      else if(ok){ emit({...s, confirmed:true}, i); pending.splice(q,1); }
+      else if(i>=s.expire){ events.push({type:'cancel', i, time:b.time, dir:s.dir, level:s.level, why:'нет подтверждения 3 свечи'}); pending.splice(q,1); }
+    }
+
+    levels.forEach((lv, li)=>{
+      if(lv.since > b.time || lv.round) return; // круглые — только цели для тейка
+      const p = lv.price, z = lv.zone, up = p+z, dn = p-z, st = state[li];
+      const impulse = body >= 0.5*range && body >= 0.5*a;
+
+      if(st.dir!==0){
+        st.extreme = st.dir>0 ? Math.max(st.extreme, b.high) : Math.min(st.extreme, b.low);
+        if(i - st.at > RETEST_BARS){ st.dir = 0; }
+        else if(st.dir>0 && b.close < dn){ // пробой вверх не удержали → ловушка, SELL
+          events.push({type:'fail', i, time:b.time, dir:1, level:lv});
+          setup({dir:-1, kind:'trap', name:'Ловушка: ложный пробой вверх', level:lv, li, sl: st.extreme + 0.2*a}, i);
+          st.dir = 0; return;
+        }
+        else if(st.dir<0 && b.close > up){
+          events.push({type:'fail', i, time:b.time, dir:-1, level:lv});
+          setup({dir:1, kind:'trap', name:'Ловушка: ложный пробой вниз', level:lv, li, sl: st.extreme - 0.2*a}, i);
+          st.dir = 0; return;
+        }
+        else if(st.dir>0 && i>st.at && b.low <= up && b.close > p && (b.close>=b.open || loW>=body)){
+          setup({dir:1, kind:'retest', name:'Ретест после пробоя вверх', level:lv, li, sl: Math.min(b.low, dn) - 0.25*a}, i);
+          st.dir = 0; return;
+        }
+        else if(st.dir<0 && i>st.at && b.high >= dn && b.close < p && (b.close<=b.open || upW>=body)){
+          setup({dir:-1, kind:'retest', name:'Ретест после пробоя вниз', level:lv, li, sl: Math.max(b.high, up) + 0.25*a}, i);
+          st.dir = 0; return;
+        }
+        return;
+      }
+
+      // пробой: закрытие за зоной сильным телом
+      if(pb.close <= up && b.close > up + 0.1*a && impulse && b.close>b.open){
+        Object.assign(st, {dir:1, at:i, extreme:b.high}); events.push({type:'break', i, time:b.time, dir:1, level:lv}); return;
+      }
+      if(pb.close >= dn && b.close < dn - 0.1*a && impulse && b.close<b.open){
+        Object.assign(st, {dir:-1, at:i, extreme:b.low}); events.push({type:'break', i, time:b.time, dir:-1, level:lv}); return;
+      }
+      // отбой фитилём от сопротивления
+      const wickMin = Math.max(1.5*body, 0.4*range, 0.35*a);
+      if(pb.close < up && b.high >= dn && b.close < p && upW >= wickMin){
+        const sweep = b.high > up;
+        setup({dir:-1, kind: sweep?'sweep':'wick', name: sweep ? 'Ложный пробой вверх (сняли стопы)' : 'Отбой фитилём от сопротивления',
+               level:lv, li, sl: Math.max(b.high, up) + 0.2*a}, i);
+        return;
+      }
+      // отбой фитилём от поддержки
+      if(pb.close > dn && b.low <= up && b.close > p && loW >= wickMin){
+        const sweep = b.low < dn;
+        setup({dir:1, kind: sweep?'sweep':'wick', name: sweep ? 'Ложный пробой вниз (сняли стопы)' : 'Отбой фитилём от поддержки',
+               level:lv, li, sl: Math.min(b.low, dn) - 0.2*a}, i);
+      }
+    });
+  }
+  return {events, state, pending, atr:A};
+}
+
+// ───────────────────────── приложение ─────────────────────────
+const S = {
+  inst: store.get('inst','gold'), tf: store.get('tf','5m'), ltf: store.get('ltf','auto'),
+  manual: store.get('manual', {}), offsets: store.get('offsets', {}),
+  feedIdx: 0, E: [], L: [], live: true, csvE: null, lastSignalKey: store.get('lastSig',''),
+  addMode: false, lines: [], timer: null, levelTimer: null, busy: false
+};
+const tzShift = -new Date().getTimezoneOffset()*60;
+const keyOf = () => S.inst==='custom' ? 'custom:'+$('customSym').value.trim().toUpperCase() : S.inst;
+const offset = () => S.offsets[keyOf()] || 0;
+const manualLevels = () => S.manual[keyOf()] || [];
+let prec = 2;
+const fmt = v => v==null ? '—' : v.toFixed(prec);
+
+const chart = LightweightCharts.createChart($('chart'), {
+  autoSize: true,
+  layout:{background:{type:'solid', color:'#0f1218'}, textColor:'#aab2c3', fontSize:12},
+  grid:{vertLines:{color:'#1b212c'}, horzLines:{color:'#1b212c'}},
+  rightPriceScale:{borderColor:'#2a3242'}, timeScale:{borderColor:'#2a3242', timeVisible:true, secondsVisible:false, rightOffset:8},
+  crosshair:{mode:0}
+});
+const series = chart.addCandlestickSeries({upColor:'#22c55e', downColor:'#ef4444', borderVisible:false, wickUpColor:'#22c55e', wickDownColor:'#ef4444'});
+
+function feedList(){
+  if(S.inst==='custom') return [{name:'Binance Futures '+$('customSym').value.trim().toUpperCase(), kind:'binance', url:'https://fapi.binance.com/fapi/v1/klines', sym:$('customSym').value.trim().toUpperCase(), contract:+$('contract').value||1}];
+  return FEEDS[S.inst] || [];
+}
+const ltfName = () => S.ltf==='auto' ? AUTO_LTF[S.tf] : S.ltf;
+
+async function load(full){
+  if(S.busy) return; S.busy = true;
+  try{
+    const ltf = ltfName();
+    if(S.inst==='demo'){
+      if(full || !S.demoBase){ S.demoBase = makeDemo(3000); S.demoPos = 2400; }
+      S.demoPos = Math.min(S.demoPos+1, S.demoBase.length); // каждую загрузку «проходит» минута
+      const m1 = S.demoBase.slice(0, S.demoPos);
+      S.E = aggregate(m1, TF_SEC[S.tf]).slice(-600); S.L = aggregate(m1, TF_SEC[ltf]);
+      S.live = true; $('src').textContent = 'Демо-данные (случайные), новая минута каждые 3 с';
+    } else if(S.inst==='csv'){
+      if(!S.csvE){ $('hint').textContent = 'Выбери CSV-файл (TradingView → Экспорт данных графика)'; S.busy=false; return; }
+      const step = S.csvE.length>1 ? S.csvE[1].time - S.csvE[0].time : 60;
+      S.E = S.csvE.slice(-1500); S.L = aggregate(S.csvE, Math.max(TF_SEC[ltf], step*4));
+      S.live = false; $('src').textContent = `CSV: ${S.csvE.length} свечей (ТФ файла ${Math.round(step/60)}м)`;
+    } else {
+      const feeds = feedList(); let err = null;
+      for(let k=0;k<feeds.length;k++){
+        const idx = (S.feedIdx + k) % feeds.length, f = feeds[idx];
+        try{
+          const [E, L] = await Promise.all([fetchKlines(f, S.tf, 600), (full || !S.L.length || Date.now()-S.ltfAt>60000) ? fetchKlines(f, ltf, 300) : Promise.resolve(null)]);
+          S.E = E; if(L){ S.L = L; S.ltfAt = Date.now(); }
+          S.feedIdx = idx; S.feed = f; err = null;
+          if(full && S.inst!=='custom') $('contract').value = f.contract;
+          $('src').textContent = 'Данные: ' + f.name + (S.inst==='gold' ? ' — это не OANDA, сверь цену в настройках' : '');
+          break;
+        }catch(e){ err = e; }
+      }
+      if(err) throw new Error('не удалось получить данные ни с одной биржи ('+err.message+'). Проверь интернет/VPN или выбери «Демо»/CSV.');
+      S.live = true;
+    }
+    const off = offset();
+    if(off){ const sh = b=>({...b, open:b.open+off, high:b.high+off, low:b.low+off, close:b.close+off}); S.E = S.E.map(sh); S.L = S.L.map(sh); }
+    analyse(full);
+    $('hint').textContent = S.addMode ? 'Кликни по графику, чтобы поставить уровень' : `Свечи ${S.tf} · уровни с ${ltfName()} · время местное`;
+  }catch(e){
+    $('hint').innerHTML = '<span class="err">Ошибка: '+e.message+'</span>';
+    setNow('wait', 'НЕТ ДАННЫХ', e.message);
+  }finally{ S.busy = false; }
+}
+
+function analyse(full){
+  const E = S.E, n = E.length; if(n<50 || S.L.length<20){ setNow('wait','МАЛО ДАННЫХ','Нужно хотя бы 50 свечей.'); return; }
+  const last = E[n-1].close;
+  prec = last>=1000 ? 2 : last>=10 ? 3 : 5;
+  series.applyOptions({priceFormat:{type:'price', precision:prec, minMove:Math.pow(10,-prec)}});
+  const aE = atr(E)[n-1];
+  const Lc = S.L.map(b=>b.close), eL = ema(Lc, 50);
+  const slope = eL[eL.length-1] - eL[Math.max(0,eL.length-6)];
+  const lastL = Lc[Lc.length-1], aL = atr(S.L)[S.L.length-1];
+  const trend = (lastL > eL[eL.length-1] && slope > 0.05*aL) ? 1 : (lastL < eL[eL.length-1] && slope < -0.05*aL) ? -1 : 0;
+
+  const levels = findLevels(S.L, aE, manualLevels(), {round:$('roundOn').checked, ltfSec:TF_SEC[ltfName()]});
+  const closedUpTo = S.live ? n-2 : n-1;
+  const res = runEngine(E, levels, {trend, minRR:+$('minRR').value||1.5, mode:$('entryMode').value, closedUpTo});
+  S.res = res; S.levels = levels; S.trend = trend;
+
+  // график
+  series.setData(E.map(b=>({time:b.time+tzShift, open:b.open, high:b.high, low:b.low, close:b.close})));
+  if(full) chart.timeScale().scrollToRealTime();
+  for(const l of S.lines) series.removePriceLine(l); S.lines = [];
+  for(const lv of levels){
+    const res_ = lv.price > last;
+    S.lines.push(series.createPriceLine({price:lv.price, color: lv.round ? '#64748b' : res_ ? '#ef4444' : '#22c55e', lineWidth: lv.round ? 1 : lv.stars,
+      lineStyle: lv.round ? 2 : 0, axisLabelVisible: !lv.round, title: (lv.manual?'мой ':'') + '★'.repeat(lv.stars)}));
+  }
+  const markers = [];
+  for(const ev of res.events){
+    const t = ev.time + tzShift;
+    const weak = ev.score < 2;
+    if(ev.type==='buy') markers.push({time:t, position:'belowBar', color: weak ? '#64748b' : '#22c55e', shape:'arrowUp', text: weak ? 'buy?' : 'BUY'});
+    else if(ev.type==='sell') markers.push({time:t, position:'aboveBar', color: weak ? '#64748b' : '#ef4444', shape:'arrowDown', text: weak ? 'sell?' : 'SELL'});
+    else if(ev.type==='break') markers.push({time:t, position: ev.dir>0?'aboveBar':'belowBar', color:'#eab308', shape:'circle', text:'пробой'});
+    else if(ev.type==='fail') markers.push({time:t, position:'inBar', color:'#a855f7', shape:'circle', text:'ложный'});
+  }
+  markers.sort((a,b)=>a.time-b.time);
+  series.setMarkers(markers);
+
+  const active = [...res.events].reverse().find(e=>(e.type==='buy'||e.type==='sell'));
+  const live = active && active.result==='open' && active.i >= closedUpTo-6 ? active : null;
+  if(live){
+    S.lines.push(series.createPriceLine({price:live.entry, color:'#3b82f6', lineWidth:1, lineStyle:2, title:'вход'}));
+    S.lines.push(series.createPriceLine({price:live.sl, color:'#f97316', lineWidth:2, lineStyle:2, title:'стоп'}));
+    S.lines.push(series.createPriceLine({price:live.tp, color:'#38bdf8', lineWidth:2, lineStyle:2, title:'тейк'}));
+  }
+  renderNow(live, res, levels, last, aE, closedUpTo);
+  renderPlan(levels, last, aE, trend);
+  renderLog(res.events);
+  if(live) notify(live);
+}
+
+function setNow(cls, title, text, nums, why){
+  $('now').className = 'card ' + cls; $('nowTitle').textContent = title; $('nowText').innerHTML = text;
+  $('nowNums').innerHTML = nums || ''; $('nowWhy').innerHTML = (why||[]).map(w=>`<li class="${w[0]==='−'?'minus':''}">${w}</li>`).join('');
+}
+
+function lotHtml(entry, sl){
+  const dep = +$('dep').value, rp = +$('riskPct').value, cs = +$('contract').value;
+  if(!(dep>0 && rp>0 && cs>0)) return 'Заполни депозит, риск и контракт.';
+  const money = dep*rp/100, lots = money / (Math.abs(entry-sl)*cs);
+  return `Рискуешь <b>$${money.toFixed(2)}</b> → объём <b>${lots>=0.01 ? lots.toFixed(2) : lots.toPrecision(2)} лот</b> (стоп ${Math.abs(entry-sl).toFixed(prec)} пунктов цены).`;
+}
+
+function renderNow(live, res, levels, last, aE, closedUpTo){
+  const E = S.E, n = E.length;
+  const sec = TF_SEC[S.tf], left = S.live ? Math.max(0, E[n-1].time + sec - Date.now()/1000) : 0;
+  const countdown = S.live && S.inst!=='demo' ? ` <span class="muted">· до закрытия свечи ${String(Math.floor(left/60)).padStart(2,'0')}:${String(Math.floor(left%60)).padStart(2,'0')}</span>` : '';
+  if(live){
+    const buy = live.dir>0, skip = live.score < 2;
+    const nums = `<div class="grid3"><div><span>Вход</span><b>${fmt(live.entry)}</b></div><div><span>Стоп</span><b class="sellc">${fmt(live.sl)}</b></div><div><span>Тейк</span><b class="buyc">${fmt(live.tp)}</b></div></div>
+      <div style="margin-top:6px">Прибыль/риск: <b>${live.rr.toFixed(1)}</b> · Сила: <b>${live.label}</b></div>`;
+    setNow(skip ? 'wait' : buy ? 'buy' : 'sell', skip ? `${buy?'BUY':'SELL'} — СЛАБЫЙ, ПРОПУСТИТЬ` : (buy ? '▲ BUY — ПОКУПАТЬ' : '▼ SELL — ПРОДАВАТЬ'),
+      `${live.name} у уровня <b>${fmt(live.level.price)}</b>${live.confirmed?' — подтверждено следующей свечой':''}.` + countdown, nums, live.why);
+    $('lotOut').innerHTML = lotHtml(live.entry, live.sl);
+    return;
+  }
+  $('lotOut').textContent = 'Появится, когда будет сигнал.';
+  if(res.pending.length){
+    const p = res.pending[res.pending.length-1];
+    setNow('wait', 'ВНИМАНИЕ — ЖДЁМ ПОДТВЕРЖДЕНИЯ',
+      `${p.name} у <b>${fmt(p.level.price)}</b>. Вход ${p.dir>0?'<b class="buyc">BUY</b>':'<b class="sellc">SELL</b>'}, если следующая свеча закроется ${p.dir>0?'зелёной выше':'красной ниже'} ${fmt(E[p.i].close)}. Отмена, если цена уйдёт за ${fmt(p.sl)}.` + countdown);
+    return;
+  }
+  const brk = res.state.map((s,i)=>({s, lv:levels[i]})).filter(x=>x.s.dir!==0 && x.lv.since<=E[closedUpTo].time);
+  if(brk.length){
+    const x = brk[brk.length-1], up = x.s.dir>0, leftBars = 24 - (closedUpTo - x.s.at);
+    setNow('wait', up ? 'ПРОБОЙ ВВЕРХ — ЖДЁМ РЕТЕСТ' : 'ПРОБОЙ ВНИЗ — ЖДЁМ РЕТЕСТ',
+      `Уровень <b>${fmt(x.lv.price)}</b> пробит. <b>Не догоняй цену.</b> Жди, пока она вернётся к уровню и закроется ${up?'выше':'ниже'} него — тогда ${up?'<b class="buyc">BUY</b>':'<b class="sellc">SELL</b>'}. Если свеча закроется обратно ${up?'ниже':'выше'} ${fmt(up ? x.lv.price - x.lv.zone : x.lv.price + x.lv.zone)} — это ловушка, вход в обратную сторону. Ждём ещё до ${leftBars} свечей.` + countdown);
+    return;
+  }
+  const near = levels.filter(l=>Math.abs(last-l.price) <= l.zone + 0.4*aE).sort((a,b)=>Math.abs(last-a.price)-Math.abs(last-b.price))[0];
+  if(near){
+    const r = near.price >= last;
+    setNow('wait', 'ЦЕНА У УРОВНЯ — СМОТРИ ЗАКРЫТИЕ',
+      `Цена ${fmt(last)} у ${r?'сопротивления':'поддержки'} <b>${fmt(near.price)}</b> ${'★'.repeat(near.stars)}. Дождись закрытия свечи: тень и закрытие обратно → разворот ${r?'<b class="sellc">SELL</b>':'<b class="buyc">BUY</b>'}; закрытие сильным телом за уровнем → пробой, потом ретест.` + countdown);
+    return;
+  }
+  setNow('wait', 'ЖДАТЬ', `Цена ${fmt(last)} между уровнями — входа нет. Смотри план ниже.` + countdown);
+}
+
+function renderPlan(levels, last, aE, trend){
+  const above = levels.filter(l=>l.price>last).sort((a,b)=>a.price-b.price)[0];
+  const below = levels.filter(l=>l.price<=last).sort((a,b)=>b.price-a.price)[0];
+  const tr = trend>0 ? '<span class="buyc">вверх ▲</span>' : trend<0 ? '<span class="sellc">вниз ▼</span>' : '<span class="muted">боковик</span>';
+  let h = `<div style="font-size:13px">Тренд на ${ltfName()}: <b>${tr}</b>${trend ? ' — сигналы по тренду надёжнее' : ' — работай от уровней на отбой'}</div>`;
+  const desc = l => `${'★'.repeat(l.stars)} <span class="tag">${l.tags.join(', ')}${l.touches>1?' · касаний '+l.touches:''}</span>`;
+  if(above) h += `<div class="plan r"><div>Сопротивление <span class="lv">${fmt(above.price)}</span> ${desc(above)} <span class="muted">(+${(above.price-last).toFixed(prec)})</span></div>
+     <p>🔻 Коснулась фитилём и закрылась ниже ${fmt(above.price)} → <b class="sellc">SELL</b> на разворот</p>
+     <p>🔺 Свеча закрылась выше ${fmt(above.price+above.zone)} сильным телом → пробой, жди ретест → <b class="buyc">BUY</b></p></div>`;
+  if(below) h += `<div class="plan s"><div>Поддержка <span class="lv">${fmt(below.price)}</span> ${desc(below)} <span class="muted">(−${(last-below.price).toFixed(prec)})</span></div>
+     <p>🔺 Коснулась фитилём и закрылась выше ${fmt(below.price)} → <b class="buyc">BUY</b> на разворот</p>
+     <p>🔻 Свеча закрылась ниже ${fmt(below.price-below.zone)} сильным телом → пробой, жди ретест → <b class="sellc">SELL</b></p></div>`;
+  $('plan').innerHTML = h;
+}
+
+function renderLog(events){
+  const tstr = t => new Date(t*1000).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const sig = events.filter(e=>e.type==='buy'||e.type==='sell');
+  const tp = sig.filter(e=>e.result==='tp').length, sl = sig.filter(e=>e.result==='sl').length;
+  const strong = sig.filter(e=>e.score>=2), stp = strong.filter(e=>e.result==='tp').length, ssl = strong.filter(e=>e.result==='sl').length;
+  $('stats').textContent = sig.length ? `на истории: ✅${tp} ❌${sl}` + (strong.length ? ` · без слабых ✅${stp} ❌${ssl}` : '') : '';
+  const rows = events.filter(e=>e.type!=='watch').slice(-40).reverse().map(e=>{
+    const lv = e.level ? fmt(e.level.price) : '';
+    if(e.type==='buy'||e.type==='sell'){
+      const res = e.result==='tp' ? '✅ тейк' : e.result==='sl' ? '❌ стоп' : '⏳ открыт';
+      return `<div><b class="${e.type==='buy'?'buyc':'sellc'}">${e.type.toUpperCase()}</b> ${tstr(e.time)} · ${e.name} · вход ${fmt(e.entry)} стоп ${fmt(e.sl)} тейк ${fmt(e.tp)} · <span class="${e.score<2?'muted':''}">${e.label}</span> · ${res}</div>`;
+    }
+    if(e.type==='break') return `<div class="waitc">${tstr(e.time)} · пробой ${e.dir>0?'вверх':'вниз'} ${lv}</div>`;
+    if(e.type==='fail') return `<div style="color:#c084fc">${tstr(e.time)} · пробой ${lv} не удержали</div>`;
+    if(e.type==='cancel') return `<div class="muted">${tstr(e.time)} · отмена у ${lv}: ${e.why}</div>`;
+    return '';
+  }).join('');
+  $('log').innerHTML = rows || '<span class="muted">Пока нет.</span>';
+}
+
+function notify(ev){
+  const key = keyOf()+S.tf+ev.time+ev.type;
+  if(key===S.lastSignalKey || ev.score<2) return;
+  S.lastSignalKey = key; store.set('lastSig', key);
+  if(!$('soundOn').checked) return;
+  try{
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.18].forEach((d,k)=>{ const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = ev.dir>0 ? 880+k*220 : 660-k*160;
+      g.gain.setValueAtTime(0.15, ac.currentTime+d); g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+d+0.16);
+      o.connect(g).connect(ac.destination); o.start(ac.currentTime+d); o.stop(ac.currentTime+d+0.17); });
+  }catch(e){}
+  try{ if('Notification' in window && Notification.permission==='granted')
+    new Notification(`${ev.type.toUpperCase()} ${fmt(ev.entry)}`, {body:`${ev.name}. Стоп ${fmt(ev.sl)}, тейк ${fmt(ev.tp)}`}); }catch(e){}
+}
+
+// ───────────────────────── управление ─────────────────────────
+function renderManual(){
+  const m = manualLevels();
+  $('manualList').innerHTML = m.length ? m.map((p,i)=>`<span>${fmt(p)}<button data-i="${i}" title="Удалить">✕</button></span>`).join('') : 'нет — нажми «➕ Свой уровень» и кликни по графику';
+}
+$('manualList').addEventListener('click', e=>{
+  const i = e.target.dataset.i; if(i===undefined) return;
+  const k = keyOf(); S.manual[k] = manualLevels().filter((_,j)=>j!=i); store.set('manual', S.manual); renderManual(); analyse(false);
+});
+$('addLevelBtn').onclick = ()=>{ S.addMode = !S.addMode; $('addLevelBtn').classList.toggle('on', S.addMode);
+  $('hint').textContent = S.addMode ? 'Кликни по графику, чтобы поставить уровень' : `Свечи ${S.tf} · уровни с ${ltfName()}`; };
+chart.subscribeClick(p=>{
+  if(!S.addMode || !p.point) return;
+  const price = series.coordinateToPrice(p.point.y); if(price==null) return;
+  const k = keyOf(); S.manual[k] = [...manualLevels(), +price.toFixed(prec)]; store.set('manual', S.manual);
+  S.addMode = false; $('addLevelBtn').classList.remove('on'); renderManual(); analyse(false);
+});
+$('syncBtn').onclick = ()=>{
+  const bp = +$('brokerPrice').value; if(!(bp>0) || !S.E.length) return;
+  const raw = S.E[S.E.length-1].close - offset();
+  S.offsets[keyOf()] = +(bp - raw).toFixed(5); store.set('offsets', S.offsets); showOffset(); load(true);
+};
+function showOffset(){ const o = offset(); $('offsetInfo').textContent = o ? `Поправка к данным: ${o>0?'+':''}${o.toFixed(prec)} (цены на графике = цены твоего брокера)` : 'Поправки нет. Введи цену из терминала, чтобы уровни совпали с твоим графиком.'; }
+
+function restart(){
+  clearInterval(S.timer); S.L = []; S.feedIdx = 0; S.res = null;
+  store.set('inst', S.inst); store.set('tf', S.tf); store.set('ltf', S.ltf);
+  renderManual(); showOffset(); load(true);
+  if(S.inst!=='csv') S.timer = setInterval(()=>load(false), S.inst==='demo' ? 3000 : 5000);
+}
+$('inst').onchange = e=>{ S.inst = e.target.value; if(S.inst==='csv') $('csvFile').click(); restart(); };
+$('tf').onchange = e=>{ S.tf = e.target.value; restart(); };
+$('ltf').onchange = e=>{ S.ltf = e.target.value; restart(); };
+$('customSym').onchange = ()=>{ if(S.inst==='custom') restart(); };
+$('csvFile').onchange = async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  try{ S.csvE = parseCSV(await f.text()); restart(); }catch(err){ $('hint').innerHTML = '<span class="err">CSV: '+err.message+'</span>'; }
+};
+for(const id of ['entryMode','minRR','roundOn']) $(id).onchange = ()=>{ store.set(id, $(id).type==='checkbox' ? $(id).checked : $(id).value); analyse(false); };
+for(const id of ['dep','riskPct','contract','soundOn']) $(id).onchange = ()=>{ store.set(id, $(id).type==='checkbox' ? $(id).checked : $(id).value); analyse(false); };
+for(const id of ['entryMode','minRR','roundOn','dep','riskPct','soundOn']){ const v = store.get(id, null); if(v!==null){ if($(id).type==='checkbox') $(id).checked = v; else $(id).value = v; } }
+$('soundOn').addEventListener('change', ()=>{ try{ if($('soundOn').checked && 'Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){} });
+document.addEventListener('click', function once(){ try{ if($('soundOn').checked && 'Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){} document.removeEventListener('click', once); });
+
+$('inst').value = S.inst; $('tf').value = S.tf; $('ltf').value = S.ltf;
+if(S.inst==='csv'){ S.inst = 'gold'; $('inst').value = 'gold'; }
+restart();
+</script>
+</body>
+</html>
