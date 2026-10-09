@@ -125,7 +125,22 @@ footer a{color:var(--muted)}
 
     <div class="card">
       <h3>Настройки</h3>
-      <div class="row"><label for="brokerPrice">Цена у моего брокера сейчас</label><input type="number" id="brokerPrice" step="0.001" placeholder="напр. 4191.90"><button id="syncBtn">Сверить</button></div>
+      <div class="row"><label for="goldSrc"><b>Источник цены золота</b></label>
+        <select id="goldSrc">
+          <option value="auto" selected>Биржи + подгонка (без ключей)</option>
+          <option value="oanda">OANDA — точно как в TradingView</option>
+          <option value="twelve">Twelve Data XAU/USD (ключ)</option>
+        </select></div>
+      <div id="oandaBox" hidden>
+        <div class="row"><label for="oandaToken">Токен OANDA</label><input type="text" id="oandaToken" placeholder="xxxxxxxx-xxxx…" style="width:170px"></div>
+        <div class="row"><label for="oandaAcc">Счёт</label><select id="oandaAcc"><option value="practice">демо (practice)</option><option value="live">реальный</option></select></div>
+        <div class="muted" style="font-size:12px">Бесплатно: открой демо-счёт на oanda.com → «Manage API Access» → Generate. Токен хранится только в этом браузере.</div>
+      </div>
+      <div id="tdBox" hidden>
+        <div class="row"><label for="tdKey">Ключ Twelve Data</label><input type="text" id="tdKey" style="width:170px"></div>
+        <div class="muted" style="font-size:12px">Бесплатный ключ: twelvedata.com → Sign up → API key. Обновление раз в 2 минуты (лимит 800 запросов в день).</div>
+      </div>
+      <div class="row"><label for="brokerPrice">Цена у моего брокера сейчас</label><input type="number" id="brokerPrice" step="0.001" placeholder="напр. 4191.90"><button id="syncBtn">Сверить</button><button id="resetOff" title="Убрать мою поправку">✕</button></div>
       <div class="muted" id="offsetInfo" style="font-size:12px"></div>
       <div class="row"><label for="entryMode">Как входить</label>
         <select id="entryMode">
@@ -192,9 +207,9 @@ const FEEDS = {
   ],
 };
 
-async function getJSON(url){
+async function getJSON(url, headers){
   const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 8000);
-  try{ const r = await fetch(url, {signal:ctl.signal}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); }
+  try{ const r = await fetch(url, {signal:ctl.signal, headers:headers||{}}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); }
   finally{ clearTimeout(t); }
 }
 const num = x => +x;
@@ -215,7 +230,29 @@ async function fetchKlines(feed, tf, limit){
     const list = d && d.data; if(!list || !list.length) throw new Error('пустой ответ');
     return list.map(k=>({time:k[0]/1000, open:num(k[1]), high:num(k[2]), low:num(k[3]), close:num(k[4]), volume:num(k[5])})).reverse();
   }
+  if(feed.kind==='oanda'){
+    const g = {'1m':'M1','5m':'M5','15m':'M15','1h':'H1','4h':'H4'}[tf];
+    const d = await getJSON(`${feed.host}/v3/instruments/XAU_USD/candles?granularity=${g}&count=${Math.min(limit,5000)}&price=M`, {Authorization:'Bearer '+feed.token});
+    if(!d.candles || !d.candles.length) throw new Error('OANDA: пустой ответ');
+    return d.candles.map(k=>({time:Date.parse(k.time)/1000, open:+k.mid.o, high:+k.mid.h, low:+k.mid.l, close:+k.mid.c, volume:k.volume||0}));
+  }
+  if(feed.kind==='twelve'){
+    const iv = {'1m':'1min','5m':'5min','15m':'15min','1h':'1h','4h':'4h'}[tf];
+    const d = await getJSON(`https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${iv}&outputsize=${Math.min(limit,5000)}&timezone=UTC&apikey=${encodeURIComponent(feed.key)}`);
+    if(d.status!=='ok' || !d.values) throw new Error('Twelve Data: '+(d.message||'ошибка'));
+    return d.values.map(k=>({time:Date.parse(k.datetime.replace(' ','T')+'Z')/1000, open:+k.open, high:+k.high, low:+k.low, close:+k.close, volume:+k.volume||0})).reverse();
+  }
   throw new Error('неизвестный источник');
+}
+
+// живая спот-цена золота без ключа — чтобы подогнать биржевые свечи под рынок XAUUSD
+async function spotGold(){
+  const d = await getJSON('https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD');
+  for(const item of d || []){
+    const pr = (item.spreadProfilePrices||[]).find(x=>x.spreadProfile==='prime') || (item.spreadProfilePrices||[])[0];
+    if(pr && pr.bid>0 && pr.ask>0) return (pr.bid+pr.ask)/2;
+  }
+  throw new Error('нет котировки');
 }
 
 // склеивает свечи младшего ТФ в старший (для CSV и демо)
@@ -485,7 +522,20 @@ const S = {
 };
 const tzShift = -new Date().getTimezoneOffset()*60;
 const keyOf = () => S.inst==='custom' ? 'custom:'+$('customSym').value.trim().toUpperCase() : S.inst;
-const offset = () => S.offsets[keyOf()] || 0;
+const offKey = () => keyOf() + '|' + (S.feed ? S.feed.name : '');
+function offset(){
+  if(S.feed && S.feed.exact) return 0;
+  if(S.offsets[offKey()] != null) return S.offsets[offKey()];
+  return S.inst==='gold' && S.spotOk ? S.autoOff : 0;
+}
+function srcText(){
+  const f = S.feed; if(!f) return '—';
+  if(f.exact) return `Данные: <b>${f.name}</b> — настоящая цена золота`;
+  if(S.inst!=='gold') return 'Данные: ' + f.name;
+  if(S.offsets[offKey()] != null) return `Данные: ${f.name}, подогнано под цену твоего брокера`;
+  if(S.spotOk) return `Данные: ${f.name}, подогнано под спот XAUUSD (поправка ${S.autoOff>0?'+':''}${S.autoOff.toFixed(2)})`;
+  return `<span class="err">Данные: ${f.name} — цена отличается от OANDA! Введи цену брокера в «Настройках» или подключи OANDA</span>`;
+}
 const manualLevels = () => S.manual[keyOf()] || [];
 let prec = 2;
 const fmt = v => v==null ? '—' : v.toFixed(prec);
@@ -500,13 +550,26 @@ const chart = LightweightCharts.createChart($('chart'), {
 const series = chart.addCandlestickSeries({upColor:'#22c55e', downColor:'#ef4444', borderVisible:false, wickUpColor:'#22c55e', wickDownColor:'#ef4444'});
 
 function feedList(){
+  if(S.inst==='gold'){
+    const src = $('goldSrc').value;
+    if(src==='oanda'){
+      const token = $('oandaToken').value.trim(); if(!token) throw new Error('вставь токен OANDA в «Настройки → Источник цены золота»');
+      return [{name:'OANDA XAU_USD', kind:'oanda', exact:true, contract:100, token,
+               host: $('oandaAcc').value==='live' ? 'https://api-fxtrade.oanda.com' : 'https://api-fxpractice.oanda.com'}];
+    }
+    if(src==='twelve'){
+      const key = $('tdKey').value.trim(); if(!key) throw new Error('вставь ключ Twelve Data в «Настройки → Источник цены золота»');
+      return [{name:'Twelve Data XAU/USD', kind:'twelve', exact:true, contract:100, key, oneCall:true}];
+    }
+  }
   if(S.inst==='custom') return [{name:'Binance Futures '+$('customSym').value.trim().toUpperCase(), kind:'binance', url:'https://fapi.binance.com/fapi/v1/klines', sym:$('customSym').value.trim().toUpperCase(), contract:+$('contract').value||1}];
   return FEEDS[S.inst] || [];
 }
 const ltfName = () => S.ltf==='auto' ? AUTO_LTF[S.tf] : S.ltf;
 
 async function load(full){
-  if(S.busy) return; S.busy = true;
+  if(S.busy){ if(full) S.again = true; return; }
+  S.busy = true; const gen = S.gen;
   try{
     const ltf = ltfName();
     if(S.inst==='demo'){
@@ -525,25 +588,40 @@ async function load(full){
       for(let k=0;k<feeds.length;k++){
         const idx = (S.feedIdx + k) % feeds.length, f = feeds[idx];
         try{
-          const [E, L] = await Promise.all([fetchKlines(f, S.tf, 600), (full || !S.L.length || Date.now()-S.ltfAt>60000) ? fetchKlines(f, ltf, 300) : Promise.resolve(null)]);
-          S.E = E; if(L){ S.L = L; S.ltfAt = Date.now(); }
+          if(f.oneCall){ // Twelve Data: один запрос, старший ТФ склеиваем сами (бесплатный лимит 800 запросов в день)
+            const E = await fetchKlines(f, S.tf, Math.min(5000, Math.ceil(300*TF_SEC[ltf]/TF_SEC[S.tf])));
+            S.E = E.slice(-600); S.L = aggregate(E, TF_SEC[ltf]); S.ltfAt = Date.now();
+          } else {
+            const [E, L] = await Promise.all([fetchKlines(f, S.tf, 600), (full || !S.L.length || Date.now()-S.ltfAt>60000) ? fetchKlines(f, ltf, 300) : Promise.resolve(null)]);
+            S.E = E; if(L){ S.L = L; S.ltfAt = Date.now(); }
+          }
           S.feedIdx = idx; S.feed = f; err = null;
           if(full && S.inst!=='custom') $('contract').value = f.contract;
-          $('src').textContent = 'Данные: ' + f.name + (S.inst==='gold' ? ' — это не OANDA, сверь цену в настройках' : '');
           break;
         }catch(e){ err = e; }
       }
+      if(gen!==S.gen) return; // пока ждали ответ, сменили инструмент/источник
       if(err) throw new Error('не удалось получить данные ни с одной биржи ('+err.message+'). Проверь интернет/VPN или выбери «Демо»/CSV.');
       S.live = true;
+      S.rawLast = S.E[S.E.length-1].close;
+      if(S.inst==='gold' && !S.feed.exact && Date.now() - (S.spotAt||0) > 30000){
+        S.spotAt = Date.now();
+        try{ const spot = await spotGold(); S.autoOff = spot - S.rawLast; S.spotOk = true; }catch(e){ S.spotOk = false; }
+        if(gen!==S.gen) return;
+      }
+      $('src').innerHTML = srcText();
     }
     const off = offset();
     if(off){ const sh = b=>({...b, open:b.open+off, high:b.high+off, low:b.low+off, close:b.close+off}); S.E = S.E.map(sh); S.L = S.L.map(sh); }
-    analyse(full);
+    analyse(full); showOffset();
     $('hint').textContent = S.addMode ? 'Кликни по графику, чтобы поставить уровень' : `Свечи ${S.tf} · уровни с ${ltfName()} · время местное`;
   }catch(e){
     $('hint').innerHTML = '<span class="err">Ошибка: '+e.message+'</span>';
     setNow('wait', 'НЕТ ДАННЫХ', e.message);
-  }finally{ S.busy = false; }
+  }finally{
+    S.busy = false;
+    if(S.again){ S.again = false; load(true); }
+  }
 }
 
 function analyse(full){
@@ -753,16 +831,24 @@ chart.subscribeClick(p=>{
 });
 $('syncBtn').onclick = ()=>{
   const bp = +$('brokerPrice').value; if(!(bp>0) || !S.E.length) return;
-  const raw = S.E[S.E.length-1].close - offset();
-  S.offsets[keyOf()] = +(bp - raw).toFixed(5); store.set('offsets', S.offsets); showOffset(); load(true);
+  const raw = S.rawLast != null ? S.rawLast : S.E[S.E.length-1].close - offset();
+  S.offsets[offKey()] = +(bp - raw).toFixed(5); store.set('offsets', S.offsets); showOffset(); load(true);
 };
-function showOffset(){ const o = offset(); $('offsetInfo').textContent = o ? `Поправка к данным: ${o>0?'+':''}${o.toFixed(prec)} (цены на графике = цены твоего брокера)` : 'Поправки нет. Введи цену из терминала, чтобы уровни совпали с твоим графиком.'; }
+function showOffset(){
+  const manual = S.offsets[offKey()] != null;
+  $('offsetInfo').textContent = S.feed && S.feed.exact ? 'Источник точный — поправка не нужна.'
+    : manual ? `Твоя поправка: ${S.offsets[offKey()]>0?'+':''}${S.offsets[offKey()].toFixed(prec)} (цены на графике = цены брокера).`
+    : 'Поправка автоматическая (если доступна). Для точности введи цену из своего терминала и нажми «Сверить».';
+}
+$('resetOff').onclick = ()=>{ delete S.offsets[offKey()]; store.set('offsets', S.offsets); showOffset(); load(true); };
 
 function restart(){
   clearInterval(S.timer); S.L = []; S.feedIdx = 0; S.res = null;
   store.set('inst', S.inst); store.set('tf', S.tf); store.set('ltf', S.ltf);
+  S.gen = (S.gen||0) + 1; S.feed = null; S.spotAt = 0; S.spotOk = false;
   renderManual(); showOffset(); load(true);
-  if(S.inst!=='csv') S.timer = setInterval(()=>load(false), S.inst==='demo' ? 3000 : 5000);
+  const slow = S.inst==='gold' && $('goldSrc').value==='twelve';
+  if(S.inst!=='csv') S.timer = setInterval(()=>load(false), S.inst==='demo' ? 3000 : slow ? 120000 : 5000);
 }
 $('inst').onchange = e=>{ S.inst = e.target.value; if(S.inst==='csv') $('csvFile').click(); restart(); };
 $('tf').onchange = e=>{ S.tf = e.target.value; restart(); };
@@ -772,6 +858,12 @@ $('csvFile').onchange = async e=>{
   const f = e.target.files[0]; if(!f) return;
   try{ S.csvE = parseCSV(await f.text()); restart(); }catch(err){ $('hint').innerHTML = '<span class="err">CSV: '+err.message+'</span>'; }
 };
+function srcBoxes(){ $('oandaBox').hidden = $('goldSrc').value!=='oanda'; $('tdBox').hidden = $('goldSrc').value!=='twelve'; }
+for(const id of ['goldSrc','oandaToken','oandaAcc','tdKey']){
+  const v = store.get(id, null); if(v!==null) $(id).value = v;
+  $(id).onchange = ()=>{ store.set(id, $(id).value); srcBoxes(); if(S.inst==='gold') restart(); };
+}
+srcBoxes();
 for(const id of ['entryMode','minRR','roundOn','patMode']) $(id).onchange = ()=>{ store.set(id, $(id).type==='checkbox' ? $(id).checked : $(id).value); analyse(false); };
 for(const id of ['dep','riskPct','contract','soundOn']) $(id).onchange = ()=>{ store.set(id, $(id).type==='checkbox' ? $(id).checked : $(id).value); analyse(false); };
 for(const id of ['entryMode','minRR','roundOn','patMode','dep','riskPct','soundOn']){ const v = store.get(id, null); if(v!==null){ if($(id).type==='checkbox') $(id).checked = v; else $(id).value = v; } }
