@@ -1,17 +1,38 @@
 {
- "updatedAt": "2026-10-08",
+ "updatedAt": "2026-10-09",
  "episodes": [
+  {
+   "id": "w-2026-10-06-minnesota-stearns",
+   "scope": "world",
+   "topic": "hpai",
+   "date": "2026-10-06",
+   "status": "confirmed",
+   "place": "США, штат Миннесота, округ Стернс",
+   "country": "США",
+   "birds": 34400,
+   "title": "Миннесота: ещё 34 400 индеек в округе Стернс",
+   "summary": "6 октября APHIS подтвердило ГПГП в коммерческом стаде мясных индеек (34 400 голов) в округе Стернс. Это 18-е коммерческое стадо в Миннесоте, поражённое в 2026 году.",
+   "sources": [
+    {
+     "name": "wattagnet.com",
+     "url": "https://www.wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15837031/new-avian-flu-cases-reported-in-minnesota-alberta",
+     "kind": "media"
+    }
+   ],
+   "keyword": "Stearns County turkey HPAI",
+   "addedBy": "claude"
+  },
   {
    "id": "w-2026-10-01-alberta",
    "scope": "world",
    "topic": "hpai",
    "date": "2026-10-01",
    "status": "confirmed",
-   "place": "Канада, провинция Альберта, округа Ту-Хиллс и Вермилион-Ривер",
+   "place": "Канада, провинция Альберта, округа Ту-Хиллс, Вермилион-Ривер и Стерджен",
    "country": "Канада",
    "birds": null,
    "title": "Альберта: грипп птиц вернулся на коммерческие фермы",
-   "summary": "CFIA подтвердило ГПГП на коммерческой птицеферме в округе Ту-Хиллс 1 октября; до этого, 26 сентября, — в округе Вермилион-Ривер. Подробности (вид и число птиц) CFIA не раскрывает. За последний месяц в Канаде поражено 10 стад: 8 в Манитобе и 2 в Альберте.",
+   "summary": "CFIA подтвердило ГПГП на коммерческой птицеферме в округе Ту-Хиллс 1 октября; до этого, 26 сентября, — в округе Вермилион-Ривер. Подробности (вид и число птиц) CFIA не раскрывает. За последний месяц в Канаде поражено 10 стад: 8 в Манитобе и 2 в Альберте. 7 октября подтверждён ещё один очаг — на коммерческой ферме в округе Стерджен; это шестое коммерческое стадо в Альберте в 2026 году и второе в октябре.",
    "sources": [
     {
      "name": "wattagnet.com",
@@ -27,6 +48,11 @@
      "name": "inspection.canada.ca",
      "url": "https://inspection.canada.ca/en/animal-health/terrestrial-animals/diseases/reportable/avian-influenza/latest-bird-flu-situation/status-province/ai-zones",
      "kind": "official"
+    },
+    {
+     "name": "wattagnet.com",
+     "url": "https://www.wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15837031/new-avian-flu-cases-reported-in-minnesota-alberta",
+     "kind": "media"
     }
    ],
    "keyword": "Alberta avian influenza",
