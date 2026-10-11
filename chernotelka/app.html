@@ -107,6 +107,26 @@ h2{font:500 16px var(--f-display)}
 .evs .e .m{color:var(--muted)}
 .evs .e .n{font-family:var(--f-mono)}
 
+/* главное и «было → стало» */
+.facts{list-style:none;margin:0;padding:6px 14px 12px;display:flex;flex-direction:column;gap:8px}
+.facts li{display:flex;gap:10px;align-items:baseline;font-size:16px;line-height:1.45}
+.facts li::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--accent);transform:translateY(-2px)}
+.facts b{font-weight:600}
+.dumb{display:flex;flex-direction:column;padding:4px 0 8px}
+.drow{display:grid;grid-template-columns:minmax(150px,220px) minmax(160px,1fr) minmax(190px,auto);gap:4px 16px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%}
+.drow:first-child{border-top:0}
+.drow:hover{background:var(--info-bg)}
+.drow .dv{font:600 14px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.drow .dv small{display:block;font:400 12px var(--f-body);color:var(--muted);white-space:normal}
+.drow svg{display:block;max-width:100%;height:auto}
+.dumb .rest{padding:8px 14px 4px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+details.more summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:12px 14px}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary h2::before{content:"▸ ";color:var(--muted)}
+details.more[open] summary h2::before{content:"▾ "}
+details.more[open] summary{border-bottom:1px solid var(--line)}
+@media (max-width:720px){.drow{grid-template-columns:minmax(0,1fr) auto}.drow svg{grid-column:1/-1;grid-row:2}.drow .dv{text-align:right}.drow .dv small{max-width:150px;margin-left:auto}}
+
 /* сравнение */
 .cmpctl{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;padding:12px 14px}
 .cmpctl label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
@@ -199,11 +219,11 @@ h2{font:500 16px var(--f-display)}
   </header>
 
   <nav class="tabs">
-    <button type="button" class="tab" data-view="dyn">Динамика и препараты</button>
-    <button type="button" class="tab" data-view="drugs">Эффективность препаратов</button>
-    <button type="button" class="tab" data-view="cmp">Сравнение препаратов</button>
-    <button type="button" class="tab" data-view="ev">Все обработки</button>
-    <button type="button" class="tab" data-view="files">Журнал и настройки</button>
+    <button type="button" class="tab" data-view="dyn">Динамика</button>
+    <button type="button" class="tab" data-view="drugs">Препараты</button>
+    <button type="button" class="tab" data-view="cmp">Сравнение</button>
+    <button type="button" class="tab" data-view="ev">Обработки</button>
+    <button type="button" class="tab" data-view="files">Журнал</button>
   </nav>
 
   <div id="noData" class="panel empty" hidden>
@@ -216,25 +236,33 @@ h2{font:500 16px var(--f-display)}
     <div class="tiles" id="tilesDyn"></div>
     <div class="panel">
       <div class="sechead">
-        <h2>Численность чернотелки и обработки</h2>
-        <div class="right">
-          <span class="seg" id="segBy"><button type="button" data-v="tour">по турам</button><button type="button" data-v="week">по неделям</button><button type="button" data-v="month">по месяцам</button></span>
-          <span class="seg" id="segScale"><button type="button" data-v="lin">обычная шкала</button><button type="button" data-v="log">лог.</button></span>
-        </div>
+        <h2>Как менялась численность жуков</h2>
+        <div class="right"><span class="seg" id="segBy"><button type="button" data-v="month">по месяцам</button><button type="button" data-v="week">по неделям</button><button type="button" data-v="tour">по турам</button></span></div>
       </div>
-      <p class="note" style="padding:10px 14px 0" id="dynNote"></p>
       <div class="chartbox" id="dynBox"><div class="chartscroll" id="dynScroll"></div><div class="tip" id="tip" hidden></div></div>
-      <div class="legendrow" id="dynLegend"></div>
+      <p class="note" style="padding:6px 14px 12px" id="dynNote"></p>
     </div>
     <div class="panel">
-      <div class="sechead"><h2>По периодам</h2><span class="note">улов — сумма 4 труб за учёт; изменение — к предыдущему периоду</span></div>
-      <div class="tablewrap"><table class="tbl" id="perTable"></table></div>
+      <div class="sechead"><h2>Главное</h2></div>
+      <ul class="facts" id="facts"></ul>
     </div>
+    <div class="panel">
+      <div class="sechead"><h2>Препараты: было → стало</h2><span class="note">средний улов до и после обработки, лучшие сверху</span></div>
+      <div class="dumb" id="dumbDyn"></div>
+    </div>
+    <details class="panel more">
+      <summary><h2>Подробно по периодам</h2><span class="note">все обработки каждого периода</span></summary>
+      <div class="tablewrap"><table class="tbl" id="perTable"></table></div>
+    </details>
   </section>
 
   <section id="v-drugs" class="sec" hidden>
     <div class="panel">
-      <div class="sechead"><h2>Эффективность препаратов</h2><span class="note" id="drugsNote"></span></div>
+      <div class="sechead"><h2>Было → стало</h2><span class="note">средний улов до и после обработки, лучшие сверху</span></div>
+      <div class="dumb" id="dumbDrugs"></div>
+    </div>
+    <div class="panel">
+      <div class="sechead"><h2>Все цифры по препаратам</h2><span class="note" id="drugsNote"></span></div>
       <div class="tablewrap"><table class="tbl" id="drugTable"></table></div>
     </div>
     <p class="foot" id="drugsFoot"></p>
@@ -328,7 +356,7 @@ const MONN = ['Январь','Февраль','Март','Апрель','Май'
 const fD = s => s ? `${s.slice(8,10)}.${s.slice(5,7)}.${s.slice(2,4)}` : '—';
 const fDs = s => s ? `${s.slice(8,10)}.${s.slice(5,7)}` : '—';
 const fN = (v, d = 0) => v == null ? '—' : (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('ru-RU');
-const fP = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + fN(Math.abs(v)) + '%';
+const fP = v => { if (v == null) return '—'; const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + fN(Math.abs(r)) + '%'; };
 const days = n => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
 function deltaHtml(p, bg){
   if (p == null) return '<span class="delta zero">—</span>';
@@ -345,7 +373,7 @@ let settings = Object.assign({mode: 'next', bg: 4}, LS.get('ch:settings', {}));
 let CONC = LS.get('ch:conc', {});           // концентрации, введённые в приложении: {нормализованное имя: текст}
 let view = LS.get('ch:view', 'dyn');
 if (!['dyn','drugs','cmp','ev','files'].includes(view)) view = 'dyn';
-let by = LS.get('ch:by', 'month'), scale = LS.get('ch:scale', 'lin');
+let by = LS.get('ch:by', 'month');
 let fSite = LS.get('ch:site', ''), fHouse = LS.get('ch:house', '');
 let cmpA = '', cmpB = '', evDrug = '', drugSort = LS.get('ch:drugSort', 'n');
 let M = null;                               // модель: {houses, events, drugs, freq}
@@ -454,106 +482,156 @@ function buildPeriods(){
 let PERIODS = [];
 function renderDyn(){
   for (const b of document.querySelectorAll('#segBy button')) b.setAttribute('aria-pressed', b.dataset.v === by);
-  for (const b of document.querySelectorAll('#segScale button')) b.setAttribute('aria-pressed', b.dataset.v === scale);
-  const evs = scopeEvents(), S = CH.summarize(evs), rows = scopeRows().filter(r => r.catch != null);
-  const last = [...rows].sort((a, b) => String(a.set || a.date).localeCompare(String(b.set || b.date))).slice(-1)[0];
-  $('tilesDyn').innerHTML = [
-    [fN(rows.length), 'учётов', scopeName()],
-    [fN(rows.length ? rows.reduce((a, r) => a + r.catch, 0) / rows.length : null), 'средний улов', 'сумма 4 труб за учёт'],
-    [fN(S.treatments), plural(S.treatments, 'обработка', 'обработки', 'обработок'), `${M.drugs.filter(d => evs.some(e => e.drug === d)).length} препаратов`],
-    [S.pct == null ? '—' : fP(S.pct), 'изменение после обработок', `в среднем по ${S.valid} ${plural(S.valid, 'обработке', 'обработкам', 'обработкам')} с результатом`],
-    [last ? fN(last.catch) : '—', 'последний учёт', last ? `${esc(last.house)}, ${fD(last.set || last.date)}` : '']
-  ].map(([v, l, s]) => `<div class="tile"><b>${v}</b><span>${l}</span><small>${s}</small></div>`).join('');
   PERIODS = buildPeriods();
-  $('dynNote').textContent = `Серый контур — улов до обработки, цветной столбик — после неё; цвет и подпись — препарат, над парой — изменение. Линия — средний улов за ${by === 'tour' ? 'тур' : by === 'week' ? 'неделю' : 'месяц'}, ${scopeName()}. ` +
-    (settings.mode === 'next' ? 'Обработка отнесена к периоду, когда её провели (после убоя тура).' : 'Обработка отнесена к периоду тура, перед которым её провели.');
+  SEGS = buildSegs(PERIODS);
+  const evs = scopeEvents();
+  const pts = PERIODS.filter(p => p.mean != null), last = pts[pts.length - 1];
+  const drugs = drugStats(evs), best = drugs.filter(x => x.S.valid >= 3)[0];
+  const unit = by === 'tour' ? 'тур' : by === 'week' ? 'неделю' : 'месяц';
+  $('tilesDyn').innerHTML = [
+    [last ? fN(last.mean) : '—', 'жуков на учёт сейчас', last ? `${esc(periodFull(last.k, by))}${last.chg == null ? '' : ' · ' + deltaHtml(last.chg) + ' к предыдущему'}` : ''],
+    [best ? esc(best.d) : '—', 'лучше всего снижает', best ? `${fN(best.S.B)} → ${fN(best.S.A)} жуков · ${deltaHtml(best.S.pct)}` : 'нужно 3+ обработки с результатом'],
+    [fN(evs.reduce((a, e) => a + (e.count || 1), 0)), 'обработок', scopeName()]
+  ].map(([v, l, s]) => `<div class="tile"><b>${v}</b><span>${l}</span><small>${s}</small></div>`).join('');
+  $('dynNote').textContent = `Точка — средний улов за ${unit}: сколько жуков попало в 4 трубы за один учёт (${scopeName()}). ` +
+    `Цвет отрезка и подпись сверху — препарат, которым обрабатывали в это время; под осью — насколько изменилось число жуков. Нажмите на отрезок — подробности.`;
   drawDyn();
+  renderFacts(drugs);
+  renderDumb($('dumbDyn'), drugs);
   renderPerTable();
 }
 
-function niceMax(v){ if (v <= 4) return 4; const p = 10 ** Math.floor(Math.log10(v)); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
-function yScale(max, h, top){
-  if (scale === 'log'){
-    const lm = Math.log10(Math.max(10, max) + 1);
-    const f = v => top + h - (Math.log10(Math.max(0, v) + 1) / lm) * h;
-    const ticks = [0, 1, 10, 100, 1000, 10000].filter(t => t <= Math.max(10, max) * 1.01);
-    return {f, ticks};
+/* отрезки между соседними точками и препараты, которыми обрабатывали между ними */
+let SEGS = [];
+function buildSegs(P){
+  const idx = P.map((p, i) => p.mean != null ? i : -1).filter(i => i >= 0);
+  const out = [];
+  for (let n = 0; n + 1 < idx.length; n++){
+    const i = idx[n], j = idx[n + 1];
+    // «по турам» в режиме «этот тур» препарат записан в строке следующего тура
+    const from = by === 'tour' && settings.mode === 'this' ? P.slice(i + 1, j + 1) : P.slice(i, j);
+    const m = new Map();
+    for (const p of from) for (const g of p.groups) m.set(g.drug, (m.get(g.drug) || []).concat(g.evs));
+    const groups = [...m.entries()].map(([drug, evs]) => ({drug, evs, n: evs.reduce((a, e) => a + (e.count || 1), 0)})).sort((a, b) => b.n - a.n);
+    const a = P[i], b = P[j];
+    out.push({i, j, a, b, groups, main: groups[0] ? groups[0].drug : null, evs: groups.flatMap(g => g.evs),
+      chg: a.mean > 0 ? (b.mean - a.mean) / a.mean * 100 : null});
   }
-  const mx = niceMax(max);
-  const step = mx / 4;
-  return {f: v => top + h - v / mx * h, ticks: [0, 1, 2, 3, 4].map(i => i * step)};
+  return out;
 }
+
+function niceMax(v){ if (v <= 4) return 4; const p = 10 ** Math.floor(Math.log10(v)); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+const shortP = k => { const L = periodLabel(k, by); return L.top; };
+const arrow = v => v == null ? '' : v < -0.5 ? '▼' : v > 0.5 ? '▲' : '';
+const pctTxt = v => v == null ? '' : `${arrow(v)}${Math.abs(v) > 999 ? '>999' : fN(Math.abs(v))}%`;
+const chgColor = v => v == null ? 'var(--muted)' : v < -0.5 ? 'var(--ok)' : v > 0.5 ? 'var(--bad)' : 'var(--muted)';
 
 function drawDyn(){
   const box = $('dynScroll');
-  const P = PERIODS;
-  if (!P.length){ box.innerHTML = '<div class="empty">В выбранных птичниках нет учётов</div>'; $('dynLegend').innerHTML = ''; return; }
-  const bw = 16, gapIn = 3, gapG = 8, padP = 14;
-  const widths = P.map(p => Math.max(56, p.groups.length * (bw * 2 + gapIn) + Math.max(0, p.groups.length - 1) * gapG + padP * 2));
-  const left = 48, right = 12, top = 84, h = 260, labH = 104;
+  const P = PERIODS, idx = P.map((p, i) => p.mean != null ? i : -1).filter(i => i >= 0);
+  if (idx.length < 1){ box.innerHTML = '<div class="empty">В выбранных птичниках нет учётов</div>'; return; }
+  const left = 52, right = 36, top = 64, h = 300, bottom = 58;
   const avail = Math.max(320, box.clientWidth || 800);
-  const total = widths.reduce((a, b) => a + b, 0);
-  const k = total + left + right < avail ? (avail - left - right) / total : 1;
-  const W = Math.round(Math.max(avail, total * k + left + right));
-  let max = 0;
-  for (const p of P){ if (p.mean) max = Math.max(max, p.mean); for (const g of p.groups) max = Math.max(max, g.B || 0, g.A || 0); }
-  const Y = yScale(max || 4, h, top);
-  const base = top + h;
-  let x = left, s = '';
-  // сетка
-  for (const t of Y.ticks){ const y = Y.f(t); s += `<line class="grid" x1="${left}" x2="${W - right}" y1="${y}" y2="${y}"/><text class="num" x="${left - 6}" y="${y + 4}" text-anchor="end">${fN(t)}</text>`; }
-  const pts = [], hits = [];
-  P.forEach((p, i) => {
-    const w = widths[i] * k, cx = x + w / 2;
-    if (i % 2) s += `<rect class="pband" x="${x}" y="0" width="${w}" height="${top + h + labH}" opacity=".45"/>`;
-    // пары «до/после» по препаратам
-    const gw = p.groups.length * (bw * 2 + gapIn) + Math.max(0, p.groups.length - 1) * gapG;
-    let gx = cx - gw / 2;
-    p.groups.forEach((g, gi) => {
-      const xb = gx, xa = gx + bw + gapIn, id = `${i}:${gi}`;
-      let gs = '';
-      if (g.B != null){ const y = Y.f(g.B); gs += `<rect class="bb" x="${xb + .75}" y="${Math.min(y, base - 2)}" width="${bw - 1.5}" height="${Math.max(2, base - y)}" rx="3"/>`; }
-      if (g.A != null){ const y = Y.f(g.A); gs += `<rect x="${xa}" y="${Math.min(y, base - 2)}" width="${bw}" height="${Math.max(2, base - y)}" rx="3" fill="${COLOR[g.drug]}"/>`; }
-      else gs += `<rect class="pend" x="${xa + .75}" y="${base - 24}" width="${bw - 1.5}" height="24" rx="3"/>`;
-      const topY = Math.min(g.B != null ? Y.f(g.B) : base, g.A != null ? Y.f(g.A) : base - 24);
-      const pctTxt = g.pending ? 'ждём' : g.pct == null ? (g.allBg ? 'фон' : '') : `${g.pct < -0.5 ? '▼' : g.pct > 0.5 ? '▲' : '●'}${Math.abs(g.pct) > 999 ? '>999' : fN(Math.abs(g.pct))}%`;
-      if (pctTxt) gs += `<text class="num lbl" x="${xb + bw + gapIn / 2}" y="${topY - 6}" text-anchor="middle" style="fill:${g.pct == null ? 'var(--muted)' : g.pct < -0.5 ? 'var(--ok)' : g.pct > 0.5 ? 'var(--bad)' : 'var(--muted)'}">${pctTxt}</text>`;
-      // подпись препарата под парой — повёрнута, чтобы помещались длинные названия
-      const nm = g.drug.length > 16 ? g.drug.slice(0, 15) + '…' : g.drug;
-      gs += `<text x="${xb + bw + gapIn / 2 + 4}" y="${base + 8}" transform="rotate(45 ${xb + bw + gapIn / 2 + 4} ${base + 8})" style="fill:var(--ink)">${esc(nm)}${g.evs.length > 1 ? ' ×' + g.evs.length : ''}</text>`;
-      gs += `<rect class="hl" x="${xb - 3}" y="${topY - 20}" width="${bw * 2 + gapIn + 6}" height="${base - topY + 22}" rx="5" fill="none" stroke="none"/>`;
-      s += `<g class="grp" data-g="${id}">${gs}</g>`;
-      hits.push(`<rect class="hit" data-g="${id}" x="${xb - 4}" y="${top - 24}" width="${bw * 2 + gapIn + 8}" height="${h + 24 + labH - 10}"/>`);
-      gx += bw * 2 + gapIn + gapG;
-    });
-    if (p.mean != null) pts.push([cx, Y.f(p.mean), p, i]);
-    // подпись периода и изменение к предыдущему
-    const L = periodLabel(p.k, by);
-    s += `<text x="${cx}" y="18" text-anchor="middle" style="fill:var(--ink);font-weight:600">${esc(L.top)}</text>`;
-    // под названием периода — средний улов и изменение к предыдущему периоду
-    const chgTxt = p.chg == null ? '' : `<tspan style="fill:${p.chg < -0.5 ? 'var(--ok)' : p.chg > 0.5 ? 'var(--bad)' : 'var(--muted)'}">${p.chg < -0.5 ? '▼' : p.chg > 0.5 ? '▲' : ''}${fP(p.chg)}</tspan>`;
-    s += `<text class="num" x="${cx}" y="33" text-anchor="middle">${p.mean == null ? esc(L.sub || 'нет учётов') : 'ср. ' + fN(p.mean)}</text>`;
-    if (chgTxt) s += `<text class="num" x="${cx}" y="47" text-anchor="middle">${chgTxt}</text>`;
-    x += w;
-  });
-  s += `<line class="base" x1="${left}" x2="${W - right}" y1="${base}" y2="${base}"/>`;
-  // линия численности
-  if (pts.length){
-    const d = pts.map(([px, py], i) => (i ? 'L' : 'M') + px.toFixed(1) + ' ' + py.toFixed(1)).join(' ');
-    s += `<path class="pop" d="${d}"/>`;
-    for (const pt of pts){
-      s += `<circle class="popdot" cx="${pt[0]}" cy="${pt[1]}" r="4.5"/>`;
-      hits.push(`<circle class="hit" data-p="${pt[3]}" cx="${pt[0]}" cy="${pt[1]}" r="12"/>`);
-    }
+  const n = idx.length, minStep = by === 'week' ? 64 : 100;
+  const step = n > 1 ? Math.max(minStep, (avail - left - right) / (n - 1)) : 0;
+  const W = Math.round(n > 1 ? left + right + step * (n - 1) : avail);
+  const X = {}; idx.forEach((i, k) => X[i] = n > 1 ? left + step * k : W / 2);
+  const max = Math.max(4, ...idx.map(i => P[i].mean));
+  const mx = niceMax(max * 1.12), base = top + h, Y = v => base - v / mx * h;
+  let s = '';
+  for (let t = 0; t <= 4; t++){ const v = mx / 4 * t, y = Y(v); s += `<line class="grid" x1="${left}" x2="${W - right + 12}" y1="${y}" y2="${y}"/><text class="num" x="${left - 8}" y="${y + 4}" text-anchor="end">${fN(v)}</text>`; }
+  // полоса препаратов сверху: соседние отрезки с одним препаратом сливаются
+  const bands = [];
+  for (const sg of SEGS){
+    const lastB = bands[bands.length - 1];
+    if (lastB && lastB.drug === sg.main){ lastB.x2 = X[sg.j]; lastB.segs.push(sg); }
+    else bands.push({drug: sg.main, x1: X[sg.i], x2: X[sg.j], segs: [sg]});
   }
-  const H = base + labH;
+  for (const b of bands){
+    const w = b.x2 - b.x1, cx = (b.x1 + b.x2) / 2;
+    if (!b.drug){ s += `<text x="${cx}" y="${top - 26}" text-anchor="middle">без обработок</text>`; continue; }
+    const others = new Set(b.segs.flatMap(sg => sg.groups.slice(1).map(g => g.drug))); others.delete(b.drug);
+    const maxCh = Math.max(3, Math.floor((w - 12) / 7.4) - (others.size ? 3 : 0));
+    const nm = b.drug.length > maxCh ? b.drug.slice(0, maxCh - 1) + '…' : b.drug;
+    s += `<rect x="${b.x1 + 2}" y="${top - 46}" width="${Math.max(4, w - 4)}" height="28" rx="6" fill="${COLOR[b.drug]}" opacity=".2"/>`;
+    s += `<rect x="${b.x1 + 2}" y="${top - 46}" width="5" height="28" rx="2" fill="${COLOR[b.drug]}"/>`;
+    s += `<text class="lbl" x="${cx + 2}" y="${top - 27}" text-anchor="middle">${esc(nm)}${others.size ? ` +${others.size}` : ''}</text>`;
+  }
+  // отрезки линии: цвет — основной препарат
+  for (const [k, sg] of SEGS.entries()){
+    const xa = X[sg.i], xb = X[sg.j], ya = Y(sg.a.mean), yb = Y(sg.b.mean);
+    s += sg.main
+      ? `<line x1="${xa}" y1="${ya}" x2="${xb}" y2="${yb}" stroke="${COLOR[sg.main]}" stroke-width="5" stroke-linecap="round"/>`
+      : `<line x1="${xa}" y1="${ya}" x2="${xb}" y2="${yb}" stroke="var(--axis)" stroke-width="3" stroke-dasharray="6 6"/>`;
+    s += `<text class="num lbl" x="${(xa + xb) / 2}" y="${base + 46}" text-anchor="middle" style="fill:${chgColor(sg.chg)};font-size:14px">${pctTxt(sg.chg)}</text>`;
+  }
+  s += `<line class="base" x1="${left}" x2="${W - right + 12}" y1="${base}" y2="${base}"/>`;
+  // точки и подписи
+  const showAll = n <= 16, maxI = idx.reduce((a, i) => P[i].mean > P[a].mean ? i : a, idx[0]);
+  const hits = [];
+  idx.forEach((i, k) => {
+    const x = X[i], y = Y(P[i].mean);
+    s += `<circle cx="${x}" cy="${y}" r="6" fill="var(--panel)" stroke="var(--ink)" stroke-width="2.5"/>`;
+    if (showAll || i === maxI || k === n - 1) s += `<text class="num lbl" x="${x}" y="${y - 12}" text-anchor="middle">${fN(P[i].mean)}</text>`;
+    if (showAll || k % 2 === 0 || k === n - 1) s += `<text x="${x}" y="${base + 22}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${esc(shortP(P[i].k))}</text>`;
+    hits.push(`<circle class="hit" data-p="${i}" cx="${x}" cy="${y}" r="14"/>`);
+  });
+  SEGS.forEach((sg, k) => hits.unshift(`<rect class="hit" data-s="${k}" x="${X[sg.i] + 8}" y="${top - 50}" width="${Math.max(4, X[sg.j] - X[sg.i] - 16)}" height="${h + 50 + bottom}"/>`));
+  const H = base + bottom;
   const atEnd = !box.firstChild || box.scrollLeft + box.clientWidth >= box.scrollWidth - 4;
-  box.innerHTML = `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Численность чернотелки и обработки по периодам: ${esc(scopeName())}">${s}${hits.join('')}</svg>`;
-  if (atEnd) box.scrollLeft = box.scrollWidth;   // сначала видны последние периоды
-  // легенда: только препараты, которые есть на графике
-  const used = M.drugs.filter(d => P.some(p => p.groups.some(g => g.drug === d)));
-  $('dynLegend').innerHTML = `<span><span class="sw line"></span>средний улов за период</span><span><span class="sw before"></span>до обработки</span>` +
-    used.map(d => `<span>${swatch(d)}${esc(d)} — после</span>`).join('') + `<span>▼ снижение · ▲ рост</span>`;
+  box.innerHTML = `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Численность жуков по периодам и применённые препараты: ${esc(scopeName())}">${s}${hits.join('')}</svg>`;
+  if (atEnd) box.scrollLeft = box.scrollWidth;
+}
+
+/* сводка по препаратам в выбранных птичниках: лучшие сверху */
+function drugStats(evs){
+  return M.drugs.filter(d => evs.some(e => e.drug === d)).map(d => ({d, S: CH.summarize(evs.filter(e => e.drug === d))}))
+    .sort((a, b) => (a.S.valid ? 0 : 1) - (b.S.valid ? 0 : 1) || (a.S.valid >= 3 ? 0 : 1) - (b.S.valid >= 3 ? 0 : 1) || (a.S.pct ?? 0) - (b.S.pct ?? 0));
+}
+function renderDumb(el, drugs){
+  const ok = drugs.filter(x => x.S.valid), rest = drugs.filter(x => !x.S.valid);
+  if (!ok.length){ el.innerHTML = '<div class="empty">Нет обработок с учётом до и после</div>'; return; }
+  const max = Math.max(4, ...ok.map(x => Math.max(x.S.B, x.S.A)));
+  const X = v => 8 + v / max * 284;
+  el.innerHTML = ok.map(({d, S}) => {
+    const c = S.pct < -0.5 ? 'var(--ok)' : S.pct > 0.5 ? 'var(--bad)' : 'var(--muted)';
+    const xb = X(S.B), xa = X(S.A);
+    return `<button type="button" class="drow" data-cmpdrug="${esc(d)}"><span>${dname(d)}${S.valid < 3 ? '<span class="note" style="display:block">мало данных</span>' : ''}</span>` +
+      `<svg width="300" height="26" viewBox="0 0 300 26" aria-hidden="true"><line x1="8" x2="292" y1="13" y2="13" stroke="var(--grid)" stroke-width="2"/>` +
+      `<line x1="${xb}" x2="${xa}" y1="13" y2="13" stroke="${c}" stroke-width="4"/>` +
+      `<circle cx="${xb}" cy="13" r="6" fill="var(--before)" stroke="var(--before-line)" stroke-width="2"/><circle cx="${xa}" cy="13" r="7" fill="${COLOR[d]}"/></svg>` +
+      `<span class="dv">${fN(S.B)} → ${fN(S.A)} ${deltaHtml(S.pct)}<small>${S.valid} ${plural(S.valid, 'обработка', 'обработки', 'обработок')} с результатом · снижение в ${S.down}</small></span></button>`;
+  }).join('') + (rest.length ? `<div class="rest">Пока без результата: ${rest.map(x => esc(x.d)).join(', ')}</div>` : '') +
+    `<div class="rest">○ серый кружок — жуков до обработки, ● цветной — после. Нажмите строку, чтобы сравнить с другим препаратом.</div>`;
+}
+
+/* главное — обычными словами */
+function renderFacts(drugs){
+  const P = PERIODS.filter(p => p.mean != null), out = [];
+  const nm = k => periodFull(k, by).toLowerCase();
+  const drugsOf = sg => sg.groups.length ? sg.groups.slice(0, 3).map(g => `<b>${esc(g.drug)}</b>`).join(', ') + (sg.groups.length > 3 ? ` и ещё ${sg.groups.length - 3}` : '') : 'обработок не было';
+  if (P.length){
+    const last = P[P.length - 1];
+    out.push(`Сейчас (${nm(last.k)}) в среднем <b>${fN(last.mean)} жуков</b> на учёт` + (last.chg == null ? '.' : ` — ${last.chg < 0 ? 'меньше' : 'больше'}, чем в предыдущий период, на <b>${fN(Math.abs(last.chg))}%</b>.`));
+    const mxp = P.reduce((a, b) => b.mean > a.mean ? b : a);
+    if (P.length > 1) out.push(`Больше всего жуков было: ${nm(mxp.k)} — <b>${fN(mxp.mean)}</b> на учёт.`);
+  }
+  const sg = SEGS.filter(x => x.chg != null);
+  if (sg.length){
+    const up = sg.reduce((a, b) => b.chg > a.chg ? b : a), dn = sg.reduce((a, b) => b.chg < a.chg ? b : a);
+    if (dn.chg < 0) out.push(`Сильнее всего упала: ${shortP(dn.a.k)} → ${shortP(dn.b.k)}, <b style="color:var(--ok)">▼${fN(-dn.chg)}%</b>. Обрабатывали: ${drugsOf(dn)}.`);
+    if (up.chg > 0) out.push(`Сильнее всего выросла: ${shortP(up.a.k)} → ${shortP(up.b.k)}, <b style="color:var(--bad)">▲${fN(up.chg)}%</b>. Обрабатывали: ${drugsOf(up)}.`);
+  }
+  const sure = drugs.filter(x => x.S.valid >= 3);
+  if (sure.length){
+    const b = sure[0], w = sure[sure.length - 1];
+    out.push(`Лучше всего работает <b>${esc(b.d)}</b>: было ${fN(b.S.B)}, стало ${fN(b.S.A)} жуков (${fP(b.S.pct)}).`);
+    if (w !== b) out.push(`Хуже всего — <b>${esc(w.d)}</b>: было ${fN(w.S.B)}, стало ${fN(w.S.A)} жуков (${fP(w.S.pct)}).`);
+  }
+  const evs = scopeEvents(), lastEv = evs[evs.length - 1];
+  if (lastEv){ const S = CH.summarize(evs.filter(e => e.drug === lastEv.drug));
+    out.push(`Последним применяли <b>${esc(lastEv.drug)}</b> (${fD(lastEv.date)})` + (S.valid ? `: в среднем ${fP(S.pct)} по ${S.valid} ${plural(S.valid, 'обработке', 'обработкам', 'обработкам')}.` : ' — результата ещё нет.')); }
+  $('facts').innerHTML = out.map(t => `<li><span>${t}</span></li>`).join('') || '<li><span>Недостаточно данных</span></li>';
 }
 
 /* подсказка при наведении и карточка по нажатию */
@@ -586,25 +664,29 @@ function showTip(html, evt){
   if (ly < 4) ly = evt.clientY - boxR.top + 16;
   tip.style.left = lx + 'px'; tip.style.top = ly + 'px';
 }
+function segTip(sg){
+  return `<h4>${esc(shortP(sg.a.k))} → ${esc(shortP(sg.b.k))}</h4><dl>
+    <dt>Жуков на учёт</dt><dd>${fN(sg.a.mean)} → ${fN(sg.b.mean)}</dd>
+    <dt>Изменение</dt><dd style="color:${chgColor(sg.chg)}">${sg.chg == null ? '—' : arrow(sg.chg) + ' ' + fP(sg.chg)}</dd></dl>` +
+    (sg.groups.length ? `<div class="note" style="margin:8px 0 4px">Чем обрабатывали:</div><dl>` + sg.groups.map(g => {
+      const S = CH.summarize(g.evs), concs = [...new Set(g.evs.map(e => e.conc).filter(Boolean))];
+      const dates = [...new Set(g.evs.map(e => e.date).filter(Boolean))].sort();
+      return `<dt>${swatch(g.drug)} ${esc(g.drug)}</dt><dd>${g.n} обр.${S.valid ? ' · ' + fP(S.pct) : ''}</dd>` +
+        `<dt style="padding-left:18px">${dates.length ? fDs(dates[0]) + (dates.length > 1 ? '–' + fDs(dates[dates.length - 1]) : '') : ''}</dt><dd style="font-family:var(--f-body);color:var(--muted)">${esc(concs.join('; ') || 'конц. не указана')}</dd>`;
+    }).join('') + '</dl>' : '<div class="note" style="margin-top:8px">Обработок не было</div>');
+}
 $('dynScroll').addEventListener('pointermove', e => {
   if (e.pointerType === 'touch') return;
-  const t = e.target.closest('[data-g],[data-p]');
-  for (const g of document.querySelectorAll('.grp.on')) g.classList.remove('on');
+  const t = e.target.closest('[data-s],[data-p]');
   if (!t){ $('tip').hidden = true; return; }
-  if (t.dataset.g){
-    const {p, g} = groupInfo(t.dataset.g);
-    const el = document.querySelector(`.grp[data-g="${t.dataset.g}"]`); if (el) el.classList.add('on');
-    showTip(tipHtml(p, g), e);
-  } else {
-    const p = PERIODS[+t.dataset.p];
-    showTip(`<h4>${esc(periodFull(p.k, by))}</h4><dl><dt>Средний улов</dt><dd>${fN(p.mean, 1)}</dd><dt>Учётов</dt><dd>${p.n}</dd><dt>К пред. периоду</dt><dd>${p.chg == null ? '—' : fP(p.chg)}</dd><dt>Обработок</dt><dd>${p.evs.length}</dd></dl>`, e);
-  }
+  if (t.dataset.s != null) showTip(segTip(SEGS[+t.dataset.s]), e);
+  else { const p = PERIODS[+t.dataset.p]; showTip(`<h4>${esc(periodFull(p.k, by))}</h4><dl><dt>Жуков на учёт</dt><dd>${fN(p.mean, 1)}</dd><dt>Учётов</dt><dd>${p.n}</dd><dt>К пред. периоду</dt><dd>${p.chg == null ? '—' : fP(p.chg)}</dd></dl>`, e); }
 });
-$('dynScroll').addEventListener('pointerleave', () => { $('tip').hidden = true; for (const g of document.querySelectorAll('.grp.on')) g.classList.remove('on'); });
+$('dynScroll').addEventListener('pointerleave', () => { $('tip').hidden = true; });
 $('dynScroll').addEventListener('click', e => {
-  const t = e.target.closest('[data-g],[data-p]'); if (!t) return;
+  const t = e.target.closest('[data-s],[data-p]'); if (!t) return;
   $('tip').hidden = true;
-  if (t.dataset.g){ const {p, g} = groupInfo(t.dataset.g); openEvents(`${g.drug} · ${periodFull(p.k, by)}`, g.evs, tipHtml(p, g)); }
+  if (t.dataset.s != null){ const sg = SEGS[+t.dataset.s]; openEvents(`${shortP(sg.a.k)} → ${shortP(sg.b.k)}`, sg.evs, segTip(sg).replace('<h4>', '<h4 style="display:none">')); }
   else { const p = PERIODS[+t.dataset.p]; openEvents(periodFull(p.k, by), p.evs, `<div class="note">Средний улов ${fN(p.mean, 1)} по ${p.n} ${plural(p.n, 'учёту', 'учётам', 'учётам')}${p.chg == null ? '' : ', к предыдущему периоду ' + fP(p.chg)}</div>`); }
 });
 
@@ -627,6 +709,7 @@ function renderPerTable(){
 /* ===== препараты ===== */
 function renderDrugs(){
   const evs = scopeEvents();
+  renderDumb($('dumbDrugs'), drugStats(evs));
   const list = M.drugs.filter(d => evs.some(e => e.drug === d)).map(d => ({d, S: CH.summarize(evs.filter(e => e.drug === d))}));
   const key = {n: x => -x.S.treatments, pct: x => x.S.pct ?? 1e9, dur: x => -(x.S.dur ?? -1), name: x => x.d};
   list.sort((a, b) => { const f = key[drugSort] || key.n; const va = f(a), vb = f(b); return typeof va === 'string' ? va.localeCompare(vb, 'ru') : va - vb; });
@@ -784,9 +867,9 @@ function setView(v){ view = v; LS.set('ch:view', v); render(); window.scrollTo(0
 document.addEventListener('click', e => {
   const v = e.target.closest('[data-view]'); if (v){ setView(v.dataset.view); return; }
   const sb = e.target.closest('#segBy button'); if (sb){ by = sb.dataset.v; LS.set('ch:by', by); renderDyn(); return; }
-  const sc = e.target.closest('#segScale button'); if (sc){ scale = sc.dataset.v; LS.set('ch:scale', scale); renderDyn(); return; }
   const sm = e.target.closest('#segMode button'); if (sm){ settings.mode = sm.dataset.v; LS.set('ch:settings', settings); rebuild(); return; }
   const ds = e.target.closest('[data-dsort]'); if (ds){ drugSort = ds.dataset.dsort; LS.set('ch:drugSort', drugSort); renderDrugs(); return; }
+  const cd = e.target.closest('[data-cmpdrug]'); if (cd){ const d = cd.dataset.cmpdrug; if (d !== cmpB){ cmpA = cmpB; cmpB = d; } setView('cmp'); return; }
   const dr = e.target.closest('tr[data-drug]');
   if (dr){ const d = dr.dataset.drug; if (d !== cmpB){ cmpA = cmpB; cmpB = d; } setView('cmp'); return; }
   const ed = e.target.closest('[data-evd]'); if (ed){ evDrug = ed.dataset.evd; renderEv(); return; }
