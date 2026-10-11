@@ -1,0 +1,837 @@
+<title>Мониторинг чернотелки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Раскладка: шапка с фильтрами (площадка, птичник), разделы — динамика, препараты, сравнение, обработки, журнал */
+:root{
+  /* фирменный фон aitas ukpf — бежевый, как в «Санразрыве» */
+  --bg:#e5dbc0; --panel:#f5f0e2; --ink:#221e1a; --muted:#6b6250; --line:#d3c7a6;
+  --accent:#0f6b5c; --accent-soft:#e0e6d4; --info-bg:#ece4cd;
+  --grid:#e3d9bf; --axis:#b9ad8c; --before:#e9e1cb; --before-line:#8c8169; --pop:#221e1a;
+  --good:#0ca30c; --crit:#d03b3b; --ok:#2f6b3a; --ok-bg:#dfe7d2; --bad:#9d2a22; --bad-bg:#f3d9cf; --warn:#8a5300; --warn-bg:#f4e3c2;
+  /* препараты: категориальная палитра (порядок проверен на различимость при цветослабости), остальные — «прочие» */
+  --d1:#2a78d6; --d2:#eb6834; --d3:#1baf7a; --d4:#eda100; --d5:#e87ba4; --d6:#008300; --d7:#6250d6; --d0:#9a8f78;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding:0 16px 40px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font:700 clamp(19px,2.6vw,26px) var(--f-display);letter-spacing:-.01em}
+h2{font:500 16px var(--f-display)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin:0 -16px;padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:16px;flex:1;min-width:0}
+.brand .logo{height:52px;width:auto;margin-left:auto;order:2}
+.scope{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.scope select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;height:38px;min-width:0;max-width:220px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tab{flex:none;border:0;background:transparent;color:var(--muted);padding:9px 14px;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500}
+.tab[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.note{font-size:13px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--panel);border-radius:8px;padding:8px 16px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{border-color:var(--bad);background:transparent;color:var(--bad)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0}
+.sec{display:flex;flex-direction:column;gap:16px}
+.sechead{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.sechead .right{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.empty{padding:32px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-width:0}
+.tile b{display:block;font:600 24px var(--f-display);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile span{font-size:13px;color:var(--muted)}
+.tile small{display:block;font-size:12px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.seg button{border:0;background:var(--panel);padding:6px 12px;font-size:14px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:14px;color:var(--muted)}
+
+/* график */
+.chartbox{position:relative}
+.chartscroll{overflow-x:auto;padding:4px 0 0}
+.chartscroll svg{display:block}
+.chart text{font-family:var(--f-body);fill:var(--muted);font-size:11px}
+.chart .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.chart .lbl{fill:var(--ink);font-size:11px;font-weight:600}
+.chart .grid{stroke:var(--grid);stroke-width:1}
+.chart .base{stroke:var(--axis);stroke-width:1}
+.chart .bb{fill:var(--before);stroke:var(--before-line);stroke-width:1.5}
+.chart .pend{fill:none;stroke:var(--before-line);stroke-width:1.5;stroke-dasharray:3 3}
+.chart .pop{fill:none;stroke:var(--pop);stroke-width:2;stroke-linejoin:round}
+.chart .popdot{fill:var(--pop);stroke:var(--panel);stroke-width:2}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .hit:hover+g rect,.chart .grp.on rect{filter:brightness(.92)}
+.chart .grp.on .hl{stroke:var(--ink);stroke-width:1.5;fill:none}
+.chart .pband{fill:var(--info-bg)}
+.legendrow{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.legendrow span{display:inline-flex;gap:6px;align-items:center}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none}
+.sw.before{background:var(--before);border:1.5px solid var(--before-line)}
+.sw.line{height:2px;width:16px;border-radius:1px;background:var(--pop)}
+.tip{position:absolute;z-index:5;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(40,30,10,.16);padding:10px 12px;font-size:13px;width:max-content;max-width:320px}
+.tip h4{margin:0 0 4px;font:600 14px var(--f-body);display:flex;gap:6px;align-items:center}
+.tip dl{display:grid;grid-template-columns:auto auto;gap:1px 12px;margin:0}
+.tip dt{color:var(--muted)}
+.tip dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+
+.delta{font:600 13px var(--f-mono);white-space:nowrap}
+.delta.down{color:var(--ok)} .delta.up{color:var(--bad)} .delta.zero{color:var(--muted)}
+.dname{display:inline-flex;gap:6px;align-items:center;font-weight:600}
+
+/* таблицы */
+.tablewrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font:600 11px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:bottom}
+.tbl th.r,.tbl td.r{text-align:right}
+.tbl th button{border:0;background:none;padding:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr[data-ev],.tbl tbody tr[data-drug]{cursor:pointer}
+.tbl tbody tr[data-ev]:hover td,.tbl tbody tr[data-drug]:hover td{background:var(--info-bg)}
+.tbl .sub{display:block;font-size:12px;color:var(--muted);font-family:var(--f-body)}
+.tbl tr.bg td{color:var(--muted)}
+.mini{display:inline-block;vertical-align:middle}
+.evs{display:flex;flex-direction:column;gap:4px}
+.evs .e{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;font-size:13px}
+.evs .e b{font-weight:600}
+.evs .e .m{color:var(--muted)}
+.evs .e .n{font-family:var(--f-mono)}
+
+/* сравнение */
+.cmpctl{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;padding:12px 14px}
+.cmpctl label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.cmpctl select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--ink);font-weight:600}
+.cmpctl .swap{border:1px solid var(--line);background:var(--panel);border-radius:8px;height:40px;width:40px}
+.verdict{margin:0;padding:12px 14px;border-top:1px solid var(--line);font-size:15px}
+.verdict b{font-weight:600}
+.cmp th:not(:first-child),.cmp td:not(:first-child){text-align:right}
+.cmp td:first-child{color:var(--muted)}
+.cmp td.v{font:600 15px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cmp td .sub{font-weight:400}
+
+/* журнал и настройки */
+.upl{display:flex;flex-direction:column;gap:12px;padding:16px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.setrow{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.setrow .lab{flex:1 1 280px;min-width:0}
+.setrow .lab small{display:block;color:var(--muted);font-size:12px}
+.setrow input[type=number]{width:80px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-family:var(--f-mono)}
+.conc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:6px 12px;padding:12px 16px;align-items:center}
+.conc input{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%;min-width:0}
+.conc .from{font-size:12px;color:var(--muted)}
+.warnbox{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:0}
+.warnbox ul{margin:4px 0 0;padding-left:18px}
+.folderbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--info-bg)}
+.folderbox code{font:13px var(--f-mono);word-break:break-all}
+.folderbox .row{display:flex;flex-wrap:wrap;gap:8px}
+.foot{font-size:12px;color:var(--muted)}
+.filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 14px}
+.filters::-webkit-scrollbar{display:none}
+.filters button{flex:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 12px;font-size:14px;display:inline-flex;gap:6px;align-items:center}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+
+/* карточка обработки */
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}
+.sheet .box{background:var(--panel);width:min(640px,100%);max-height:85vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+@media (min-width:721px){.sheet{align-items:center}.sheet .box{border-radius:16px}}
+.sheet .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.sheet .x{border:0;background:var(--info-bg);border-radius:50%;width:36px;height:36px;font-size:18px;flex:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:8px 0}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:600}
+.bnav{display:none}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:90vw}
+
+@media (max-width:900px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:720px){
+  body{padding:0 12px calc(78px + env(safe-area-inset-bottom,0px))}
+  .top{margin:0 -12px;padding:10px 12px 8px}
+  h1{font-size:18px}
+  .brand .logo{height:40px}
+  .brand{width:100%}
+  .tabs{display:none}
+  .scope{width:100%}
+  .scope select{flex:1;max-width:none}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .tile b{font-size:20px}
+  .sechead .right{margin-left:0}
+  .cmpctl{grid-template-columns:1fr;}
+  .cmpctl .swap{justify-self:center}
+  .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
+  .bnav button{flex:1;border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;font-size:11px;min-height:52px}
+  .bnav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .bnav button[aria-current="page"]{color:var(--accent);font-weight:600}
+  .tip{max-width:calc(100vw - 40px)}
+  /* таблица периодов на телефоне — карточками */
+  #perTable thead{display:none}
+  #perTable tr{display:grid;grid-template-columns:1fr auto auto;gap:2px 12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  #perTable td{padding:0;border:0}
+  #perTable td:nth-child(2){display:none}
+  #perTable td:nth-child(5){grid-column:1/-1;margin-top:6px}
+}
+</style>
+
+<nav class="bnav" aria-label="Разделы">
+  <button type="button" data-view="dyn"><svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M4 16l5-6 4 3 7-8"/></svg><span>Динамика</span></button>
+  <button type="button" data-view="drugs"><svg viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M10 3v5l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7 14h10"/></svg><span>Препараты</span></button>
+  <button type="button" data-view="cmp"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="5" height="11" rx="1"/><rect x="15" y="5" width="5" height="15" rx="1"/><path d="M11 7h2M11 12h2"/></svg><span>Сравнение</span></button>
+  <button type="button" data-view="ev"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Обработки</span></button>
+  <button type="button" data-view="files"><svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9 14l3-3 3 3"/></svg><span>Журнал</span></button>
+</nav>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Мониторинг чернотелки</h1><img class="logo" src="{{LOGO}}" alt="aitas ukpf — Усть-Каменогорская птицефабрика"></div>
+    <div class="scope">
+      <select id="fSite" aria-label="Площадка"></select>
+      <select id="fHouse" aria-label="Птичник"></select>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" class="tab" data-view="dyn">Динамика и препараты</button>
+    <button type="button" class="tab" data-view="drugs">Эффективность препаратов</button>
+    <button type="button" class="tab" data-view="cmp">Сравнение препаратов</button>
+    <button type="button" class="tab" data-view="ev">Все обработки</button>
+    <button type="button" class="tab" data-view="files">Журнал и настройки</button>
+  </nav>
+
+  <div id="noData" class="panel empty" hidden>
+    <b>Загрузите журнал мониторинга</b>
+    Файл Excel с листом «Журнал»: дата, птичник, тур, препарат, метод обработки, трубы 1–4.
+    <div style="margin-top:12px"><button type="button" class="btn" data-view="files">Загрузить журнал</button></div>
+  </div>
+
+  <section id="v-dyn" class="sec" hidden>
+    <div class="tiles" id="tilesDyn"></div>
+    <div class="panel">
+      <div class="sechead">
+        <h2>Численность чернотелки и обработки</h2>
+        <div class="right">
+          <span class="seg" id="segBy"><button type="button" data-v="tour">по турам</button><button type="button" data-v="week">по неделям</button><button type="button" data-v="month">по месяцам</button></span>
+          <span class="seg" id="segScale"><button type="button" data-v="lin">обычная шкала</button><button type="button" data-v="log">лог.</button></span>
+        </div>
+      </div>
+      <p class="note" style="padding:10px 14px 0" id="dynNote"></p>
+      <div class="chartbox" id="dynBox"><div class="chartscroll" id="dynScroll"></div><div class="tip" id="tip" hidden></div></div>
+      <div class="legendrow" id="dynLegend"></div>
+    </div>
+    <div class="panel">
+      <div class="sechead"><h2>По периодам</h2><span class="note">улов — сумма 4 труб за учёт; изменение — к предыдущему периоду</span></div>
+      <div class="tablewrap"><table class="tbl" id="perTable"></table></div>
+    </div>
+  </section>
+
+  <section id="v-drugs" class="sec" hidden>
+    <div class="panel">
+      <div class="sechead"><h2>Эффективность препаратов</h2><span class="note" id="drugsNote"></span></div>
+      <div class="tablewrap"><table class="tbl" id="drugTable"></table></div>
+    </div>
+    <p class="foot" id="drugsFoot"></p>
+  </section>
+
+  <section id="v-cmp" class="sec" hidden>
+    <div class="panel">
+      <div class="sechead"><h2>Предыдущий и текущий препарат</h2><span class="note" id="cmpScope"></span></div>
+      <div class="cmpctl">
+        <label>Предыдущий препарат<select id="cmpA"></select></label>
+        <button type="button" class="swap" id="cmpSwap" aria-label="Поменять местами">⇄</button>
+        <label>Текущий препарат<select id="cmpB"></select></label>
+      </div>
+      <div class="chartscroll" id="cmpChart"></div>
+      <div class="legendrow" id="cmpLegend"></div>
+      <div class="tablewrap"><table class="tbl cmp" id="cmpTable"></table></div>
+      <p class="verdict" id="verdict"></p>
+    </div>
+    <div class="panel">
+      <div class="sechead"><h2>Обработки этих препаратов</h2></div>
+      <div class="tablewrap"><table class="tbl" id="cmpEvents"></table></div>
+    </div>
+  </section>
+
+  <section id="v-ev" class="sec" hidden>
+    <div class="panel">
+      <div class="sechead"><h2>Все обработки</h2><span class="note" id="evNote"></span></div>
+      <div class="filters" id="evDrugs"></div>
+      <div class="tablewrap"><table class="tbl" id="evTable"></table></div>
+    </div>
+  </section>
+
+  <section id="v-files" class="sec" hidden>
+    <div class="panel">
+      <div class="upl">
+        <h2>Журнал мониторинга</h2>
+        <p class="note">Файл Excel (.xlsx) с листом «Журнал»: дата, птичник, тур, расставление, снятие, убой, препарат, метод обработки, трубы 1–4. Если в журнале есть столбцы «Концентрация» и «Кол-во обработок», они тоже учитываются. Новая загрузка заменяет прежний журнал.</p>
+        <label class="drop" id="drop">
+          <span>Перетащите файл сюда или</span>
+          <span class="btn">Выбрать файл</span>
+          <input type="file" id="file" accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
+        </label>
+        <p class="note" id="uplNote"></p>
+        <div class="folderbox" id="folderBox" hidden>
+          <b>Папка с журналом</b>
+          <span class="note">Положите сюда файл журнала — программа берёт самый свежий файл Excel при запуске и обновляется, когда файл меняется.</span>
+          <code id="folderPath"></code>
+          <div class="row"><button type="button" class="btn" id="openFolder">Открыть папку</button><button type="button" class="btn ghost" id="reloadFolder">Обновить из папки</button></div>
+        </div>
+        <div id="warnings"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="upl" style="padding-bottom:4px"><h2>Как считать</h2></div>
+      <div class="setrow">
+        <span class="lab">Препарат из строки тура действует на…<small>«следующий тур» — обработка после снятия ловушек и убоя: «до» — улов этого тура, «после» — улов следующего. «Этот тур» — обработка перед туром: «до» — улов прошлого тура, «после» — этого.</small></span>
+        <span class="seg" id="segMode"><button type="button" data-v="next">следующий тур</button><button type="button" data-v="this">этот тур</button></span>
+      </div>
+      <div class="setrow">
+        <span class="lab">Фоновый улов, не больше<small>Учёт с таким уловом (по 1 жуку в трубе = 4) считается фоном: процент снижения от него ничего не говорит, такие обработки не входят в средние.</small></span>
+        <input type="number" id="bg" min="0" step="1">
+      </div>
+    </div>
+    <div class="panel">
+      <div class="upl" style="padding-bottom:0"><h2>Концентрация и дозировка препаратов</h2>
+        <p class="note">Подставляется в график и таблицы, если в журнале не указана. Хранится на этом устройстве.</p></div>
+      <div class="conc" id="concList"></div>
+    </div>
+    <p class="foot">Журнал хранится только на этом устройстве. Продолжительность эффекта — дни от обработки до учёта, на котором улов снова дошёл до уровня «до»; если не дошёл — до последнего учёта (со знаком «≥»).</p>
+  </section>
+</div>
+
+<div class="sheet" id="sheet" hidden><div class="box" role="dialog" aria-modal="true" id="sheetBox"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<!--{{XLSX}}-->
+<script>
+/*{{ANALYSIS}}*/
+</script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+};
+function toast(t){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 3500); }
+function plural(n, a, b, c){ n = Math.abs(n) % 100; const n1 = n % 10; return n > 10 && n < 20 ? c : n1 > 1 && n1 < 5 ? b : n1 === 1 ? a : c; }
+const MON = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+const MONN = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const fD = s => s ? `${s.slice(8,10)}.${s.slice(5,7)}.${s.slice(2,4)}` : '—';
+const fDs = s => s ? `${s.slice(8,10)}.${s.slice(5,7)}` : '—';
+const fN = (v, d = 0) => v == null ? '—' : (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('ru-RU');
+const fP = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + fN(Math.abs(v)) + '%';
+const days = n => `${n} ${plural(n, 'день', 'дня', 'дней')}`;
+function deltaHtml(p, bg){
+  if (p == null) return '<span class="delta zero">—</span>';
+  const r = Math.round(p);
+  const cls = r < 0 ? 'down' : r > 0 ? 'up' : 'zero';
+  const ic = r < 0 ? '▼' : r > 0 ? '▲' : '●';
+  const word = r < 0 ? 'снижение' : r > 0 ? 'рост' : 'без изменений';
+  return `<span class="delta ${cls}" title="${word}${bg ? ' (от фонового улова)' : ''}">${ic} ${fP(p)}</span>`;
+}
+
+/* ===== состояние ===== */
+let BOOK = LS.get('ch:book', null);         // {file, loadedAt, sheet, rows, drugsRef, concRef, warnings}
+let settings = Object.assign({mode: 'next', bg: 4}, LS.get('ch:settings', {}));
+let CONC = LS.get('ch:conc', {});           // концентрации, введённые в приложении: {нормализованное имя: текст}
+let view = LS.get('ch:view', 'dyn');
+if (!['dyn','drugs','cmp','ev','files'].includes(view)) view = 'dyn';
+let by = LS.get('ch:by', 'month'), scale = LS.get('ch:scale', 'lin');
+let fSite = LS.get('ch:site', ''), fHouse = LS.get('ch:house', '');
+let cmpA = '', cmpB = '', evDrug = '', drugSort = LS.get('ch:drugSort', 'n');
+let M = null;                               // модель: {houses, events, drugs, freq}
+let COLOR = {};
+
+function rebuild(){
+  if (!BOOK){ M = null; render(); return; }
+  M = CH.build(BOOK, {mode: settings.mode, bg: +settings.bg});
+  COLOR = {}; M.drugs.forEach((d, i) => COLOR[d] = i < 7 ? `var(--d${i + 1})` : 'var(--d0)');
+  for (const e of M.events) if (!e.conc) e.conc = CONC[CH.norm(e.drug)] || '';
+  if (fHouse && !M.houses[fHouse]) fHouse = '';
+  if (fSite && !Object.values(M.houses).some(h => h.site === fSite)) fSite = '';
+  render();
+}
+const swatch = d => `<span class="sw" style="background:${COLOR[d] || 'var(--d0)'}"></span>`;
+const dname = d => `<span class="dname">${swatch(d)}${esc(d)}</span>`;
+
+/* выборка по площадке/птичнику */
+const inScopeHouse = h => (!fHouse || h.key === fHouse) && (!fSite || h.site === fSite);
+const scopeEvents = () => M.events.filter(e => (!fHouse || e.key === fHouse) && (!fSite || e.site === fSite));
+const scopeRows = () => Object.values(M.houses).filter(inScopeHouse).flatMap(h => h.rows);
+const scopeName = () => fHouse ? `птичник ${M.houses[fHouse].name}` : fSite ? `площадка ${fSite}` : 'все птичники';
+
+function renderScope(){
+  const sites = [...new Set(Object.values(M.houses).map(h => h.site))].sort((a, b) => a.localeCompare(b, 'ru', {numeric: true}));
+  $('fSite').innerHTML = '<option value="">Все площадки</option>' + sites.map(s => `<option value="${esc(s)}"${s === fSite ? ' selected' : ''}>Площадка ${esc(s)}</option>`).join('');
+  const hs = Object.values(M.houses).filter(h => !fSite || h.site === fSite).sort((a, b) => a.name.localeCompare(b.name, 'ru', {numeric: true}));
+  $('fHouse').innerHTML = '<option value="">Все птичники</option>' + hs.map(h => `<option value="${esc(h.key)}"${h.key === fHouse ? ' selected' : ''}>${esc(h.name)}</option>`).join('');
+}
+
+function render(){
+  for (const b of document.querySelectorAll('.tab[data-view], .bnav [data-view]')) b.dataset.view === view ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+  const has = !!M;
+  $('noData').hidden = has || view === 'files';
+  for (const v of ['dyn','drugs','cmp','ev','files']) $('v-' + v).hidden = v !== view || (!has && v !== 'files');
+  $('fSite').disabled = $('fHouse').disabled = !has;
+  for (const b of document.querySelectorAll('#segMode button')) b.setAttribute('aria-pressed', b.dataset.v === settings.mode);
+  $('bg').value = settings.bg;
+  renderFiles();
+  if (!has) return;
+  renderScope();
+  if (view === 'dyn') renderDyn();
+  if (view === 'drugs') renderDrugs();
+  if (view === 'cmp') renderCmp();
+  if (view === 'ev') renderEv();
+}
+
+/* ===== периоды ===== */
+function periodLabel(p, b){
+  if (b === 'tour') return {top: `Тур ${p}`, sub: ''};
+  if (b === 'month') return {top: MONN[+p.slice(5,7) - 1].slice(0, 3) + ' ' + p.slice(2, 4), sub: ''};
+  const e = CH.fromNum(CH.dayNum(p) + 6);
+  return {top: fDs(p), sub: '–' + fDs(e)};
+}
+const periodFull = (p, b) => b === 'tour' ? `Тур ${p}` : b === 'month' ? `${MONN[+p.slice(5,7) - 1]} ${p.slice(0,4)}` : `${fD(p)} – ${fD(CH.fromNum(CH.dayNum(p) + 6))}`;
+/* учёт: дата расстановки ловушек; обработка: дата из события; при «по турам» — тур строки */
+const rowPeriod = (r, b) => b === 'tour' ? r.tour : CH.periodOf(r.set || r.date, b);
+const evPeriod = (e, b) => b === 'tour' ? e.row.tour : CH.periodOf(e.date, b);
+
+function buildPeriods(){
+  const b = by;
+  const rows = scopeRows().filter(r => r.catch != null);
+  const evs = scopeEvents();
+  const P = new Map();
+  const get = k => { if (!P.has(k)) P.set(k, {k, rows: [], evs: []}); return P.get(k); };
+  for (const r of rows){ const k = rowPeriod(r, b); if (k != null) get(k).rows.push(r); }
+  for (const e of evs){ const k = evPeriod(e, b); if (k != null) get(k).evs.push(e); }
+  let list = [...P.values()].sort((a, c) => b === 'tour' ? a.k - c.k : String(a.k).localeCompare(String(c.k)));
+  // недели: без пропусков между первой и последней, чтобы время читалось равномерно
+  if (b !== 'tour' && list.length > 1){
+    const out = []; let cur = list[0].k; const last = list[list.length - 1].k;
+    while (cur <= last){
+      out.push(P.get(cur) || {k: cur, rows: [], evs: []});
+      if (b === 'month'){ const y = +cur.slice(0,4), m = +cur.slice(5,7); cur = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2,'0')}`; }
+      else cur = CH.fromNum(CH.dayNum(cur) + 7);
+    }
+    list = out;
+  }
+  let prev = null;
+  for (const p of list){
+    p.n = p.rows.length;
+    p.mean = p.n ? p.rows.reduce((a, r) => a + r.catch, 0) / p.n : null;
+    p.prevMean = prev ? prev.mean : null;
+    p.chg = p.mean != null && p.prevMean != null && p.prevMean > 0 ? (p.mean - p.prevMean) / p.prevMean * 100 : null;
+    if (p.mean != null) prev = p;
+    const g = new Map();
+    for (const e of p.evs){ if (!g.has(e.drug)) g.set(e.drug, []); g.get(e.drug).push(e); }
+    p.groups = [...g.entries()].sort((a, c) => M.drugs.indexOf(a[0]) - M.drugs.indexOf(c[0])).map(([drug, evs]) => {
+      const withB = evs.filter(e => e.B != null), withA = evs.filter(e => e.A != null), both = evs.filter(e => e.B != null && e.A != null);
+      const valid = both.filter(e => !e.bg);
+      const sB = valid.reduce((a, e) => a + e.B, 0), sA = valid.reduce((a, e) => a + e.A, 0);
+      // до/после — по обработкам с результатом и не фоновым уловом, чтобы столбики и процент считались по одним и тем же учётам
+      const srcB = valid.length ? valid : withB, srcA = valid.length ? valid : withA;
+      return {drug, evs, nB: srcB.length,
+        B: srcB.length ? srcB.reduce((a, e) => a + e.B, 0) / srcB.length : null,
+        A: srcA.length ? srcA.reduce((a, e) => a + e.A, 0) / srcA.length : null,
+        pct: sB > 0 ? (sA - sB) / sB * 100 : null,
+        allBg: both.length > 0 && !valid.length, pending: !withA.length,
+        count: evs.reduce((a, e) => a + (e.count || 1), 0)};
+    });
+  }
+  return list;
+}
+
+/* ===== главный график ===== */
+let PERIODS = [];
+function renderDyn(){
+  for (const b of document.querySelectorAll('#segBy button')) b.setAttribute('aria-pressed', b.dataset.v === by);
+  for (const b of document.querySelectorAll('#segScale button')) b.setAttribute('aria-pressed', b.dataset.v === scale);
+  const evs = scopeEvents(), S = CH.summarize(evs), rows = scopeRows().filter(r => r.catch != null);
+  const last = [...rows].sort((a, b) => String(a.set || a.date).localeCompare(String(b.set || b.date))).slice(-1)[0];
+  $('tilesDyn').innerHTML = [
+    [fN(rows.length), 'учётов', scopeName()],
+    [fN(rows.length ? rows.reduce((a, r) => a + r.catch, 0) / rows.length : null), 'средний улов', 'сумма 4 труб за учёт'],
+    [fN(S.treatments), plural(S.treatments, 'обработка', 'обработки', 'обработок'), `${M.drugs.filter(d => evs.some(e => e.drug === d)).length} препаратов`],
+    [S.pct == null ? '—' : fP(S.pct), 'изменение после обработок', `в среднем по ${S.valid} ${plural(S.valid, 'обработке', 'обработкам', 'обработкам')} с результатом`],
+    [last ? fN(last.catch) : '—', 'последний учёт', last ? `${esc(last.house)}, ${fD(last.set || last.date)}` : '']
+  ].map(([v, l, s]) => `<div class="tile"><b>${v}</b><span>${l}</span><small>${s}</small></div>`).join('');
+  PERIODS = buildPeriods();
+  $('dynNote').textContent = `Серый контур — улов до обработки, цветной столбик — после неё; цвет и подпись — препарат, над парой — изменение. Линия — средний улов за ${by === 'tour' ? 'тур' : by === 'week' ? 'неделю' : 'месяц'}, ${scopeName()}. ` +
+    (settings.mode === 'next' ? 'Обработка отнесена к периоду, когда её провели (после убоя тура).' : 'Обработка отнесена к периоду тура, перед которым её провели.');
+  drawDyn();
+  renderPerTable();
+}
+
+function niceMax(v){ if (v <= 4) return 4; const p = 10 ** Math.floor(Math.log10(v)); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+function yScale(max, h, top){
+  if (scale === 'log'){
+    const lm = Math.log10(Math.max(10, max) + 1);
+    const f = v => top + h - (Math.log10(Math.max(0, v) + 1) / lm) * h;
+    const ticks = [0, 1, 10, 100, 1000, 10000].filter(t => t <= Math.max(10, max) * 1.01);
+    return {f, ticks};
+  }
+  const mx = niceMax(max);
+  const step = mx / 4;
+  return {f: v => top + h - v / mx * h, ticks: [0, 1, 2, 3, 4].map(i => i * step)};
+}
+
+function drawDyn(){
+  const box = $('dynScroll');
+  const P = PERIODS;
+  if (!P.length){ box.innerHTML = '<div class="empty">В выбранных птичниках нет учётов</div>'; $('dynLegend').innerHTML = ''; return; }
+  const bw = 16, gapIn = 3, gapG = 8, padP = 14;
+  const widths = P.map(p => Math.max(56, p.groups.length * (bw * 2 + gapIn) + Math.max(0, p.groups.length - 1) * gapG + padP * 2));
+  const left = 48, right = 12, top = 84, h = 260, labH = 104;
+  const avail = Math.max(320, box.clientWidth || 800);
+  const total = widths.reduce((a, b) => a + b, 0);
+  const k = total + left + right < avail ? (avail - left - right) / total : 1;
+  const W = Math.round(Math.max(avail, total * k + left + right));
+  let max = 0;
+  for (const p of P){ if (p.mean) max = Math.max(max, p.mean); for (const g of p.groups) max = Math.max(max, g.B || 0, g.A || 0); }
+  const Y = yScale(max || 4, h, top);
+  const base = top + h;
+  let x = left, s = '';
+  // сетка
+  for (const t of Y.ticks){ const y = Y.f(t); s += `<line class="grid" x1="${left}" x2="${W - right}" y1="${y}" y2="${y}"/><text class="num" x="${left - 6}" y="${y + 4}" text-anchor="end">${fN(t)}</text>`; }
+  const pts = [], hits = [];
+  P.forEach((p, i) => {
+    const w = widths[i] * k, cx = x + w / 2;
+    if (i % 2) s += `<rect class="pband" x="${x}" y="0" width="${w}" height="${top + h + labH}" opacity=".45"/>`;
+    // пары «до/после» по препаратам
+    const gw = p.groups.length * (bw * 2 + gapIn) + Math.max(0, p.groups.length - 1) * gapG;
+    let gx = cx - gw / 2;
+    p.groups.forEach((g, gi) => {
+      const xb = gx, xa = gx + bw + gapIn, id = `${i}:${gi}`;
+      let gs = '';
+      if (g.B != null){ const y = Y.f(g.B); gs += `<rect class="bb" x="${xb + .75}" y="${Math.min(y, base - 2)}" width="${bw - 1.5}" height="${Math.max(2, base - y)}" rx="3"/>`; }
+      if (g.A != null){ const y = Y.f(g.A); gs += `<rect x="${xa}" y="${Math.min(y, base - 2)}" width="${bw}" height="${Math.max(2, base - y)}" rx="3" fill="${COLOR[g.drug]}"/>`; }
+      else gs += `<rect class="pend" x="${xa + .75}" y="${base - 24}" width="${bw - 1.5}" height="24" rx="3"/>`;
+      const topY = Math.min(g.B != null ? Y.f(g.B) : base, g.A != null ? Y.f(g.A) : base - 24);
+      const pctTxt = g.pending ? 'ждём' : g.pct == null ? (g.allBg ? 'фон' : '') : `${g.pct < -0.5 ? '▼' : g.pct > 0.5 ? '▲' : '●'}${Math.abs(g.pct) > 999 ? '>999' : fN(Math.abs(g.pct))}%`;
+      if (pctTxt) gs += `<text class="num lbl" x="${xb + bw + gapIn / 2}" y="${topY - 6}" text-anchor="middle" style="fill:${g.pct == null ? 'var(--muted)' : g.pct < -0.5 ? 'var(--ok)' : g.pct > 0.5 ? 'var(--bad)' : 'var(--muted)'}">${pctTxt}</text>`;
+      // подпись препарата под парой — повёрнута, чтобы помещались длинные названия
+      const nm = g.drug.length > 16 ? g.drug.slice(0, 15) + '…' : g.drug;
+      gs += `<text x="${xb + bw + gapIn / 2 + 4}" y="${base + 8}" transform="rotate(45 ${xb + bw + gapIn / 2 + 4} ${base + 8})" style="fill:var(--ink)">${esc(nm)}${g.evs.length > 1 ? ' ×' + g.evs.length : ''}</text>`;
+      gs += `<rect class="hl" x="${xb - 3}" y="${topY - 20}" width="${bw * 2 + gapIn + 6}" height="${base - topY + 22}" rx="5" fill="none" stroke="none"/>`;
+      s += `<g class="grp" data-g="${id}">${gs}</g>`;
+      hits.push(`<rect class="hit" data-g="${id}" x="${xb - 4}" y="${top - 24}" width="${bw * 2 + gapIn + 8}" height="${h + 24 + labH - 10}"/>`);
+      gx += bw * 2 + gapIn + gapG;
+    });
+    if (p.mean != null) pts.push([cx, Y.f(p.mean), p, i]);
+    // подпись периода и изменение к предыдущему
+    const L = periodLabel(p.k, by);
+    s += `<text x="${cx}" y="18" text-anchor="middle" style="fill:var(--ink);font-weight:600">${esc(L.top)}</text>`;
+    // под названием периода — средний улов и изменение к предыдущему периоду
+    const chgTxt = p.chg == null ? '' : `<tspan style="fill:${p.chg < -0.5 ? 'var(--ok)' : p.chg > 0.5 ? 'var(--bad)' : 'var(--muted)'}">${p.chg < -0.5 ? '▼' : p.chg > 0.5 ? '▲' : ''}${fP(p.chg)}</tspan>`;
+    s += `<text class="num" x="${cx}" y="33" text-anchor="middle">${p.mean == null ? esc(L.sub || 'нет учётов') : 'ср. ' + fN(p.mean)}</text>`;
+    if (chgTxt) s += `<text class="num" x="${cx}" y="47" text-anchor="middle">${chgTxt}</text>`;
+    x += w;
+  });
+  s += `<line class="base" x1="${left}" x2="${W - right}" y1="${base}" y2="${base}"/>`;
+  // линия численности
+  if (pts.length){
+    const d = pts.map(([px, py], i) => (i ? 'L' : 'M') + px.toFixed(1) + ' ' + py.toFixed(1)).join(' ');
+    s += `<path class="pop" d="${d}"/>`;
+    for (const pt of pts){
+      s += `<circle class="popdot" cx="${pt[0]}" cy="${pt[1]}" r="4.5"/>`;
+      hits.push(`<circle class="hit" data-p="${pt[3]}" cx="${pt[0]}" cy="${pt[1]}" r="12"/>`);
+    }
+  }
+  const H = base + labH;
+  const atEnd = !box.firstChild || box.scrollLeft + box.clientWidth >= box.scrollWidth - 4;
+  box.innerHTML = `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Численность чернотелки и обработки по периодам: ${esc(scopeName())}">${s}${hits.join('')}</svg>`;
+  if (atEnd) box.scrollLeft = box.scrollWidth;   // сначала видны последние периоды
+  // легенда: только препараты, которые есть на графике
+  const used = M.drugs.filter(d => P.some(p => p.groups.some(g => g.drug === d)));
+  $('dynLegend').innerHTML = `<span><span class="sw line"></span>средний улов за период</span><span><span class="sw before"></span>до обработки</span>` +
+    used.map(d => `<span>${swatch(d)}${esc(d)} — после</span>`).join('') + `<span>▼ снижение · ▲ рост</span>`;
+}
+
+/* подсказка при наведении и карточка по нажатию */
+function groupInfo(id){ const [i, gi] = id.split(':').map(Number); return {p: PERIODS[i], g: PERIODS[i].groups[gi]}; }
+function tipHtml(p, g){
+  const ev = g.evs, dates = [...new Set(ev.map(e => e.date).filter(Boolean))].sort();
+  const houses = [...new Set(ev.map(e => e.house))];
+  const concs = [...new Set(ev.map(e => e.conc).filter(Boolean))];
+  const methods = [...new Set(ev.map(e => e.method).filter(Boolean))];
+  const durs = ev.filter(e => e.dur != null && e.A != null && e.A < e.B && !e.bg);
+  return `<h4>${swatch(g.drug)}${esc(g.drug)}</h4><div class="note" style="margin-bottom:6px">${esc(periodFull(p.k, by))}</div><dl>
+    <dt>Дата применения</dt><dd>${dates.length ? (dates.length > 3 ? fDs(dates[0]) + '–' + fDs(dates[dates.length - 1]) : dates.map(fDs).join(', ')) : '—'}</dd>
+    <dt>Концентрация</dt><dd>${esc(concs.join('; ') || 'не указана')}</dd>
+    <dt>Объект</dt><dd>${esc(houses.length > 4 ? houses.slice(0, 4).join(', ') + ` и ещё ${houses.length - 4}` : houses.join(', '))}</dd>
+    <dt>Метод</dt><dd>${esc(methods.join('; ') || '—')}</dd>
+    <dt>Обработок</dt><dd>${g.count}${ev.some(e => e.repeat) ? ` (повторных ${ev.filter(e => e.repeat).length})` : ''}</dd>
+    <dt>До обработки</dt><dd>${fN(g.B)}${g.nB > 1 ? ' ср.' : ''}</dd>
+    <dt>После</dt><dd>${g.A == null ? 'учёта ещё нет' : fN(g.A) + (g.nB > 1 ? ' ср.' : '')}</dd>${g.nB < ev.length && g.A != null ? `<dt></dt><dd style="font-family:var(--f-body);color:var(--muted)">по ${g.nB} из ${ev.length}, без фона и ожидающих</dd>` : ''}
+    <dt>Изменение</dt><dd>${g.pct == null ? (g.allBg ? 'фоновый улов' : '—') : fP(g.pct)}</dd>
+    <dt>Эффект держался</dt><dd>${durs.length ? (durs.some(e => e.durOpen) ? '≥ ' : '') + days(Math.round(durs.reduce((a, e) => a + e.dur, 0) / durs.length)) : '—'}</dd>
+  </dl>`;
+}
+function showTip(html, evt){
+  const tip = $('tip'), boxR = $('dynBox').getBoundingClientRect();
+  tip.innerHTML = html; tip.hidden = false;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let lx = evt.clientX - boxR.left + 14, ly = evt.clientY - boxR.top - th - 12;
+  if (lx + tw > boxR.width - 4) lx = evt.clientX - boxR.left - tw - 14;
+  if (lx < 4) lx = 4;
+  if (ly < 4) ly = evt.clientY - boxR.top + 16;
+  tip.style.left = lx + 'px'; tip.style.top = ly + 'px';
+}
+$('dynScroll').addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') return;
+  const t = e.target.closest('[data-g],[data-p]');
+  for (const g of document.querySelectorAll('.grp.on')) g.classList.remove('on');
+  if (!t){ $('tip').hidden = true; return; }
+  if (t.dataset.g){
+    const {p, g} = groupInfo(t.dataset.g);
+    const el = document.querySelector(`.grp[data-g="${t.dataset.g}"]`); if (el) el.classList.add('on');
+    showTip(tipHtml(p, g), e);
+  } else {
+    const p = PERIODS[+t.dataset.p];
+    showTip(`<h4>${esc(periodFull(p.k, by))}</h4><dl><dt>Средний улов</dt><dd>${fN(p.mean, 1)}</dd><dt>Учётов</dt><dd>${p.n}</dd><dt>К пред. периоду</dt><dd>${p.chg == null ? '—' : fP(p.chg)}</dd><dt>Обработок</dt><dd>${p.evs.length}</dd></dl>`, e);
+  }
+});
+$('dynScroll').addEventListener('pointerleave', () => { $('tip').hidden = true; for (const g of document.querySelectorAll('.grp.on')) g.classList.remove('on'); });
+$('dynScroll').addEventListener('click', e => {
+  const t = e.target.closest('[data-g],[data-p]'); if (!t) return;
+  $('tip').hidden = true;
+  if (t.dataset.g){ const {p, g} = groupInfo(t.dataset.g); openEvents(`${g.drug} · ${periodFull(p.k, by)}`, g.evs, tipHtml(p, g)); }
+  else { const p = PERIODS[+t.dataset.p]; openEvents(periodFull(p.k, by), p.evs, `<div class="note">Средний улов ${fN(p.mean, 1)} по ${p.n} ${plural(p.n, 'учёту', 'учётам', 'учётам')}${p.chg == null ? '' : ', к предыдущему периоду ' + fP(p.chg)}</div>`); }
+});
+
+function evLine(e){
+  return `<div class="e"><b>${esc(e.house)}</b><span class="m">тур ${e.tour ?? '—'}</span>${dname(e.drug)}<span class="m">${fD(e.date)}</span>` +
+    `<span class="n">${fN(e.B)} → ${e.A == null ? '…' : fN(e.A)}</span>${e.B != null && e.A != null ? deltaHtml(e.pct, e.bg) : ''}</div>`;
+}
+function renderPerTable(){
+  const rows = [...PERIODS].reverse().filter(p => p.n || p.evs.length);
+  $('perTable').innerHTML = `<thead><tr><th>Период</th><th class="r">Учётов</th><th class="r">Средний улов</th><th class="r">К пред. периоду</th><th>Обработки: препарат · дата · концентрация · объект · кол-во · до → после</th></tr></thead><tbody>` +
+    rows.map(p => `<tr><td><b>${esc(periodFull(p.k, by))}</b></td><td class="n r">${p.n || '—'}</td><td class="n r">${fN(p.mean, 1)}</td><td class="r">${deltaHtml(p.chg)}</td><td><div class="evs">${
+      p.groups.map(g => `<div class="e">${dname(g.drug)}<span class="m">${[...new Set(g.evs.map(e => e.date).filter(Boolean))].sort().map(fDs).slice(0, 4).join(', ')}${g.evs.length > 4 ? '…' : ''}</span>` +
+        `<span class="m">${esc([...new Set(g.evs.map(e => e.conc).filter(Boolean))].join('; ') || 'конц. не указана')}</span>` +
+        `<span>${esc([...new Set(g.evs.map(e => e.house))].slice(0, 5).join(', '))}${new Set(g.evs.map(e => e.house)).size > 5 ? '…' : ''}</span>` +
+        `<span class="m">${g.count} ${plural(g.count, 'обработка', 'обработки', 'обработок')}</span>` +
+        `<span class="n">${fN(g.B)} → ${g.A == null ? '…' : fN(g.A)}</span>${g.pct != null ? deltaHtml(g.pct) : g.allBg ? '<span class="delta zero">фон</span>' : ''}</div>`).join('') || '<span class="note">обработок нет</span>'
+    }</div></td></tr>`).join('') + '</tbody>';
+}
+
+/* ===== препараты ===== */
+function renderDrugs(){
+  const evs = scopeEvents();
+  const list = M.drugs.filter(d => evs.some(e => e.drug === d)).map(d => ({d, S: CH.summarize(evs.filter(e => e.drug === d))}));
+  const key = {n: x => -x.S.treatments, pct: x => x.S.pct ?? 1e9, dur: x => -(x.S.dur ?? -1), name: x => x.d};
+  list.sort((a, b) => { const f = key[drugSort] || key.n; const va = f(a), vb = f(b); return typeof va === 'string' ? va.localeCompare(vb, 'ru') : va - vb; });
+  const max = Math.max(1, ...list.map(x => Math.max(x.S.B || 0, x.S.A || 0)));
+  const bar = (B, A, d) => {
+    if (B == null) return '';
+    const w = 120, f = v => Math.max(2, v / max * w);
+    return `<svg class="mini" width="${w}" height="22" viewBox="0 0 ${w} 22" aria-hidden="true"><rect x="0" y="2" width="${f(B)}" height="8" rx="3" fill="var(--before)" stroke="var(--before-line)"/>` +
+      (A == null ? '' : `<rect x="0" y="12" width="${f(A)}" height="8" rx="3" fill="${COLOR[d]}"/>`) + '</svg>';
+  };
+  const th = (k, t, r) => `<th class="${r ? 'r' : ''}"><button type="button" data-dsort="${k}">${t}${drugSort === k ? ' ↓' : ''}</button></th>`;
+  $('drugTable').innerHTML = `<thead><tr>${th('name', 'Препарат')}<th>Концентрация · метод</th>${th('n', 'Обработок', 1)}<th class="r">Повторных</th><th class="r">Птичников</th><th class="r">До</th><th class="r">После</th><th></th>${th('pct', 'Изменение', 1)}<th class="r">Медиана</th><th class="r">Снизилось</th>${th('dur', 'Эффект держался', 1)}<th>Применяли</th></tr></thead><tbody>` +
+    list.map(({d, S}) => `<tr data-drug="${esc(d)}"><td>${dname(d)}</td><td><span class="sub">${esc(S.concs.join('; ') || 'конц. не указана')}</span><span class="sub">${esc(S.methods.slice(0, 2).join('; '))}</span></td>` +
+      `<td class="n r">${S.treatments}</td><td class="n r">${S.repeats || '—'}</td><td class="n r">${S.houses}</td><td class="n r">${fN(S.B)}</td><td class="n r">${fN(S.A)}</td><td>${bar(S.B, S.A, d)}</td>` +
+      `<td class="r">${S.valid ? deltaHtml(S.pct) : `<span class="note">${S.done ? 'только фон' : 'ждём учёт'}</span>`}</td><td class="r">${S.valid ? deltaHtml(S.medPct) : ''}</td>` +
+      `<td class="n r">${S.valid ? `${S.down} из ${S.valid}` : '—'}</td><td class="n r">${S.dur == null ? '—' : (S.durOpen ? '≥ ' : '') + days(Math.round(S.dur))}</td>` +
+      `<td class="n">${fD(S.first)}${S.last && S.last !== S.first ? '<span class="sub">по ' + fD(S.last) + '</span>' : ''}</td></tr>`).join('') + '</tbody>';
+  $('drugsNote').textContent = scopeName() + ' · нажмите строку, чтобы сравнить';
+  $('drugsFoot').textContent = `До и после — средний улов (сумма 4 труб) на учёт. Изменение — по сумме уловов всех обработок препарата, медиана — типичная обработка. Не учитываются обработки без учёта «после» и с фоновым уловом «до» (не больше ${settings.bg}). Повторная — тот же препарат подряд в том же птичнике.`;
+}
+
+/* ===== сравнение ===== */
+function defaultPair(evs){
+  const done = evs.filter(e => e.A != null && e.B != null && !e.bg);
+  const src = done.length ? done : evs;
+  const cur = src.length ? src[src.length - 1].drug : '';
+  const prevEv = [...src].reverse().find(e => e.drug !== cur);
+  return [prevEv ? prevEv.drug : (M.drugs.find(d => d !== cur) || ''), cur];
+}
+function renderCmp(){
+  const evs = scopeEvents();
+  const present = M.drugs.filter(d => evs.some(e => e.drug === d));
+  if (!present.includes(cmpA) || !present.includes(cmpB) || !cmpA || !cmpB){ const [a, b] = defaultPair(evs); if (!present.includes(cmpA)) cmpA = a; if (!present.includes(cmpB)) cmpB = b; }
+  const opts = sel => present.map(d => `<option value="${esc(d)}"${d === sel ? ' selected' : ''}>${esc(d)}</option>`).join('');
+  $('cmpA').innerHTML = opts(cmpA); $('cmpB').innerHTML = opts(cmpB);
+  $('cmpScope').textContent = scopeName();
+  const EA = evs.filter(e => e.drug === cmpA), EB = evs.filter(e => e.drug === cmpB);
+  const A = CH.summarize(EA), B = CH.summarize(EB);
+  // график: две пары столбиков на общей шкале
+  const max = Math.max(4, A.B || 0, A.A || 0, B.B || 0, B.A || 0);
+  const W = 360, h = 170, top = 28, base = top + h, Y = v => base - v / niceMax(max) * h;
+  let s = '';
+  for (let i = 0; i <= 4; i++){ const v = niceMax(max) / 4 * i, y = Y(v); s += `<line class="grid" x1="44" x2="${W - 8}" y1="${y}" y2="${y}"/><text class="num" x="38" y="${y + 4}" text-anchor="end">${fN(v)}</text>`; }
+  [[cmpA, A, 'предыдущий'], [cmpB, B, 'текущий']].forEach(([d, S, role], i) => {
+    const cx = 44 + (W - 52) * (i * 2 + 1) / 4, bw = 34;
+    if (S.B != null) s += `<rect class="bb" x="${cx - bw - 2}" y="${Y(S.B)}" width="${bw}" height="${base - Y(S.B)}" rx="4"/><text class="num lbl" x="${cx - bw / 2 - 2}" y="${Y(S.B) - 6}" text-anchor="middle">${fN(S.B)}</text>`;
+    if (S.A != null) s += `<rect x="${cx + 2}" y="${Y(S.A)}" width="${bw}" height="${base - Y(S.A)}" rx="4" fill="${COLOR[d]}"/><text class="num lbl" x="${cx + bw / 2 + 2}" y="${Y(S.A) - 6}" text-anchor="middle">${fN(S.A)}</text>`;
+    s += `<text x="${cx}" y="${base + 18}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${esc(d.length > 22 ? d.slice(0, 21) + '…' : d)}</text><text x="${cx}" y="${base + 34}" text-anchor="middle">${role}</text>`;
+  });
+  s += `<line class="base" x1="44" x2="${W - 8}" y1="${base}" y2="${base}"/>`;
+  $('cmpChart').innerHTML = `<svg class="chart" width="${W}" height="${base + 42}" viewBox="0 0 ${W} ${base + 42}" style="margin:8px auto 0" role="img" aria-label="Средний улов до и после: ${esc(cmpA)} и ${esc(cmpB)}">${s}</svg>`;
+  $('cmpLegend').innerHTML = `<span><span class="sw before"></span>до обработки (средний улов)</span><span>${swatch(cmpA)}${swatch(cmpB)}после обработки</span>`;
+  const diff = (a, b, unit, better) => {
+    if (a == null || b == null) return '';
+    const d = b - a; if (Math.abs(d) < 0.5) return '<span class="delta zero">≈</span>';
+    const good = better === 'lower' ? d < 0 : d > 0;
+    return `<span class="delta ${good ? 'down' : 'up'}">${d > 0 ? '+' : '−'}${fN(Math.abs(d))}${unit}</span>`;
+  };
+  const dur = S => S.dur == null ? '—' : (S.durOpen ? '≥ ' : '') + days(Math.round(S.dur));
+  const per = S => S.first ? `${fD(S.first)}${S.last !== S.first ? ' – ' + fD(S.last) : ''}` : '—';
+  const rows = [
+    ['Период применения', per(A), per(B), ''],
+    ['Обработок', A.treatments, B.treatments, ''],
+    ['из них повторных', A.repeats, B.repeats, ''],
+    ['Птичников', A.houses, B.houses, ''],
+    ['Концентрация', esc(A.concs.join('; ') || 'не указана'), esc(B.concs.join('; ') || 'не указана'), ''],
+    ['Численность до обработки', fN(A.B), fN(B.B), A.B == null || B.B == null ? '' : `<span class="delta zero">${B.B - A.B > 0 ? '+' : B.B - A.B < 0 ? '−' : ''}${fN(Math.abs(B.B - A.B))}</span>`],
+    ['Численность после обработки', fN(A.A), fN(B.A), diff(A.A, B.A, '', 'lower')],
+    ['Снижение / рост, особей', A.B == null || A.A == null ? '—' : (A.A - A.B > 0 ? '+' : A.A - A.B < 0 ? '−' : '') + fN(Math.abs(A.A - A.B)), B.B == null || B.A == null ? '—' : (B.A - B.B > 0 ? '+' : B.A - B.B < 0 ? '−' : '') + fN(Math.abs(B.A - B.B)), ''],
+    ['Изменение, %', deltaHtml(A.pct), deltaHtml(B.pct), A.pct != null && B.pct != null ? diff(A.pct, B.pct, ' п.п.', 'lower') : ''],
+    ['Медиана по обработкам', deltaHtml(A.medPct), deltaHtml(B.medPct), ''],
+    ['Снижение было', A.valid ? `${A.down} из ${A.valid}` : '—', B.valid ? `${B.down} из ${B.valid}` : '—', ''],
+    ['Продолжительность эффекта', dur(A), dur(B), A.dur != null && B.dur != null ? diff(A.dur, B.dur, ' дн.', 'higher') : '']
+  ];
+  $('cmpTable').innerHTML = `<thead><tr><th></th><th>${dname(cmpA)}<span class="sub">предыдущий</span></th><th>${dname(cmpB)}<span class="sub">текущий</span></th><th>Разница</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td>${r[0]}</td><td class="v">${r[1]}</td><td class="v">${r[2]}</td><td class="v">${r[3]}</td></tr>`).join('') + '</tbody>';
+  let v = '';
+  if (A.pct != null && B.pct != null){
+    const w = x => x < -0.5 ? `снизил численность на ${fN(-x)}%` : x > 0.5 ? `не остановил рост (+${fN(x)}%)` : 'не изменил численность';
+    const better = B.pct < A.pct - 0.5 ? `<b>${esc(cmpB)}</b> работает лучше на ${fN(A.pct - B.pct)} п.п.` : B.pct > A.pct + 0.5 ? `<b>${esc(cmpA)}</b> работал лучше на ${fN(B.pct - A.pct)} п.п.` : 'Разницы почти нет.';
+    v = `Текущий <b>${esc(cmpB)}</b> ${w(B.pct)}, предыдущий <b>${esc(cmpA)}</b> ${w(A.pct)}. ${better}` +
+      (A.valid < 3 || B.valid < 3 ? ' <span class="note">Обработок с результатом мало — вывод предварительный.</span>' : '');
+  } else v = '<span class="note">Для сравнения нужен учёт до и после обработки хотя бы у одной обработки каждого препарата (без фонового улова).</span>';
+  $('verdict').innerHTML = v;
+  renderEvTable($('cmpEvents'), [...EB, ...EA].sort((a, b) => String(b.date).localeCompare(String(a.date))));
+}
+
+/* ===== все обработки ===== */
+function renderEvTable(el, list){
+  el.innerHTML = `<thead><tr><th>Дата</th><th>Птичник</th><th class="r">Тур</th><th>Препарат</th><th>Концентрация</th><th>Метод</th><th class="r">Кол-во</th><th class="r">До</th><th class="r">После</th><th class="r">Изменение</th><th class="r">Эффект</th></tr></thead><tbody>` +
+    (list.length ? list.map(e => `<tr data-ev="${esc(e.id)}"${e.bg ? ' class="bg"' : ''}><td class="n">${fD(e.date)}</td><td>${esc(e.house)}</td><td class="n r">${e.tour ?? '—'}</td><td>${dname(e.drug)}${e.repeat ? '<span class="sub">повторно</span>' : ''}</td>` +
+      `<td>${esc(e.conc || '—')}</td><td><span class="sub" style="color:inherit">${esc(e.method || '—')}</span></td><td class="n r">${e.count || 1}</td><td class="n r">${fN(e.B)}</td><td class="n r">${e.A == null ? '<span class="note">ждём</span>' : fN(e.A)}</td>` +
+      `<td class="r">${e.B != null && e.A != null ? (e.bg ? '<span class="delta zero" title="фоновый улов до обработки">фон</span>' : deltaHtml(e.pct)) : ''}</td>` +
+      `<td class="n r">${e.dur == null ? '—' : e.dur === 0 ? 'нет' : (e.durOpen ? '≥ ' : '') + days(e.dur)}</td></tr>`).join('')
+      : '<tr><td colspan="11" class="note">Обработок нет</td></tr>') + '</tbody>';
+}
+function renderEv(){
+  const evs = scopeEvents();
+  const present = M.drugs.filter(d => evs.some(e => e.drug === d));
+  if (evDrug && !present.includes(evDrug)) evDrug = '';
+  $('evDrugs').innerHTML = `<button type="button" data-evd="" aria-pressed="${!evDrug}">Все препараты</button>` + present.map(d => `<button type="button" data-evd="${esc(d)}" aria-pressed="${d === evDrug}">${swatch(d)}${esc(d)}</button>`).join('');
+  const list = evs.filter(e => !evDrug || e.drug === evDrug).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  $('evNote').textContent = `${scopeName()} · ${list.length} ${plural(list.length, 'запись', 'записи', 'записей')}`;
+  renderEvTable($('evTable'), list);
+}
+
+/* карточка */
+function openEvents(title, evs, head){
+  $('sheetBox').innerHTML = `<div class="head"><h2>${esc(title)}</h2><button type="button" class="x" id="closeSheet" aria-label="Закрыть">×</button></div>${head || ''}` +
+    `<div class="evs" style="margin-top:10px">${[...evs].sort((a, b) => String(a.date).localeCompare(String(b.date))).map(evLine).join('') || '<span class="note">Обработок нет</span>'}</div>`;
+  $('sheet').hidden = false;
+}
+function openEvent(id){
+  const e = M.events.find(x => x.id === id); if (!e) return;
+  const H = M.houses[e.key];
+  const hist = H.rows.map(r => `<li class="e"><b>Тур ${r.tour ?? '—'}</b><span class="m">${fD(r.set || r.date)}</span><span class="n">улов ${r.catch == null ? '—' : fN(r.catch)}</span>${r.drug ? dname(r.drug) : '<span class="m">препарат не указан</span>'}</li>`).join('');
+  $('sheetBox').innerHTML = `<div class="head"><h2>${esc(e.house)} · ${esc(e.drug)}</h2><button type="button" class="x" id="closeSheet" aria-label="Закрыть">×</button></div>
+    <dl class="kv"><dt>Дата применения</dt><dd>${fD(e.date)}</dd><dt>Препарат</dt><dd>${dname(e.drug)}${e.drugRaw && e.drugRaw !== e.drug ? ` <span class="note">(в журнале: ${esc(e.drugRaw)})</span>` : ''}</dd>
+    <dt>Концентрация</dt><dd>${esc(e.conc || 'не указана')}</dd><dt>Метод</dt><dd>${esc(e.method || '—')}</dd><dt>Объект</dt><dd>${esc(e.area)}</dd><dt>Обработок</dt><dd>${e.count || 1}${e.repeat ? ' · повторно тем же препаратом' : ''}</dd>
+    <dt>До обработки</dt><dd>${fN(e.B)}${e.before ? ` <span class="note">тур ${e.before.tour}, ${fD(e.before.set || e.before.date)}</span>` : ''}</dd>
+    <dt>После</dt><dd>${e.A == null ? 'учёта ещё нет' : fN(e.A)}${e.after ? ` <span class="note">тур ${e.after.tour}, ${fD(e.after.set || e.after.date)}</span>` : ''}</dd>
+    <dt>Изменение</dt><dd>${e.B != null && e.A != null ? (e.A - e.B > 0 ? '+' : e.A - e.B < 0 ? '−' : '') + fN(Math.abs(e.A - e.B)) + ' · ' + deltaHtml(e.pct, e.bg) + (e.bg ? ' <span class="note">от фонового улова</span>' : '') : '—'}</dd>
+    <dt>Эффект держался</dt><dd>${e.dur == null ? '—' : e.dur === 0 ? 'эффекта нет' : (e.durOpen ? '≥ ' : '') + days(e.dur) + (e.durOpen ? ' (улов ещё не вернулся к уровню «до»)' : '')}</dd></dl>
+    <h3 style="font:600 14px var(--f-body);margin-top:12px">История птичника</h3><ul class="evs" style="list-style:none;padding:0;margin:6px 0 0">${hist}</ul>`;
+  $('sheet').hidden = false;
+}
+
+/* ===== журнал и настройки ===== */
+function renderFiles(){
+  $('uplNote').innerHTML = BOOK ? `Загружен: <b>${esc(BOOK.file)}</b> (лист «${esc(BOOK.sheet)}», ${BOOK.rows.length} строк), ${new Date(BOOK.loadedAt).toLocaleString('ru-RU')}.` : '';
+  const w = BOOK ? BOOK.warnings || [] : [];
+  $('warnings').innerHTML = w.length ? `<div class="warnbox">Проверьте журнал — ${w.length} ${plural(w.length, 'замечание', 'замечания', 'замечаний')}:<ul>${w.slice(0, 12).map(x => `<li>${esc(x)}</li>`).join('')}${w.length > 12 ? `<li>и ещё ${w.length - 12}</li>` : ''}</ul></div>` : '';
+  if (!M){ $('concList').innerHTML = '<span class="note">Появится после загрузки журнала.</span>'; return; }
+  $('concList').innerHTML = M.drugs.map(d => {
+    const k = CH.norm(d), fromBook = (BOOK.concRef || {})[k];
+    return `<label for="c-${esc(k)}">${dname(d)}</label><span><input id="c-${esc(k)}" data-conc="${esc(k)}" value="${esc(CONC[k] || '')}" placeholder="${esc(fromBook || 'например 0,5 % · 200 мл/м²')}">${fromBook ? `<span class="from">из справочника: ${esc(fromBook)}</span>` : ''}</span>`;
+  }).join('');
+}
+async function handleFile(file, quiet){
+  if (typeof XLSX === 'undefined'){ toast('Не загрузилась библиотека чтения Excel'); return false; }
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), {type: 'array', cellDates: false});
+    const b = CH.readBook(XLSX, wb);
+    if (!b.rows.length){ if (!quiet) $('uplNote').textContent = `В файле «${file.name}» не найден журнал: ${b.warnings.join(' ')}`; return false; }
+    BOOK = Object.assign(b, {file: file.name, loadedAt: new Date().toISOString()});
+    if (!LS.set('ch:book', BOOK)) toast('Не хватило памяти устройства, чтобы сохранить журнал');
+    if (window.desktop) window.desktop.saveData(JSON.stringify(BOOK)).catch(() => {});
+    rebuild();
+    if (!quiet){ toast('Журнал загружен'); setView('dyn'); }
+    return true;
+  }catch(e){ if (!quiet) $('uplNote').textContent = `Не удалось прочитать «${file.name}».`; return false; }
+}
+
+function setView(v){ view = v; LS.set('ch:view', v); render(); window.scrollTo(0, 0); }
+document.addEventListener('click', e => {
+  const v = e.target.closest('[data-view]'); if (v){ setView(v.dataset.view); return; }
+  const sb = e.target.closest('#segBy button'); if (sb){ by = sb.dataset.v; LS.set('ch:by', by); renderDyn(); return; }
+  const sc = e.target.closest('#segScale button'); if (sc){ scale = sc.dataset.v; LS.set('ch:scale', scale); renderDyn(); return; }
+  const sm = e.target.closest('#segMode button'); if (sm){ settings.mode = sm.dataset.v; LS.set('ch:settings', settings); rebuild(); return; }
+  const ds = e.target.closest('[data-dsort]'); if (ds){ drugSort = ds.dataset.dsort; LS.set('ch:drugSort', drugSort); renderDrugs(); return; }
+  const dr = e.target.closest('tr[data-drug]');
+  if (dr){ const d = dr.dataset.drug; if (d !== cmpB){ cmpA = cmpB; cmpB = d; } setView('cmp'); return; }
+  const ed = e.target.closest('[data-evd]'); if (ed){ evDrug = ed.dataset.evd; renderEv(); return; }
+  const ev = e.target.closest('tr[data-ev]'); if (ev){ openEvent(ev.dataset.ev); return; }
+  if (e.target.id === 'cmpSwap'){ [cmpA, cmpB] = [cmpB, cmpA]; renderCmp(); return; }
+  if (e.target.id === 'closeSheet' || e.target.id === 'sheet') $('sheet').hidden = true;
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('sheet').hidden = true; });
+$('fSite').addEventListener('change', () => { fSite = $('fSite').value; if (fHouse && M.houses[fHouse] && fSite && M.houses[fHouse].site !== fSite) fHouse = ''; LS.set('ch:site', fSite); LS.set('ch:house', fHouse); render(); });
+$('fHouse').addEventListener('change', () => { fHouse = $('fHouse').value; if (fHouse){ fSite = M.houses[fHouse].site; if (by !== 'tour'){ by = 'tour'; LS.set('ch:by', by); } } LS.set('ch:site', fSite); LS.set('ch:house', fHouse); render(); });
+$('cmpA').addEventListener('change', () => { cmpA = $('cmpA').value; renderCmp(); });
+$('cmpB').addEventListener('change', () => { cmpB = $('cmpB').value; renderCmp(); });
+$('bg').addEventListener('change', () => { const v = Math.max(0, Math.round(+$('bg').value || 0)); settings.bg = v; LS.set('ch:settings', settings); rebuild(); });
+$('concList').addEventListener('change', e => {
+  const k = e.target.dataset.conc; if (!k) return;
+  const v = e.target.value.trim(); if (v) CONC[k] = v; else delete CONC[k];
+  LS.set('ch:conc', CONC); rebuild(); toast('Концентрация сохранена');
+});
+$('file').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); e.target.value = ''; });
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (M && view === 'dyn') drawDyn(); }, 150); });
+
+rebuild();
+/* ПК: сохранённый журнал с диска и самый свежий файл из папки */
+async function loadFolder(quiet){
+  if (!window.desktop) return;
+  try{
+    const list = await window.desktop.listGraphs();
+    const f = list[list.length - 1];
+    if (f){ const ok = await handleFile(new File([f.data], f.name), true); if (!quiet) toast(ok ? 'Журнал из папки обновлён' : 'Не удалось прочитать журнал из папки'); }
+    else if (!quiet) toast('В папке пока нет файлов Excel');
+  }catch(e){ if (!quiet) toast('Не удалось прочитать папку'); }
+}
+(async () => {
+  try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+  if (!window.desktop) return;
+  try{ const saved = await window.desktop.loadData(); if (saved && !BOOK){ BOOK = JSON.parse(saved); LS.set('ch:book', BOOK); rebuild(); } }catch(e){}
+  $('folderBox').hidden = false;
+  try{ $('folderPath').textContent = await window.desktop.folder(); }catch(e){}
+  $('openFolder').addEventListener('click', () => window.desktop.openFolder());
+  $('reloadFolder').addEventListener('click', () => loadFolder(false));
+  window.desktop.onGraphsChanged(() => loadFolder(false));
+  await loadFolder(true);
+})();
+</script>

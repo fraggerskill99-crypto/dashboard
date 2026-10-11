@@ -1,0 +1,16 @@
+{
+  "name": "chernotelka",
+  "productName": "Мониторинг чернотелки",
+  "version": "1.0.0",
+  "description": "Динамика численности жука-чернотелки и эффективность препаратов из журнала мониторинга Excel",
+  "author": "UKPF",
+  "main": "main.js",
+  "build": {
+    "appId": "kz.ukpf.chernotelka",
+    "productName": "Мониторинг чернотелки",
+    "files": ["main.js", "preload.js", "www/**/*"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }], "icon": "www/icon-512.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "Мониторинг чернотелки", "artifactName": "chernotelka-setup.exe" },
+    "portable": { "artifactName": "chernotelka-portable.exe" }
+  }
+}

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- «Мониторинг чернотелки»: жук-чернотелка и линия спада численности; цвета aitas ukpf -->
+  <defs>
+    <radialGradient id="chbg" cx="50%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#efe7d0"/><stop offset="1" stop-color="#ddd1b0"/>
+    </radialGradient>
+    <linearGradient id="chshell" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4a4038"/><stop offset="1" stop-color="#1c1814"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#chbg)"/>
+  <!-- спад численности -->
+  <path d="M70 150 L150 170 L215 250 L300 280 L360 360 L440 385" fill="none" stroke="#0f6b5c" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+  <path d="M440 385 l-46 -6 m46 6 l-14 -44" fill="none" stroke="#0f6b5c" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+  <!-- жук -->
+  <g transform="translate(240 236) rotate(-28)" stroke="#1c1814" stroke-width="12" stroke-linecap="round" fill="none">
+    <path d="M-38 -40 l-46 -28 M-42 0 l-58 0 M-36 40 l-46 34 M38 -40 l46 -28 M42 0 l58 0 M36 40 l46 34"/>
+    <path d="M-14 -96 q-12 -26 -34 -32 M14 -96 q12 -26 34 -32"/>
+  </g>
+  <g transform="translate(240 236) rotate(-28)">
+    <ellipse cx="0" cy="-86" rx="26" ry="18" fill="#2a241f"/>
+    <path d="M-40 -70 Q0 -84 40 -70 L44 -48 Q0 -38 -44 -48 Z" fill="#332b25"/>
+    <path d="M-50 -44 Q0 -56 50 -44 Q62 40 0 104 Q-62 40 -50 -44 Z" fill="url(#chshell)"/>
+    <path d="M0 -48 L0 100" stroke="#6b5f52" stroke-width="5"/>
+    <path d="M-24 -30 Q-30 30 -10 74 M24 -30 Q30 30 10 74" stroke="#5a4f44" stroke-width="4" fill="none" opacity=".7"/>
+    <ellipse cx="-22" cy="-20" rx="10" ry="22" fill="#fff" opacity=".12"/>
+  </g>
+</svg>
