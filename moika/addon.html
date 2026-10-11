@@ -1,0 +1,24 @@
+<!--MOIKA:IMPORT-->
+      <label class="upload-btn" style="background:#fff;color:var(--navy);border:1px solid var(--border)">
+        <span>&#8679; Данные из старого файла дашборда (.html)</span>
+        <input type="file" id="moikaImportInput" accept=".html,.htm,text/html" style="display:none">
+      </label>
+      <div class="upload-status" id="moikaImportStatus"></div>
+<!--MOIKA:EMPTY-->
+  <div class="card moika-empty" id="moikaEmpty" style="display:none">
+    <h2>Данных пока нет</h2>
+    <p class="note">Загрузите старый файл дашборда (.html) — из него перенесутся все акты с марта 2025, сверки ПР/Р и баллы Инкубатория и ЗПП. Или добавьте акты приёма мойки (.xlsx). Данные хранятся только на этом устройстве.</p>
+  </div>
+<!--MOIKA:MONTH-->
+    <div class="card" id="moikaMonthCard">
+      <h2>Средний балл за месяц</h2>
+      <p class="note">Считается автоматически по всем оценкам месяца: Выращивание — среднее по корпусам из актов приёма мойки (норма 8), Инкубаторий — по дневным баллам (норма 8), ЗПП — по дневным баллам по шкале 0–5 (коридор 3–5). Текущий месяц ещё не закончен — его балл меняется с каждой новой оценкой.</p>
+      <div class="kpi-row" id="moikaMonthKpis"></div>
+      <div class="scroll-area"><div id="moikaMonthTable"></div></div>
+      <h3>Выращивание по зонам — последние 12 месяцев</h3>
+      <div class="scroll-area"><div id="moikaZoneMonthTable"></div></div>
+      <div class="action-bar" style="margin-top:10px">
+        <button id="moikaMonthCsv" class="chip" style="cursor:pointer">&#8681; Таблица в Excel (CSV)</button>
+        <button id="moikaClearBtn" class="chip" style="cursor:pointer;margin-left:auto;color:var(--red)">Очистить данные</button>
+      </div>
+    </div>

@@ -1,0 +1,16 @@
+{
+  "name": "moika",
+  "productName": "Качество мойки",
+  "version": "1.0.0",
+  "description": "Дашборд качества мойки УКПФ: средний балл по месяцам, зонам и турам",
+  "author": "UKPF",
+  "main": "main.js",
+  "build": {
+    "appId": "kz.ukpf.moika",
+    "productName": "Качество мойки",
+    "files": ["main.js", "www/**/*"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }], "icon": "www/icon-512.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "Качество мойки", "artifactName": "moika-setup.exe" },
+    "portable": { "artifactName": "moika-portable.exe" }
+  }
+}

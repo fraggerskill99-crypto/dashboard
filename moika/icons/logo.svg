@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- «Качество мойки»: капля воды с галочкой и звёздочкой-баллом; цвета дашборда -->
+  <defs>
+    <linearGradient id="mbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E5395"/><stop offset="1" stop-color="#1F3864"/></linearGradient>
+    <linearGradient id="mdrop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7DD3FC"/><stop offset="1" stop-color="#0891B2"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#mbg)"/>
+  <path d="M256 72 C 300 150 380 230 380 310 A 124 124 0 0 1 132 310 C 132 230 212 150 256 72 Z" fill="url(#mdrop)"/>
+  <path d="M190 312 L 238 360 L 328 262" fill="none" stroke="#ffffff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="206" cy="232" rx="20" ry="38" transform="rotate(25 206 232)" fill="#ffffff" opacity=".35"/>
+</svg>
