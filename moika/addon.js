@@ -138,3 +138,134 @@ TAB_RENDERERS.overview = () => { renderMoikaMonthly(); _moikaOverview(); };
 moikaUploadStatus();
 const _moikaShowTab = showTab;
 showTab = function (tab) { _moikaShowTab(tab); if (tab === 'overview') renderMoikaMonthly(); };
+
+/* ===== Автообновление: акты и фото/видео подтягиваются сами, без кнопки «обновить» =====
+   Программа для Windows — папка «Документы\Качество мойки» (следит за изменениями).
+   Chrome/Edge на ПК — привязанные файлы и папка с фото/видео проверяются каждые 30 секунд. */
+const MOIKA_SEEN = {};        // файл → время изменения, которое уже прочитано
+const MOIKA_APPLY = { akt: applyAktBuffer, incub: applyIncubBuffer, zpp: applyZppBuffer, schedule: applyScheduleBuffer };
+const MOIKA_KIND_NAME = { akt: 'акт', incub: 'акт Инкубатория', zpp: 'акт ЗПП', schedule: 'график ПР/Р' };
+let moikaMediaSig = '';
+
+function moikaSyncNote(text) {
+  const el = document.getElementById('moikaSync');
+  if (el) el.innerHTML = text;
+}
+function moikaToast(text) {
+  let el = document.getElementById('moikaToast');
+  if (!el) { el = document.createElement('div'); el.id = 'moikaToast'; el.className = 'moika-toast'; document.body.appendChild(el); }
+  el.textContent = text; el.style.display = 'block';
+  clearTimeout(moikaToast._t); moikaToast._t = setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+const moikaTime = () => new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+// подписи к фото из прежнего дашборда переносятся на файлы из папки
+function moikaWithCaptions(index) {
+  const out = {};
+  Object.keys(index).forEach((key) => {
+    const old = MEDIA_MANIFEST[key] || [];
+    const capOf = {};
+    old.forEach((e) => (e.files || []).forEach((f) => { if (e.caption) capOf[f.filename] = e.caption; }));
+    out[key] = index[key].map((e) => Object.assign({}, e, { caption: e.caption || (e.files.map((f) => capOf[f.filename]).find(Boolean) || '') }));
+  });
+  return out;
+}
+const _moikaScan = scanMediaFolder;
+scanMediaFolder = async (h) => moikaWithCaptions(await _moikaScan(h));
+
+function moikaSetMedia(index) {
+  const sig = Object.keys(index).sort().map((k) => k + ':' + index[k].reduce((a, e) => a + e.files.length, 0)).join(',');
+  if (sig === moikaMediaSig) return false;
+  const first = !moikaMediaSig;
+  moikaMediaSig = sig;
+  DYNAMIC_MEDIA_INDEX = index;
+  if (dirtyTabs) dirtyTabs.add('checklist');
+  if (activeTab === 'checklist') { renderChecklistTab(); dirtyTabs.delete('checklist'); }
+  return !first;
+}
+
+// фото/видео из папки программы открываются напрямую по ссылке на файл
+const _moikaOpenMedia = openMediaViewer;
+openMediaViewer = async function (date, corpus) {
+  const entries = DYNAMIC_MEDIA_INDEX[mediaKey(date, corpus)];
+  if (!entries || !entries.some((e) => e.files.some((f) => f.url))) return _moikaOpenMedia(date, corpus);
+  const modal = document.getElementById('mediaModal'), bodyEl = document.getElementById('mediaModalBody');
+  document.getElementById('mediaModalTitle').textContent = corpus + ' — ' + fmtDate(date);
+  bodyEl.innerHTML = '';
+  modal.style.display = 'flex';
+  entries.forEach((entry) => {
+    const wrap = document.createElement('div'); wrap.className = 'media-item';
+    entry.files.forEach((f) => {
+      const el = document.createElement(f.kind === 'video' ? 'video' : 'img');
+      el.src = f.url; if (f.kind === 'video') el.controls = true;
+      wrap.appendChild(el);
+    });
+    if (entry.caption) { const c = document.createElement('div'); c.className = 'media-item-caption'; c.textContent = entry.caption; wrap.appendChild(c); }
+    bodyEl.appendChild(wrap);
+  });
+};
+
+// --- программа для Windows: папка «Документы\Качество мойки» ---
+async function moikaDesktopSync(kinds) {
+  const all = !kinds || !kinds.length, changed = [];
+  for (const k of ['akt', 'incub', 'zpp', 'schedule']) {
+    if (!all && !kinds.includes(k)) continue;
+    let list = [];
+    try { list = await window.desktop.readXlsx(k); } catch (e) { continue; }
+    for (const f of list) {
+      const id = k + '/' + f.name;
+      if (MOIKA_SEEN[id] === f.mtime) continue;
+      try {
+        const u8 = f.data;
+        await MOIKA_APPLY[k](u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength), f.name);
+        MOIKA_SEEN[id] = f.mtime; changed.push(MOIKA_KIND_NAME[k] + ' «' + f.name + '»');
+      } catch (e) { MOIKA_SEEN[id] = f.mtime; }
+    }
+  }
+  let mediaNew = false;
+  if (all || kinds.includes('media')) { try { mediaNew = moikaSetMedia(await window.desktop.mediaIndex()); } catch (e) {} }
+  const nMedia = Object.keys(DYNAMIC_MEDIA_INDEX).length;
+  moikaSyncNote(`&#10227; Автообновление из папки · проверено в ${moikaTime()} · фото/видео: ${nMedia} записей`);
+  if (!all && (changed.length || mediaNew)) moikaToast('Обновлено: ' + changed.concat(mediaNew ? ['фото/видео'] : []).join(', '));
+}
+async function moikaDesktopSetup() {
+  const box = document.getElementById('moikaFolderBox');
+  box.style.display = 'flex';
+  try { const p = await window.desktop.paths(); document.getElementById('moikaFolderPath').textContent = p.root; } catch (e) {}
+  box.addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) window.desktop.openFolder(b.dataset.open || ''); });
+  // в программе привязка папки через Chrome не нужна — всё берётся из папки программы
+  ['pinMediaBtn', 'unpinMediaBtn'].forEach((id) => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  const ms = document.getElementById('mediaUploadStatus');
+  if (ms) ms.textContent = 'Фото и видео берутся из папки «Документы\\Качество мойки\\Фото и видео\\ГГГГ-ММ-ДД\\Корпус».';
+  await moikaDesktopSync(null);
+  window.desktop.onChanged((kinds) => moikaDesktopSync(kinds));
+}
+
+// --- Chrome/Edge на ПК: привязанные файлы и папка ---
+async function moikaPollPinned(silent) {
+  const changed = [];
+  const check = async (kind, h) => {
+    try {
+      if (!(await ensurePermission(h, false))) return;
+      const f = await h.getFile(), id = kind + '/' + f.name;
+      if (MOIKA_SEEN[id] === undefined) { MOIKA_SEEN[id] = f.lastModified; return; }   // первое чтение уже сделал дашборд
+      if (MOIKA_SEEN[id] === f.lastModified) return;
+      MOIKA_SEEN[id] = f.lastModified;
+      await MOIKA_APPLY[kind](await f.arrayBuffer(), f.name);
+      changed.push(MOIKA_KIND_NAME[kind] + ' «' + f.name + '»');
+    } catch (e) {}
+  };
+  try {
+    for (const h of (await loadHandle(AKT_MULTI_KEY)) || []) await check('akt', h);
+    for (const k of ['incub', 'zpp', 'schedule']) { const h = await loadHandle(k); if (h) await check(k, h); }
+  } catch (e) {}
+  let mediaNew = false;
+  if (MEDIA_DIR_HANDLE) { try { mediaNew = moikaSetMedia(await scanMediaFolder(MEDIA_DIR_HANDLE)); } catch (e) {} }
+  const pinned = (await loadHandle(AKT_MULTI_KEY).catch(() => null) || []).length || MEDIA_DIR_HANDLE;
+  moikaSyncNote(pinned ? `&#10227; Автообновление привязанных файлов · проверено в ${moikaTime()}` : '&#10227; Автообновление включится, когда привяжете акты или папку с фото/видео');
+  if (!silent && (changed.length || mediaNew)) moikaToast('Обновлено: ' + changed.concat(mediaNew ? ['фото/видео'] : []).join(', '));
+}
+
+if (window.desktop) moikaDesktopSetup();
+else if (FS_SUPPORTED) { setTimeout(() => moikaPollPinned(true), 4000); setInterval(() => moikaPollPinned(false), 30000); }
+else moikaSyncNote('На телефоне акты и фото добавляются вручную кнопками выше');

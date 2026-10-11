@@ -4,6 +4,13 @@
         <input type="file" id="moikaImportInput" accept=".html,.htm,text/html" style="display:none">
       </label>
       <div class="upload-status" id="moikaImportStatus"></div>
+      <div class="upload-status moika-sync" id="moikaSync"></div>
+      <div class="moika-folder" id="moikaFolderBox" style="display:none">
+        <b>Папка программы — всё подтягивается само</b>
+        <code id="moikaFolderPath"></code>
+        <span>Акты приёма мойки · Акт Инкубатория · Акт ЗПП · График ПР-Р · Фото и видео\ГГГГ-ММ-ДД\Корпус</span>
+        <button type="button" class="chip" data-open="">&#128193; Открыть папку</button>
+      </div>
 <!--MOIKA:EMPTY-->
   <div class="card moika-empty" id="moikaEmpty" style="display:none">
     <h2>Данных пока нет</h2>
