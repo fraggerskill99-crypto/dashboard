@@ -1,6 +1,53 @@
 {
- "updatedAt": "2026-10-11",
+ "updatedAt": "2026-10-12",
  "episodes": [
+  {
+   "id": "w-2026-10-08-hungary-nd-5th",
+   "scope": "world",
+   "topic": "nd",
+   "date": "2026-10-08",
+   "status": "confirmed",
+   "place": "Венгрия, Бач-Кишкун, Керекедьхаза",
+   "country": "Венгрия",
+   "birds": 15000,
+   "title": "Пятое стадо с болезнью Ньюкасла в Венгрии — 15 тыс. кур",
+   "summary": "По отчёту WOAH от 8 октября, болезнь Ньюкасла подтверждена в стаде 15 тыс. кур в Керекедьхазе. Это пятое поражённое стадо в Венгрии с 8 сентября, всего в них 261 912 птиц.",
+   "sources": [
+    {
+     "name": "wattagnet.com",
+     "url": "https://www.wattagnet.com/broilers-turkeys/diseases-health/news/15837010/newcastle-disease-strikes-again-in-hungary-spain",
+     "kind": "media"
+    }
+   ],
+   "addedBy": "claude",
+   "keyword": "Newcastle disease Hungary"
+  },
+  {
+   "id": "w-2026-10-08-washington-dairy",
+   "scope": "world",
+   "topic": "hpai",
+   "date": "2026-10-08",
+   "status": "confirmed",
+   "place": "США, штат Вашингтон, округ Якима, молочные фермы",
+   "country": "США",
+   "birds": null,
+   "title": "H5N1 впервые у молочных коров в штате Вашингтон",
+   "summary": "8 октября NVSL подтвердила H5 клады 2.3.4.4b в двух молочных стадах в округе Якима. Поводом для анализов стали клинические признаки; раньше эти стада проходили плановый надзор с отрицательным результатом. Генотип уточняется.",
+   "sources": [
+    {
+     "name": "APHIS USDA",
+     "url": "https://www.aphis.usda.gov/news/agency-announcements/usda-confirms-highly-pathogenic-avian-influenza-two-dairy-herds",
+     "kind": "official"
+    },
+    {
+     "name": "morningagclips.com",
+     "url": "https://www.morningagclips.com/washington-confirms-first-detection-of-avian-influenza-in-dairy-cattle/",
+     "kind": "media"
+    }
+   ],
+   "addedBy": "claude",
+   "keyword": "Washington dairy avian influenza"
+  },
   {
    "id": "w-2026-10-06-minnesota-stearns",
    "scope": "world",
