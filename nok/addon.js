@@ -20,7 +20,33 @@ function db(){
 async function kvGet(k){ try{ const d = await db(); return await new Promise(ok => { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => ok(undefined); }); }catch(e){ return undefined; } }
 async function kvSet(k, v){ try{ const d = await db(); await new Promise(ok => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = ok; t.onerror = ok; }); }catch(e){} }
 async function kvDel(k){ try{ const d = await db(); await new Promise(ok => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').delete(k); t.oncomplete = ok; t.onerror = ok; }); }catch(e){} }
-function save(){ return kvSet('data', {facilities: N.DATA.facilities, facilitiesRes: N.DATA.facilitiesRes, meta: N.DATA.meta, savedAt: Date.now()}); }
+const RULES = 2; // 2 — пробы «до мойки» не учитываются
+function save(){ return kvSet('data', {facilities: N.DATA.facilities, facilitiesRes: N.DATA.facilitiesRes, meta: N.DATA.meta, rules: RULES, forceReplace: !!window.NOK_FORCE_REPLACE, savedAt: Date.now()}); }
+/* Убирает из уже сохранённых недель обнаружения «до мойки» (NOK и их место в списке).
+   Пробы «до мойки» с результатом OK так не найти — они уйдут из «Всего», когда придёт новый Свод. */
+const BEFORE_RE = /до[\s_]*мойки/i;
+function stripBefore(map){
+  let removed = 0;
+  Object.values(map || {}).forEach(weeks => Object.values(weeks || {}).forEach(wk => {
+    const uniq = new Set();
+    Object.values(wk.categories || {}).forEach(c => {
+      (c.indicators || []).forEach(ind => {
+        const keep = ind.locations.filter(l => !BEFORE_RE.test(l));
+        const gone = ind.locations.length - keep.length;
+        if(!gone) return;
+        ind.locations.filter(l => BEFORE_RE.test(l)).forEach(l => uniq.add(ind.name + '|' + l));
+        ind.locations = keep; ind.count = keep.length;
+        c.nok -= gone; c.total -= gone;
+      });
+      c.indicators = (c.indicators || []).filter(ind => ind.count > 0);
+    });
+    if(!uniq.size) return;
+    removed += uniq.size;
+    wk.overall.nok -= uniq.size; wk.overall.total -= uniq.size;
+    if(wk.fromWeeks) uniq.forEach(k => { const m = k.match(/нед\. (\d+)\)/); const e = m && wk.fromWeeks[m[1]]; if(e){ e.nok--; e.total--; } });
+  }));
+  return removed;
+}
 
 /* ---------- сообщения ---------- */
 let toastT = null;
@@ -45,6 +71,7 @@ let busy = false, auto = false, pending = null;
 window.nokQuiet = (text, pct) => { if(!auto) return false; setSync(`Обрабатываю новый Свод: ${text} ${Math.round(pct || 0)}%`, 'busy'); return true; };
 window.nokOnDone = (res, file) => {
   const wasAuto = auto; busy = false; auto = false;
+  window.NOK_FORCE_REPLACE = false;
   save().then(() => { if(file && file.nokKey) kvSet('seen', file.nokKey); });
   SEEN = file && file.nokKey ? file.nokKey : SEEN;
   renderWeeks();
@@ -163,7 +190,9 @@ $('nokImportInput').onchange = async e => {
     const d = extractData(await f.text());
     if(!d.facilities) throw new Error('в файле нет недель');
     const before = countWeeks();
-    N.mergeIntoData(cleanWeeks(d.facilities), d.meta && d.meta.data_through, cleanWeeks(d.facilitiesRes));
+    const fac = cleanWeeks(d.facilities), res = cleanWeeks(d.facilitiesRes);
+    stripBefore(fac); stripBefore(res);
+    N.mergeIntoData(fac, d.meta && d.meta.data_through, res);
     await save(); N.refresh(true); renderWeeks();
     toast(`Перенесено из «${f.name}»: добавлено недель — ${countWeeks() - before}. Всё сохранено.`);
   }catch(err){ alert('Не удалось перенести недели: ' + err.message); }
@@ -178,11 +207,21 @@ $('nokBackupBtn').onclick = () => {
 /* ---------- запуск ---------- */
 (async () => {
   const saved = await kvGet('data');
+  let oldRules = false;
   if(saved && saved.facilities){
+    if(saved.forceReplace) { window.NOK_FORCE_REPLACE = true; oldRules = true; }
+    if((saved.rules || 1) < RULES){
+      // правила изменились: чистим сохранённое и при следующем Своде недели заменяются целиком
+      oldRules = true;
+      const n = stripBefore(saved.facilities) + stripBefore(saved.facilitiesRes);
+      window.NOK_FORCE_REPLACE = true;
+      if(n) setTimeout(() => toast(`Убраны обнаружения «до мойки»: ${n}. Новый Свод пересчитает недели полностью.`), 800);
+    }
     N.mergeIntoData(saved.facilities, saved.meta && saved.meta.data_through, saved.facilitiesRes);
     N.refresh(false);
+    if(oldRules) save();
   }
-  SEEN = await kvGet('seen') || null;
+  SEEN = oldRules ? null : (await kvGet('seen') || null);
   renderWeeks();
   if(window.desktop) desktopSetup();
   else if(window.showDirectoryPicker && !/Android|iPhone|iPad/i.test(navigator.userAgent)) browserSetup();
