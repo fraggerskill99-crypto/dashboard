@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOK-дашборд</title>
+<style>
+  :root{
+    --navy:#1a1f2e;
+    --navy-2:#242b3d;
+    --line:#e2e5eb;
+    --ok-bg:#dcfce7; --ok-text:#166534;
+    --nok-bg:#fee2e2; --nok-text:#991b1b;
+    --pending-bg:#fef3c7; --pending-text:#92400e;
+    --muted:#6b7280;
+    --paper:#f7f8fa;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    background:var(--paper); color:#1f2430;
+  }
+  header{
+    background:linear-gradient(135deg, var(--navy), var(--navy-2));
+    color:#fff; padding:22px 28px 20px;
+  }
+  header h1{margin:0 0 4px; font-size:21px; font-weight:700; letter-spacing:.2px;}
+  header .sub{font-size:13px; color:#aab2c5;}
+  header .author{font-size:12px; color:#7d859c; margin-top:6px;}
+  .wrap{max-width:1280px; margin:0 auto; padding:0 20px 40px;}
+  .controls{
+    display:flex; flex-wrap:wrap; gap:14px; align-items:center;
+    background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:14px 18px; margin:-18px auto 18px; max-width:1280px;
+    box-shadow:0 2px 10px rgba(20,25,40,.06);
+  }
+  .seg{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden;}
+  .seg button{
+    border:none; background:#fff; padding:8px 18px; font-size:14px; font-weight:600;
+    cursor:pointer; color:#42485a; transition:.15s;
+  }
+  .seg button.active{background:var(--navy); color:#fff;}
+  .seg button:not(:last-child){border-right:1px solid var(--line);}
+  select{
+    padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px;
+    background:#fff; color:#1f2430; min-width:260px;
+  }
+  .toggle-line{
+    display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:#33394a;
+    cursor:pointer; user-select:none;
+  }
+  .toggle-line input{width:16px; height:16px; accent-color:var(--navy); cursor:pointer;}
+  .spacer{flex:1;}
+  .btn{
+    padding:9px 16px; border-radius:8px; border:1px solid var(--line); background:#fff;
+    font-size:13.5px; font-weight:600; cursor:pointer; color:#33394a; display:flex; gap:7px; align-items:center;
+  }
+  .btn:hover{border-color:#c7cbd6;}
+  .btn.primary{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .btn.primary:hover{background:var(--navy-2);}
+  #fileInput{display:none;}
+  .meta-line{font-size:12.5px; color:var(--muted); margin:2px 20px 14px;}
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px;}
+  .stat{
+    background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px;
+  }
+  .stat .num{font-size:24px; font-weight:800; line-height:1.1;}
+  .stat .lbl{font-size:12px; color:var(--muted); margin-top:4px;}
+  .stat.nokstat .num{color:var(--nok-text);}
+  .stat.okstat .num{color:var(--ok-text);}
+  table.dash{
+    width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden;
+    box-shadow:0 2px 10px rgba(20,25,40,.06); border:1px solid var(--line);
+  }
+  table.dash thead th{
+    background:var(--navy); color:#fff; text-align:left; font-size:12.5px;
+    text-transform:uppercase; letter-spacing:.04em; padding:10px 12px; font-weight:700;
+  }
+  table.dash th.num, table.dash td.num{text-align:center; width:70px;}
+  table.dash tbody td{
+    padding:10px 12px; border-top:1px solid var(--line); font-size:13.5px; vertical-align:top;
+  }
+  table.dash tbody tr:hover{background:#fafbfd;}
+  td.catname{font-weight:700; color:#1f2430; white-space:nowrap;}
+  td.total{color:#42485a; font-weight:600;}
+  td.ok-cell{background:var(--ok-bg); color:var(--ok-text); font-weight:700;}
+  td.nok-cell{font-weight:800;}
+  td.nok-cell.has-nok{background:var(--nok-bg); color:var(--nok-text);}
+  td.nok-cell.zero-nok{background:var(--ok-bg); color:var(--ok-text);}
+  .pending-tag{display:block; font-size:10.5px; font-weight:600; color:var(--pending-text); margin-top:2px;}
+  .pct-tag{display:block; font-size:10.5px; font-weight:600; opacity:.75; margin-top:1px;}
+  .indicator-block{margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--line);}
+  .indicator-block:last-child{margin-bottom:0; padding-bottom:0; border-bottom:none;}
+  .indicator-head{display:flex; align-items:center; gap:8px; margin-bottom:4px;}
+  .indicator-count{font-size:12px; color:var(--muted); font-weight:700;}
+  .chip{
+    display:inline-block; padding:1px 8px; border-radius:20px; font-size:11.5px; font-weight:700;
+    color:#fff; margin-right:6px;
+  }
+  .loc-list{margin:4px 0 0; padding-left:16px; font-size:12.5px; color:#4b5163; line-height:1.5;}
+  .loc-list li{margin-bottom:1px;}
+  .clean-msg{color:var(--ok-text); font-size:13px; font-weight:600;}
+  .empty-row td{color:var(--muted); font-style:italic; text-align:center; padding:26px;}
+  details.legend{margin-top:18px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 16px;}
+  details.legend summary{cursor:pointer; font-size:13px; font-weight:700; color:#33394a;}
+  details.legend .legend-body{font-size:12.5px; color:#525a6e; margin-top:10px; line-height:1.6;}
+  details.legend code{background:#f1f2f5; padding:1px 5px; border-radius:4px;}
+  #loadingOverlay{
+    position:fixed; inset:0; background:rgba(26,31,46,.6); display:none;
+    align-items:center; justify-content:center; z-index:50;
+  }
+  #loadingOverlay.show{display:flex;}
+  .loading-card{
+    background:#fff; border-radius:14px; padding:28px 32px; min-width:340px; text-align:center;
+    box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .loading-card .spin-row{display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;}
+  .spinner{width:18px; height:18px; border:2.5px solid #dfe2ea; border-top-color:var(--navy); border-radius:50%; animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loadingText{font-size:14.5px; font-weight:700; color:#1f2430;}
+  .progress-track{width:100%; height:8px; background:#e9ebf1; border-radius:20px; overflow:hidden;}
+  .progress-fill{height:100%; width:0%; background:linear-gradient(90deg, var(--navy), #4a5578); border-radius:20px; transition:width .25s ease;}
+  #loadingPct{font-size:12px; color:var(--muted); margin-top:8px; font-weight:600;}
+  @media (max-width:760px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .controls{flex-direction:column; align-items:stretch;}
+    select{min-width:0; width:100%;}
+    table.dash{font-size:12px;}
+  }
+  @media print{
+    /* Controls, the upload/loading UI, and the collapsed methodology note
+       don't mean anything on paper -- the facility/week/date-through line
+       right below them already repeats the same context as plain text. */
+    .controls, #loadingOverlay, details.legend{ display:none; }
+    body{ background:#fff; }
+    .wrap{ max-width:none; padding:0 4px; }
+    .stat, table.dash{ box-shadow:none; border-color:#c7cbd6; }
+    /* The header banner and table header row use light text on a dark fill;
+       most browsers omit background colors by default when printing, which
+       would leave that text invisible. Rather than depend on the person
+       having "background graphics" turned on in the print dialog, give the
+       header a plain light look and force-preserve the table header's fill. */
+    header{ background:none; color:#1f2430; padding:6px 0 10px; border-bottom:2px solid var(--navy); }
+    header .sub{ color:#42485a; }
+    header .author{ color:#6b7280; }
+    table.dash thead th{
+      background:#e9ebf1 !important; color:#1f2430 !important;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    .chip, td.ok-cell, td.nok-cell.has-nok, td.nok-cell.zero-nok, .pending-tag{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    .indicator-block{ page-break-inside:avoid; }
+  }
+
+  /* ===== А4: две стороны — по дате отбора | по дате обнаружения ===== */
+  .split-view{display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start;}
+  .split-panel{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 10px 12px; min-width:0;}
+  .split-panel h2{margin:0 0 2px; font-size:15px; color:var(--navy);}
+  .split-panel .basis-sub{font-size:11.5px; color:var(--muted); margin-bottom:8px;}
+  .split-panel .mini-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;}
+  .split-panel .mini-stats div{border:1px solid var(--line); border-radius:7px; padding:5px 7px; font-size:10.5px; color:var(--muted);}
+  .split-panel .mini-stats b{display:block; font-size:16px; color:#1f2430;}
+  .split-panel .mini-stats .n b{color:var(--nok-text);} .split-panel .mini-stats .o b{color:var(--ok-text);}
+  .split-panel table.dash{box-shadow:none;}
+  .split-panel table.dash thead th{font-size:10.5px; padding:6px 6px;}
+  .split-panel table.dash tbody td{font-size:11.5px; padding:6px 6px;}
+  .split-panel table.dash th.num, .split-panel table.dash td.num{width:46px;}
+  .split-panel .loc-list{font-size:11px;}
+  .split-panel .chip{font-size:10.5px;}
+  .split-empty{padding:20px; text-align:center; color:var(--muted); font-style:italic; font-size:13px;}
+  @media (max-width:980px){ .split-view{grid-template-columns:1fr;} }
+  @media print{
+    body.split-mode header{padding:2px 0 4px;}
+    body.split-mode header h1{font-size:14px;} body.split-mode header .sub{font-size:10px;}
+    body.split-mode .meta-line{margin:2px 0 4px; font-size:10px;}
+    body.split-mode .split-view{grid-template-columns:1fr 1fr; gap:6mm;}
+    body.split-mode .split-panel{border:none; padding:0; border-radius:0;}
+    body.split-mode .split-panel + .split-panel{border-left:1px dashed #9aa1b3 !important; padding-left:4mm;}
+    body.split-mode .split-panel h2{font-size:12px;}
+    body.split-mode .split-panel .basis-sub{font-size:9px; margin-bottom:4px;}
+    body.split-mode .split-panel .mini-stats b{font-size:12px;} body.split-mode .split-panel .mini-stats div{font-size:8.5px; padding:3px 5px;}
+    body.split-mode .split-panel table.dash thead th{font-size:8.5px; padding:3px 4px;}
+    body.split-mode .split-panel table.dash tbody td{font-size:9px; padding:3px 4px;}
+    body.split-mode .split-panel .loc-list{font-size:8.5px; line-height:1.3;}
+    body.split-mode .split-panel .chip{font-size:8.5px;}
+    body.split-mode .indicator-block{margin-bottom:4px; padding-bottom:4px;}
+  }
+  .from-weeks{font-size:11.5px; color:#33394a; background:#f3f4f8; border:1px solid var(--line); border-radius:7px; padding:5px 8px; margin:4px 0 8px;}
+  @media print{ body.split-mode .from-weeks{font-size:8.5px; padding:2px 5px; margin:2px 0 4px;} }
+</style>
+<style>
+.nok-bar{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 16px; margin:0 0 14px;}
+.nok-line{display:flex; align-items:center; gap:8px; font-size:13px; color:#33394a; font-weight:600;}
+.nok-small{font-size:12px; color:var(--muted); font-weight:400; margin-top:3px; padding-left:18px;}
+.nok-dot{width:10px; height:10px; border-radius:50%; background:#9aa1b3; flex:none;}
+.nok-dot.on{background:#16a34a; box-shadow:0 0 0 3px #dcfce7;}
+.nok-dot.busy{background:#f59e0b; box-shadow:0 0 0 3px #fef3c7; animation:nokPulse 1s infinite alternate;}
+.nok-dot.err{background:#dc2626;}
+@keyframes nokPulse{to{opacity:.4;}}
+.nok-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;}
+.nok-actions .btn{padding:6px 12px; font-size:12.5px;}
+.nok-empty{margin-top:10px; padding:12px 14px; background:#fef3c7; color:#713f12; border-radius:8px; font-size:13px; line-height:1.5;}
+.nok-toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:var(--navy); color:#fff;
+  padding:11px 18px; border-radius:10px; font-size:13.5px; box-shadow:0 8px 30px rgba(0,0,0,.25); opacity:0; pointer-events:none;
+  transition:.25s; z-index:60; max-width:calc(100% - 32px);}
+.nok-toast.show{opacity:1; transform:translateX(-50%);}
+@media (max-width:760px){ .nok-actions .btn{flex:1 1 auto; justify-content:center;} }
+@media print{ .nok-bar, .nok-toast{display:none !important;} }
+</style>
+<meta name="theme-color" content="#1a1f2e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-maskable-512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NOK">
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+</head>
+<body>
+
+<header>
+  <div class="wrap" style="padding:0;">
+    <h1>NOK-дашборд микробиологии</h1>
+    <div class="sub">Свод по объектам исследования — УКПФ и МПФ · неделя по дате отбора проб или по дате обнаружения (выдачи результата), OK/NOK</div>
+    <div class="author">Автор: Турсынгалиев Бекжан</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="controls">
+    <div class="seg" id="facilitySeg">
+      <button data-fac="УКПФ" class="active">УКПФ</button>
+      <button data-fac="МПФ">МПФ</button>
+    </div>
+    <div class="seg" id="basisSeg" title="По какой дате считать неделю">
+      <button data-basis="sample" class="active">По дате отбора</button>
+      <button data-basis="result">По дате обнаружения</button>
+      <button data-basis="both">А4: обе стороны</button>
+    </div>
+    <select id="weekSelect"></select>
+    <label class="toggle-line">
+      <input type="checkbox" id="onlyNokToggle" checked>
+      Только обнаружения (NOK)
+    </label>
+    <div class="spacer"></div>
+    <button class="btn" id="printBtn" title="Печать текущего среза (текущая неделя и фильтр)">🖨 Печать</button>
+    <button class="btn" id="downloadBtn" title="Скачать текущий срез как JSON">⬇ Экспорт JSON</button>
+    <button class="btn primary" id="uploadBtn">⬆ Загрузить Свод .xlsx</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+  </div>
+<div class="nok-bar" id="nokBar">
+  <div class="nok-line">
+    <span class="nok-dot" id="nokDot"></span>
+    <span id="nokSync">Загрузка сохранённых недель…</span>
+  </div>
+  <div class="nok-line nok-small" id="nokWeeks"></div>
+  <div class="nok-actions">
+    <button class="btn" id="nokPinBtn" style="display:none">📁 Привязать папку со Сводом</button>
+    <button class="btn" id="nokAllowBtn" style="display:none">🔓 Разрешить доступ к папке</button>
+    <button class="btn" id="nokOpenBtn" style="display:none">📂 Открыть папку</button>
+    <button class="btn" id="nokChooseBtn" style="display:none">Другая папка…</button>
+    <button class="btn" id="nokCheckBtn" style="display:none">⟳ Проверить сейчас</button>
+    <button class="btn" id="nokImportBtn" title="Старый файл NOK-дашборда (.html) или резервная копия (.json): недели добавятся к сохранённым">⬆ Перенести недели из файла</button>
+    <button class="btn" id="nokBackupBtn" title="Все сохранённые недели одним файлом — для другого компьютера">💾 Копия всех недель</button>
+    <input type="file" id="nokImportInput" accept=".html,.htm,.json" style="display:none">
+  </div>
+  <div class="nok-empty" id="nokEmpty" style="display:none">
+    <b>Недель пока нет.</b> Один раз перенесите их из старого файла NOK-дашборда (кнопка «Перенести недели из файла»)
+    или загрузите «Свод» .xlsx. Дальше новые недели добавляются, а старые сохраняются на этом устройстве.
+  </div>
+</div>
+<div class="nok-toast" id="nokToast"></div>
+  <div class="meta-line" id="metaLine"></div>
+
+  <div id="singleView">
+  <div class="stats" id="statsRow"></div>
+
+  <table class="dash">
+    <thead>
+      <tr>
+        <th style="width:20%;">Объект исследования</th>
+        <th class="num">Всего</th>
+        <th class="num">ОК</th>
+        <th class="num">NOK</th>
+        <th>Обнаружено — показатель и где именно (участок — корпус — точка отбора)</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  </div>
+  <div id="splitView" class="split-view" style="display:none"></div>
+
+  <details class="legend">
+    <summary>О методике расчёта категорий</summary>
+    <div class="legend-body">
+      Период = неделя по <code>Дата отбора пробы</code> (ISO-неделя, Пн–Вс).<br>
+      <b>БП</b> — Цех бройлерного производства / Цех выращивания, без бахильных проб.<br>
+      <b>Инкубатор</b> — Цех инкубации, без помёта.<br>
+      <b>ЗПП</b> — Производственный цех / склады ЗПП / ОТО ЗПП, без готовой продукции и без Listia-мэппинга (биомэппинг), без посуды/оборудования столовой.<br>
+      <b>Кормовые компоненты</b> — готовая продукция: комбикорм, мука кормовая.<br>
+      <b>Входящая сырьё</b> — группа материала «Сырьё» (шрот, зерно, жмых, бобы).<br>
+      <b>Транспорт</b> — подгруппа «Транспорт» (по всем цехам).<br>
+      <b>Подстилочный материал</b> — подгруппа «Подстилочный материал» (по всем цехам).<br>
+      <b>Инкубационное яйцо</b> / <b>...газация</b> — подгруппы «Яйцо» и «Яйцо инкубационное»; отдельно — точки отбора с упоминанием «фумигация/газация».<br>
+      <b>МКО</b> — цех по производству мясокостной муки (подгруппа материала «МКО»); столовая сюда не входит и никак не учитывается.<br>
+      <b>Исключено полностью</b> — Колибактериоз, Антибиотикочувствительность выделенных культур, Стрептококки (Энтерококки) в пат. материале (не входят ни в Всего, ни в NOK ни по одной категории).<br><br>
+      Категории пересекаются намеренно (как в исходном ручном отчёте): например, «Транспорт» и «Инкубационное яйцо» — сквозные категории, которые также входят в общий итог «Инкубатор».<br><br>
+      Если какая-то граница нужна иначе — скажи, поправлю правило в один заход.
+    </div>
+  </details>
+</div>
+
+<div id="loadingOverlay">
+  <div class="loading-card">
+    <div class="spin-row"><div class="spinner"></div><span id="loadingText">Обработка файла…</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div id="loadingPct">0%</div>
+  </div>
+</div>
+
+<script type="text/plain" id="fflateLibSrc">
+!function(f){typeof module!='undefined'&&typeof exports=='object'?module.exports=f():typeof define!='undefined'&&define.amd?define(f):(typeof self!='undefined'?self:this).fflate=f()}(function(){var _e={};"use strict";_e.deflate=zt,_e.deflateSync=kt,_e.inflate=At,_e.inflateSync=Tt,_e.gzip=It,_e.compress=It,_e.gzipSync=Ut,_e.compressSync=Ut,_e.gunzip=Zt,_e.gunzipSync=qt,_e.zlib=Lt,_e.zlibSync=Bt,_e.unzlib=Nt,_e.unzlibSync=Pt,_e.gzip=It,_e.compress=It,_e.decompress=Jt,_e.decompressSync=Kt,_e.strToU8=nn,_e.strFromU8=rn,_e.zip=dn,_e.zipSync=gn,_e.unzip=zn,_e.unzipSync=kn;var t=(typeof module!='undefined'&&typeof exports=='object'?function(_f){"use strict";var e,r,t,n=";var __w=require('worker_threads');__w.parentPort.on('message',function(m){onmessage({data:m})}),postMessage=function(m,t){__w.parentPort.postMessage(m,t)},close=process.exit;self=global";try{e=require("worker_threads"),r=e.Worker,t=e.isMarkedAsUntransferable}catch(e){}exports.default=r?function(e,o,a,s,u){var i=!1,l=new r(e+n,{eval:!0}).on("error",function(e){return u(e,null)}).on("message",function(e){return u(null,e)}).on("exit",function(e){e&&!i&&u(Error("exited with code "+e),null)});return t&&(s=s.filter(function(e){return!t(e)})),l.postMessage(a,s),l.terminate=function(){return i=!0,r.prototype.terminate.call(l)},l}:function(e,r,t,n,o){setImmediate(function(){return o(Error("async operations unsupported - update to Node 12+ (or Node 10-11 with the --experimental-worker CLI flag)"),null)});var a=function(){};return{terminate:a,postMessage:a}};return _f}:function(_f){"use strict";var e={};_f.default=function(r,t,s,a,n){var o=new Worker(e[t]||(e[t]=URL.createObjectURL(new Blob([r+';addEventListener("error",function(e){e=e.error;postMessage({$e$:[e.message,e.code,e.stack]})})'],{type:"text/javascript"}))));return o.onmessage=function(e){var r=e.data,t=r.$e$;if(t){var s=Error(t[0]);s.code=t[1],s.stack=t[2],n(s,null)}else n(null,r)},o.postMessage(s,a),o};return _f})({}),n=Uint8Array,r=Uint16Array,i=Int32Array,e=new n([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),o=new n([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]),s=new n([16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]),a=function(t,n){for(var e=new r(31),o=0;o<31;++o)e[o]=n+=1<<t[o-1];var s=new i(e[30]);for(o=1;o<30;++o)for(var a=e[o];a<e[o+1];++a)s[a]=a-e[o]<<5|o;return{b:e,r:s}},u=a(e,2),h=u.b,f=u.r;h[28]=258,f[258]=28;for(var c=a(o,0),l=c.b,p=c.r,v=new r(32768),d=0;d<32768;++d){var g=(43690&d)>>1|(21845&d)<<1;v[d]=((65280&(g=(61680&(g=(52428&g)>>2|(13107&g)<<2))>>4|(3855&g)<<4))>>8|(255&g)<<8)>>1}var y=function(t,n,i){for(var e=t.length,o=0,s=new r(n);o<e;++o)t[o]&&++s[t[o]-1];var a,u=new r(n);for(o=1;o<n;++o)u[o]=u[o-1]+s[o-1]<<1;if(i){a=new r(1<<n);var h=15-n;for(o=0;o<e;++o)if(t[o])for(var f=o<<4|t[o],c=n-t[o],l=u[t[o]-1]++<<c,p=l|(1<<c)-1;l<=p;++l)a[v[l]>>h]=f}else for(a=new r(e),o=0;o<e;++o)t[o]&&(a[o]=v[u[t[o]-1]++]>>15-t[o]);return a},m=new n(288);for(d=0;d<144;++d)m[d]=8;for(d=144;d<256;++d)m[d]=9;for(d=256;d<280;++d)m[d]=7;for(d=280;d<288;++d)m[d]=8;var b=new n(32);for(d=0;d<32;++d)b[d]=5;var w=y(m,9,0),x=y(m,9,1),z=y(b,5,0),k=y(b,5,1),M=function(t){for(var n=t[0],r=1;r<t.length;++r)t[r]>n&&(n=t[r]);return n},S=function(t,n,r){var i=n/8|0;return(t[i]|t[i+1]<<8)>>(7&n)&r},A=function(t,n){var r=n/8|0;return(t[r]|t[r+1]<<8|t[r+2]<<16)>>(7&n)},T=function(t){return(t+7)/8|0},D=function(t,r,i){return(null==r||r<0)&&(r=0),(null==i||i>t.length)&&(i=t.length),new n(t.subarray(r,i))};_e.FlateErrorCode={UnexpectedEOF:0,InvalidBlockType:1,InvalidLengthLiteral:2,InvalidDistance:3,StreamFinished:4,NoStreamHandler:5,InvalidHeader:6,NoCallback:7,InvalidUTF8:8,ExtraFieldTooLong:9,InvalidDate:10,FilenameTooLong:11,StreamFinishing:12,InvalidZipData:13,UnknownCompressionMethod:14};var C=["unexpected EOF","invalid block type","invalid length/literal","invalid distance","stream finished","no stream handler",,"no callback","invalid UTF-8 data","extra field too long","date not in range 1980-2099","filename too long","stream finishing","invalid zip data"],I=function(t,n,r){var i=Error(n||C[t]);if(i.code=t,Error.captureStackTrace&&Error.captureStackTrace(i,I),!r)throw i;return i},U=function(t,r,i,a){var u=t.length,f=a?a.length:0;if(!u||r.f&&!r.l)return i||new n(0);var c=!i,p=c||2!=r.i,v=r.i;c&&(i=new n(3*u));var d=function(t){var r=i.length;if(t>r){var e=new n(Math.max(2*r,t));e.set(i),i=e}},g=r.f||0,m=r.p||0,b=r.b||0,w=r.l,z=r.d,C=r.m,U=r.n,F=8*u;do{if(!w){g=S(t,m,1);var E=S(t,m+1,3);if(m+=3,!E){var Z=t[(Y=T(m)+4)-4]|t[Y-3]<<8,q=Y+Z;if(q>u){v&&I(0);break}p&&d(b+Z),i.set(t.subarray(Y,q),b),r.b=b+=Z,r.p=m=8*q,r.f=g;continue}if(1==E)w=x,z=k,C=9,U=5;else if(2==E){var O=S(t,m,31)+257,G=S(t,m+10,15)+4,L=O+S(t,m+5,31)+1;m+=14;for(var B=new n(L),H=new n(19),j=0;j<G;++j)H[s[j]]=S(t,m+3*j,7);m+=3*G;var N=M(H),P=(1<<N)-1,V=y(H,N,1);for(j=0;j<L;){var Y,J=V[S(t,m,P)];if(m+=15&J,(Y=J>>4)<16)B[j++]=Y;else{var K=0,Q=0;for(16==Y?(Q=3+S(t,m,3),m+=2,K=B[j-1]):17==Y?(Q=3+S(t,m,7),m+=3):18==Y&&(Q=11+S(t,m,127),m+=7);Q--;)B[j++]=K}}var R=B.subarray(0,O),W=B.subarray(O);C=M(R),U=M(W),w=y(R,C,1),z=y(W,U,1)}else I(1);if(m>F){v&&I(0);break}}p&&d(b+131072);for(var X=(1<<C)-1,$=(1<<U)-1,_=m;;_=m){var tt=(K=w[A(t,m)&X])>>4;if((m+=15&K)>F){v&&I(0);break}if(K||I(2),tt<256)i[b++]=tt;else{if(256==tt){_=m,w=null;break}var nt=tt-254;tt>264&&(nt=S(t,m,(1<<(et=e[j=tt-257]))-1)+h[j],m+=et);var rt=z[A(t,m)&$],it=rt>>4;if(rt||I(3),m+=15&rt,W=l[it],it>3){var et=o[it];W+=A(t,m)&(1<<et)-1,m+=et}if(m>F){v&&I(0);break}p&&d(b+131072);var ot=b+nt;if(b<W){var st=f-W,at=Math.min(W,ot);for(st+b<0&&I(3);b<at;++b)i[b]=a[st+b]}for(;b<ot;++b)i[b]=i[b-W]}}r.l=w,r.p=_,r.b=b,r.f=g,w&&(g=1,r.m=C,r.d=z,r.n=U)}while(!g);return b!=i.length&&c?D(i,0,b):i.subarray(0,b)},F=function(t,n,r){var i=n/8|0;t[i]|=r<<=7&n,t[i+1]|=r>>8},E=function(t,n,r){var i=n/8|0;t[i]|=r<<=7&n,t[i+1]|=r>>8,t[i+2]|=r>>16},Z=function(t,i){for(var e=[],o=0;o<t.length;++o)t[o]&&e.push({s:o,f:t[o]});var s=e.length,a=e.slice();if(!s)return{t:j,l:0};if(1==s){var u=new n(e[0].s+1);return u[e[0].s]=1,{t:u,l:1}}e.sort(function(t,n){return t.f-n.f}),e.push({s:-1,f:25001});var h=e[0],f=e[1],c=0,l=1,p=2;for(e[0]={s:-1,f:h.f+f.f,l:h,r:f};l!=s-1;)h=e[e[c].f<e[p].f?c++:p++],f=e[c!=l&&e[c].f<e[p].f?c++:p++],e[l++]={s:-1,f:h.f+f.f,l:h,r:f};var v=a[0].s;for(o=1;o<s;++o)a[o].s>v&&(v=a[o].s);var d=new r(v+1),g=q(e[l-1],d,0);if(g>i){o=0;var y=0,m=g-i,b=1<<m;for(a.sort(function(t,n){return d[n.s]-d[t.s]||t.f-n.f});o<s;++o){var w=a[o].s;if(!(d[w]>i))break;y+=b-(1<<g-d[w]),d[w]=i}for(y>>=m;y>0;){var x=a[o].s;d[x]<i?y-=1<<i-d[x]++-1:++o}for(;o>=0&&y;--o){var z=a[o].s;d[z]==i&&(--d[z],++y)}g=i}return{t:new n(d),l:g}},q=function(t,n,r){return-1==t.s?Math.max(q(t.l,n,r+1),q(t.r,n,r+1)):n[t.s]=r},O=function(t){for(var n=t.length;n&&!t[--n];);for(var i=new r(++n),e=0,o=t[0],s=1,a=function(t){i[e++]=t},u=1;u<=n;++u)if(t[u]==o&&u!=n)++s;else{if(!o&&s>2){for(;s>138;s-=138)a(32754);s>2&&(a(s>10?s-11<<5|28690:s-3<<5|12305),s=0)}else if(s>3){for(a(o),--s;s>6;s-=6)a(8304);s>2&&(a(s-3<<5|8208),s=0)}for(;s--;)a(o);s=1,o=t[u]}return{c:i.subarray(0,e),n:n}},G=function(t,n){for(var r=0,i=0;i<n.length;++i)r+=t[i]*n[i];return r},L=function(t,n,r){var i=r.length,e=T(n+2);t[e]=255&i,t[e+1]=i>>8,t[e+2]=255^t[e],t[e+3]=255^t[e+1];for(var o=0;o<i;++o)t[e+o+4]=r[o];return 8*(e+4+i)},B=function(t,n,i,a,u,h,f,c,l,p,v){F(n,v++,i),++u[256];for(var d=Z(u,15),g=d.t,x=d.l,k=Z(h,15),M=k.t,S=k.l,A=O(g),T=A.c,D=A.n,C=O(M),I=C.c,U=C.n,q=new r(19),B=0;B<T.length;++B)++q[31&T[B]];for(B=0;B<I.length;++B)++q[31&I[B]];for(var H=Z(q,7),j=H.t,N=H.l,P=19;P>4&&!j[s[P-1]];--P);var V,Y,J,K,Q=p+5<<3,R=G(u,m)+G(h,b)+f,W=G(u,g)+G(h,M)+f+14+3*P+G(q,j)+2*q[16]+3*q[17]+7*q[18];if(l>=0&&Q<=R&&Q<=W)return L(n,v,t.subarray(l,l+p));if(F(n,v,1+(W<R)),v+=2,W<R){V=y(g,x,0),Y=g,J=y(M,S,0),K=M;var X=y(j,N,0);for(F(n,v,D-257),F(n,v+5,U-1),F(n,v+10,P-4),v+=14,B=0;B<P;++B)F(n,v+3*B,j[s[B]]);v+=3*P;for(var $=[T,I],_=0;_<2;++_){var tt=$[_];for(B=0;B<tt.length;++B)F(n,v,X[rt=31&tt[B]]),v+=j[rt],rt>15&&(F(n,v,tt[B]>>5&127),v+=tt[B]>>12)}}else V=w,Y=m,J=z,K=b;for(B=0;B<c;++B){var nt=a[B];if(nt>255){var rt;E(n,v,V[257+(rt=nt>>18&31)]),v+=Y[rt+257],rt>7&&(F(n,v,nt>>23&31),v+=e[rt]);var it=31&nt;E(n,v,J[it]),v+=K[it],it>3&&(E(n,v,nt>>5&8191),v+=o[it])}else E(n,v,V[nt]),v+=Y[nt]}return E(n,v,V[256]),v+Y[256]},H=new i([65540,131080,131088,131104,262176,1048704,1048832,2114560,2117632]),j=new n(0),N=function(t,s,a,u,h,c){var l=c.z||t.length,v=new n(u+l+5*(1+Math.ceil(l/7e3))+h),d=v.subarray(u,v.length-h),g=c.l,y=7&(c.r||0);if(s){y&&(d[0]=c.r>>3);for(var m=H[s-1],b=m>>13,w=8191&m,x=(1<<a)-1,z=c.p||new r(32768),k=c.h||new r(x+1),M=Math.ceil(a/3),S=2*M,A=function(n){return(t[n]^t[n+1]<<M^t[n+2]<<S)&x},C=new i(25e3),I=new r(288),U=new r(32),F=0,E=0,Z=c.i||0,q=0,O=c.w||0,G=0;Z+2<l;++Z){var j=A(Z),N=32767&Z,P=k[j];if(z[N]=P,k[j]=N,O<=Z){var V=l-Z;if((F>7e3||q>24576)&&(V>423||!g)){y=B(t,d,0,C,I,U,E,q,G,Z-G,y),q=F=E=0,G=Z;for(var Y=0;Y<286;++Y)I[Y]=0;for(Y=0;Y<30;++Y)U[Y]=0}var J=2,K=0,Q=w,R=N-P&32767;if(V>2&&j==A(Z-R))for(var W=Math.min(b,V)-1,X=Math.min(32767,Z),$=Math.min(258,V);R<=X&&--Q&&N!=P;){if(t[Z+J]==t[Z+J-R]){for(var _=0;_<$&&t[Z+_]==t[Z+_-R];++_);if(_>J){if(J=_,K=R,_>W)break;var tt=Math.min(R,_-2),nt=0;for(Y=0;Y<tt;++Y){var rt=Z-R+Y&32767,it=rt-z[rt]&32767;it>nt&&(nt=it,P=rt)}}}R+=(N=P)-(P=z[N])&32767}if(K){C[q++]=268435456|f[J]<<18|p[K];var et=31&f[J],ot=31&p[K];E+=e[et]+o[ot],++I[257+et],++U[ot],O=Z+J,++F}else C[q++]=t[Z],++I[t[Z]]}}for(Z=Math.max(Z,O);Z<l;++Z)C[q++]=t[Z],++I[t[Z]];y=B(t,d,g,C,I,U,E,q,G,Z-G,y),g||(c.r=7&y|d[y/8|0]<<3,y-=7,c.h=k,c.p=z,c.i=Z,c.w=O)}else{for(Z=c.w||0;Z<l+g;Z+=65535){var st=Z+65535;st>=l&&(d[y/8|0]=g,st=l),y=L(d,y+1,t.subarray(Z,st))}c.i=l}return D(v,0,u+T(y)+h)},P=function(){for(var t=new Int32Array(256),n=0;n<256;++n){for(var r=n,i=9;--i;)r=(1&r&&-306674912)^r>>>1;t[n]=r}return t}(),V=function(){var t=-1;return{p:function(n){for(var r=t,i=0;i<n.length;++i)r=P[255&r^n[i]]^r>>>8;t=r},d:function(){return~t}}},Y=function(){var t=1,n=0;return{p:function(r){for(var i=t,e=n,o=0|r.length,s=0;s!=o;){for(var a=Math.min(s+2655,o);s<a;++s)e+=i+=r[s];i=(65535&i)+15*(i>>16),e=(65535&e)+15*(e>>16)}t=i,n=e},d:function(){return(255&(t%=65521))<<24|(65280&t)<<8|(255&(n%=65521))<<8|n>>8}}},J=function(t,r,i,e,o){if(!o&&(o={l:1},r.dictionary)){var s=r.dictionary.subarray(-32768),a=new n(s.length+t.length);a.set(s),a.set(t,s.length),t=a,o.w=s.length}return N(t,null==r.level?6:r.level,null==r.mem?o.l?Math.ceil(1.5*Math.max(8,Math.min(13,Math.log(t.length)))):20:12+r.mem,i,e,o)},K=function(t,n){var r={};for(var i in t)r[i]=t[i];for(var i in n)r[i]=n[i];return r},Q=function(t,n,r){for(var i=t(),e=""+t,o=e.slice(e.indexOf("[")+1,e.lastIndexOf("]")).replace(/\s+/g,"").split(","),s=0;s<i.length;++s){var a=i[s],u=o[s];if("function"==typeof a){n+=";"+u+"=";var h=""+a;if(a.prototype)if(-1!=h.indexOf("[native code]")){var f=h.indexOf(" ",8)+1;n+=h.slice(f,h.indexOf("(",f))}else for(var c in n+=h,a.prototype)n+=";"+u+".prototype."+c+"="+a.prototype[c];else n+=h}else r[u]=a}return n},R=[],W=function(t){var n=[];for(var r in t)t[r].buffer&&n.push((t[r]=new t[r].constructor(t[r])).buffer);return n},X=function(n,r,i,e){if(!R[i]){for(var o="",s={},a=n.length-1,u=0;u<a;++u)o=Q(n[u],o,s);R[i]={c:Q(n[a],o,s),e:s}}var h=K({},R[i].e);return(0,t.default)(R[i].c+";onmessage=function(e){for(var k in e.data)self[k]=e.data[k];onmessage="+r+"}",i,h,W(h),e)},$=function(){return[n,r,i,e,o,s,h,l,x,k,v,C,y,M,S,A,T,D,I,U,Tt,et,ot]},_=function(){return[n,r,i,e,o,s,f,p,w,m,z,b,v,H,j,y,F,E,Z,q,O,G,L,B,T,D,N,J,kt,et]},tt=function(){return[pt,gt,lt,V,P]},nt=function(){return[vt,dt]},rt=function(){return[yt,lt,Y]},it=function(){return[mt]},et=function(t){return postMessage(t,[t.buffer])},ot=function(t){return t&&{out:t.size&&new n(t.size),dictionary:t.dictionary}},st=function(t,n,r,i,e,o){var s=X(r,i,e,function(t,n){s.terminate(),o(t,n)});return s.postMessage([t,n],n.consume?[t.buffer]:[]),function(){s.terminate()}},at=function(t){return t.ondata=function(t,n){return postMessage([t,n],[t.buffer])},function(n){n.data[0]?(t.push(n.data[0],n.data[1]),postMessage([n.data[0].length])):t.flush(n.data[1])}},ut=function(t,n,r,i,e,o,s){var a,u=X(t,i,e,function(t,r){t?(u.terminate(),n.ondata.call(n,t)):Array.isArray(r)?1==r.length?(n.queuedSize-=r[0],n.ondrain&&n.ondrain(r[0])):(r[1]&&u.terminate(),n.ondata.call(n,t,r[0],r[1])):s(r)});u.postMessage(r),n.queuedSize=0,n.push=function(t,r){n.ondata||I(5),a&&n.ondata(I(4,0,1),null,!!r),n.queuedSize+=t.length,u.postMessage([t,a=r],t.buffer instanceof ArrayBuffer?[t.buffer]:[])},n.terminate=function(){u.terminate()},o&&(n.flush=function(t){u.postMessage([0,t])})},ht=function(t,n){return t[n]|t[n+1]<<8},ft=function(t,n){return(t[n]|t[n+1]<<8|t[n+2]<<16|t[n+3]<<24)>>>0},ct=function(t,n){return ft(t,n)+4294967296*ft(t,n+4)},lt=function(t,n,r){for(;r;++n)t[n]=r,r>>>=8},pt=function(t,n){var r=n.filename;if(t[0]=31,t[1]=139,t[2]=8,t[8]=n.level<2?4:9==n.level?2:0,t[9]=3,0!=n.mtime&&lt(t,4,Math.floor(new Date(n.mtime||Date.now())/1e3)),r){t[3]=8;for(var i=0;i<=r.length;++i)t[i+10]=r.charCodeAt(i)}},vt=function(t){31==t[0]&&139==t[1]&&8==t[2]||I(6,"invalid gzip data");var n=t[3],r=10;4&n&&(r+=2+(t[10]|t[11]<<8));for(var i=(n>>3&1)+(n>>4&1);i>0;i-=!t[r++]);return r+(2&n)},dt=function(t){var n=t.length;return(t[n-4]|t[n-3]<<8|t[n-2]<<16|t[n-1]<<24)>>>0},gt=function(t){return 10+(t.filename?t.filename.length+1:0)},yt=function(t,n){var r=n.level,i=0==r?0:r<6?1:9==r?3:2;if(t[0]=120,t[1]=i<<6|(n.dictionary&&32),t[1]|=31-(t[0]<<8|t[1])%31,n.dictionary){var e=Y();e.p(n.dictionary),lt(t,2,e.d())}},mt=function(t,n){return(8!=(15&t[0])||t[0]>>4>7||(t[0]<<8|t[1])%31)&&I(6,"invalid zlib data"),(t[1]>>5&1)==+!n&&I(6,"invalid zlib data: "+(32&t[1]?"need":"unexpected")+" dictionary"),2+(t[1]>>3&4)};function bt(t,n){return"function"==typeof t&&(n=t,t={}),this.ondata=n,t}var wt=function(){function t(t,r){if("function"==typeof t&&(r=t,t={}),this.ondata=r,this.o=t||{},this.s={l:0,i:32768,w:32768,z:32768},this.b=new n(98304),this.o.dictionary){var i=this.o.dictionary.subarray(-32768);this.b.set(i,32768-i.length),this.s.i=32768-i.length}}return t.prototype.p=function(t,n){this.ondata(J(t,this.o,0,0,this.s),n)},t.prototype.push=function(t,r){this.ondata||I(5),this.s.l&&I(4);var i=t.length+this.s.z;if(i>this.b.length){if(i>2*this.b.length-32768){var e=new n(-32768&i);e.set(this.b.subarray(0,this.s.z)),this.b=e}var o=this.b.length-this.s.z;this.b.set(t.subarray(0,o),this.s.z),this.s.z=this.b.length,this.p(this.b,!1),this.b.set(this.b.subarray(-32768)),this.b.set(t.subarray(o),32768),this.s.z=t.length-o+32768,this.s.i=32766,this.s.w=32768}else this.b.set(t,this.s.z),this.s.z+=t.length;this.s.l=1&r,(this.s.z>this.s.w+8191||r)&&(this.p(this.b,r||!1),this.s.w=this.s.i,this.s.i-=2),r&&(this.s=this.o={},this.b=j)},t.prototype.flush=function(t){if(this.ondata||I(5),this.s.l&&I(4),this.p(this.b,!1),this.s.w=this.s.i,this.s.i-=2,t){var r=new n(6);r[0]=this.s.r>>3;var i=L(r,this.s.r,j);this.s.r=0,this.ondata(r.subarray(0,i>>3),!1)}},t}();_e.Deflate=wt;var xt=function(){return function(t,n){ut([_,function(){return[at,wt]}],this,bt.call(this,t,n),function(t){var n=new wt(t.data);onmessage=at(n)},6,1)}}();function zt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[_],function(t){return et(kt(t.data[0],t.data[1]))},0,r)}function kt(t,n){return J(t,n||{},0,0)}_e.AsyncDeflate=xt;var Mt=function(){function t(t,r){"function"==typeof t&&(r=t,t={}),this.ondata=r;var i=t&&t.dictionary&&t.dictionary.subarray(-32768);this.s={i:0,b:i?i.length:0},this.o=new n(32768),this.p=new n(0),i&&this.o.set(i)}return t.prototype.e=function(t){if(this.ondata||I(5),this.d&&I(4),this.p.length){if(t.length){var r=new n(this.p.length+t.length);r.set(this.p),r.set(t,this.p.length),this.p=r}}else this.p=t},t.prototype.c=function(t){this.s.i=+(this.d=t||!1);var n=this.s.b,r=U(this.p,this.s,this.o);this.ondata(D(r,n,this.s.b),this.d),this.o=D(r,this.s.b-32768),this.s.b=this.o.length,this.p=D(this.p,this.s.p/8|0),this.s.p&=7},t.prototype.push=function(t,n){this.e(t),this.c(n)},t}();_e.Inflate=Mt;var St=function(){return function(t,n){ut([$,function(){return[at,Mt]}],this,bt.call(this,t,n),function(t){var n=new Mt(t.data);onmessage=at(n)},7,0)}}();function At(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[$],function(t){return et(Tt(t.data[0],ot(t.data[1])))},1,r)}function Tt(t,n){return U(t,{i:2},n&&n.out,n&&n.dictionary)}_e.AsyncInflate=St;var Dt=function(){function t(t,n){this.c=V(),this.l=0,this.v=1,wt.call(this,t,n)}return t.prototype.push=function(t,n){this.c.p(t),this.l+=t.length,wt.prototype.push.call(this,t,n)},t.prototype.p=function(t,n){var r=J(t,this.o,this.v&&gt(this.o),n&&8,this.s);this.v&&(pt(r,this.o),this.v=0),n&&(lt(r,r.length-8,this.c.d()),lt(r,r.length-4,this.l)),this.ondata(r,n)},t.prototype.flush=function(t){wt.prototype.flush.call(this,t)},t}();_e.Gzip=Dt,_e.Compress=Dt;var Ct=function(){return function(t,n){ut([_,tt,function(){return[at,wt,Dt]}],this,bt.call(this,t,n),function(t){var n=new Dt(t.data);onmessage=at(n)},8,1)}}();function It(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[_,tt,function(){return[Ut]}],function(t){return et(Ut(t.data[0],t.data[1]))},2,r)}function Ut(t,n){n||(n={});var r=V(),i=t.length;r.p(t);var e=J(t,n,gt(n),8),o=e.length;return pt(e,n),lt(e,o-8,r.d()),lt(e,o-4,i),e}_e.AsyncGzip=Ct,_e.AsyncCompress=Ct;var Ft=function(){function t(t,n){this.v=1,this.r=0,Mt.call(this,t,n)}return t.prototype.push=function(t,r){if(Mt.prototype.e.call(this,t),this.r+=t.length,this.v){var i=this.p.subarray(this.v-1),e=i.length>3?vt(i):4;if(e>i.length){if(!r)return}else this.v>1&&this.onmember&&this.onmember(this.r-i.length);this.p=i.subarray(e),this.v=0}Mt.prototype.c.call(this,0),this.s.f&&!this.s.l?(this.v=T(this.s.p)+9,this.s={i:0},this.o=new n(0),this.push(new n(0),r)):r&&Mt.prototype.c.call(this,r)},t}();_e.Gunzip=Ft;var Et=function(){return function(t,n){var r=this;ut([$,nt,function(){return[at,Mt,Ft]}],this,bt.call(this,t,n),function(t){var n=new Ft(t.data);n.onmember=function(t){return postMessage(t)},onmessage=at(n)},9,0,function(t){return r.onmember&&r.onmember(t)})}}();function Zt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[$,nt,function(){return[qt]}],function(t){return et(qt(t.data[0],t.data[1]))},3,r)}function qt(t,r){var i=vt(t);return i+8>t.length&&I(6,"invalid gzip data"),U(t.subarray(i,-8),{i:2},r&&r.out||new n(dt(t)),r&&r.dictionary)}_e.AsyncGunzip=Et;var Ot=function(){function t(t,n){this.c=Y(),this.v=1,wt.call(this,t,n)}return t.prototype.push=function(t,n){this.c.p(t),wt.prototype.push.call(this,t,n)},t.prototype.p=function(t,n){var r=J(t,this.o,this.v&&(this.o.dictionary?6:2),n&&4,this.s);this.v&&(yt(r,this.o),this.v=0),n&&lt(r,r.length-4,this.c.d()),this.ondata(r,n)},t.prototype.flush=function(t){wt.prototype.flush.call(this,t)},t}();_e.Zlib=Ot;var Gt=function(){return function(t,n){ut([_,rt,function(){return[at,wt,Ot]}],this,bt.call(this,t,n),function(t){var n=new Ot(t.data);onmessage=at(n)},10,1)}}();function Lt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[_,rt,function(){return[Bt]}],function(t){return et(Bt(t.data[0],t.data[1]))},4,r)}function Bt(t,n){n||(n={});var r=Y();r.p(t);var i=J(t,n,n.dictionary?6:2,4);return yt(i,n),lt(i,i.length-4,r.d()),i}_e.AsyncZlib=Gt;var Ht=function(){function t(t,n){Mt.call(this,t,n),this.v=t&&t.dictionary?2:1}return t.prototype.push=function(t,n){if(Mt.prototype.e.call(this,t),this.v){if(this.p.length<6&&!n)return;this.p=this.p.subarray(mt(this.p,this.v-1)),this.v=0}n&&(this.p.length<4&&I(6,"invalid zlib data"),this.p=this.p.subarray(0,-4)),Mt.prototype.c.call(this,n)},t}();_e.Unzlib=Ht;var jt=function(){return function(t,n){ut([$,it,function(){return[at,Mt,Ht]}],this,bt.call(this,t,n),function(t){var n=new Ht(t.data);onmessage=at(n)},11,0)}}();function Nt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[$,it,function(){return[Pt]}],function(t){return et(Pt(t.data[0],ot(t.data[1])))},5,r)}function Pt(t,n){return U(t.subarray(mt(t,n&&n.dictionary),-4),{i:2},n&&n.out,n&&n.dictionary)}_e.AsyncUnzlib=jt;var Vt=function(){function t(t,n){this.o=bt.call(this,t,n)||{},this.G=Ft,this.I=Mt,this.Z=Ht}return t.prototype.i=function(){var t=this;this.s.ondata=function(n,r){t.ondata(n,r)}},t.prototype.push=function(t,r){if(this.ondata||I(5),this.s)this.s.push(t,r);else{if(this.p&&this.p.length){var i=new n(this.p.length+t.length);i.set(this.p),i.set(t,this.p.length)}else this.p=t;this.p.length>2&&(this.s=31==this.p[0]&&139==this.p[1]&&8==this.p[2]?new this.G(this.o):8!=(15&this.p[0])||this.p[0]>>4>7||(this.p[0]<<8|this.p[1])%31?new this.I(this.o):new this.Z(this.o),this.i(),this.s.push(this.p,r),this.p=null)}},t}();_e.Decompress=Vt;var Yt=function(){function t(t,n){Vt.call(this,t,n),this.queuedSize=0,this.G=Et,this.I=St,this.Z=jt}return t.prototype.i=function(){var t=this;this.s.ondata=function(n,r,i){t.ondata(n,r,i)},this.s.ondrain=function(n){t.queuedSize-=n,t.ondrain&&t.ondrain(n)}},t.prototype.push=function(t,n){this.queuedSize+=t.length,Vt.prototype.push.call(this,t,n)},t}();function Jt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),31==t[0]&&139==t[1]&&8==t[2]?Zt(t,n,r):8!=(15&t[0])||t[0]>>4>7||(t[0]<<8|t[1])%31?At(t,n,r):Nt(t,n,r)}function Kt(t,n){return 31==t[0]&&139==t[1]&&8==t[2]?qt(t,n):8!=(15&t[0])||t[0]>>4>7||(t[0]<<8|t[1])%31?Tt(t,n):Pt(t,n)}_e.AsyncDecompress=Yt;var Qt=function(t,r,i,e){for(var o in t){var s=t[o],a=r+o,u=e;Array.isArray(s)&&(u=K(e,s[1]),s=s[0]),ArrayBuffer.isView(s)?i[a]=[s,u]:(i[a+="/"]=[new n(0),u],Qt(s,a,i,e))}},Rt="undefined"!=typeof TextEncoder&&new TextEncoder,Wt="undefined"!=typeof TextDecoder&&new TextDecoder,Xt=0;try{Wt.decode(j,{stream:!0}),Xt=1}catch(t){}var $t=function(t){for(var n="",r=0;;){var i=t[r++],e=(i>127)+(i>223)+(i>239);if(r+e>t.length)return{s:n,r:D(t,r-1)};e?3==e?(i=((15&i)<<18|(63&t[r++])<<12|(63&t[r++])<<6|63&t[r++])-65536,n+=String.fromCharCode(55296|i>>10,56320|1023&i)):n+=String.fromCharCode(1&e?(31&i)<<6|63&t[r++]:(15&i)<<12|(63&t[r++])<<6|63&t[r++]):n+=String.fromCharCode(i)}},_t=function(){function t(t){this.ondata=t,Xt?this.t=new TextDecoder:this.p=j}return t.prototype.push=function(t,r){if(this.ondata||I(5),r=!!r,this.t)return this.ondata(this.t.decode(t,{stream:!0}),r),void(r&&(this.t.decode().length&&I(8),this.t=null));this.p||I(4);var i=new n(this.p.length+t.length);i.set(this.p),i.set(t,this.p.length);var e=$t(i),o=e.s,s=e.r;r?(s.length&&I(8),this.p=null):this.p=s,this.ondata(o,r)},t}();_e.DecodeUTF8=_t;var tn=function(){function t(t){this.ondata=t}return t.prototype.push=function(t,n){this.ondata||I(5),this.d&&I(4),this.ondata(nn(t),this.d=n||!1)},t}();function nn(t,r){if(r){for(var i=new n(t.length),e=0;e<t.length;++e)i[e]=t.charCodeAt(e);return i}if(Rt)return Rt.encode(t);var o=t.length,s=new n(t.length+(t.length>>1)),a=0,u=function(t){s[a++]=t};for(e=0;e<o;++e){if(a+5>s.length){var h=new n(a+8+(o-e<<1));h.set(s),s=h}var f=t.charCodeAt(e);f<128||r?u(f):f<2048?(u(192|f>>6),u(128|63&f)):f>55295&&f<57344?(u(240|(f=65536+(1047552&f)|1023&t.charCodeAt(++e))>>18),u(128|f>>12&63),u(128|f>>6&63),u(128|63&f)):(u(224|f>>12),u(128|f>>6&63),u(128|63&f))}return D(s,0,a)}function rn(t,n){if(n){for(var r="",i=0;i<t.length;i+=16384)r+=String.fromCharCode.apply(null,t.subarray(i,i+16384));return r}if(Wt)return Wt.decode(t);var e=$t(t),o=e.s;return(r=e.r).length&&I(8),o}_e.EncodeUTF8=tn;var en=function(t){return 1==t?3:t<6?2:9==t?1:0},on=function(t,n){return n+30+ht(t,n+26)+ht(t,n+28)},sn=function(t,n,r){var i=ht(t,n+28),e=ht(t,n+30),o=rn(t.subarray(n+46,n+46+i),!(2048&ht(t,n+8))),s=n+46+i,a=an(t,s,e,r,ft(t,n+20),ft(t,n+24),ft(t,n+42)),u=a[0],h=a[1],f=a[2];return[ht(t,n+10),u,h,o,s+e+ht(t,n+32),f]},an=function(t,n,r,i,e,o,s){var a=4294967295==e,u=4294967295==o,h=4294967295==s,f=n+r;if(i&&a+u+h){for(;n+4<f;n+=4+ht(t,n+2))if(1==ht(t,n))return[a?ct(t,n+4+8*u):e,u?ct(t,n+4):o,h?ct(t,n+4+8*(u+a)):s,1];i<2&&I(13)}return[e,o,s,0]},un=function(t){var n=0;if(t)for(var r in t){var i=t[r].length;i>65535&&I(9),n+=i+4}return n},hn=function(t,n,r,i,e,o,s,a){var u=i.length,h=r.extra,f=a&&a.length,c=un(h);lt(t,n,null!=s?33639248:67324752),n+=4,null!=s&&(t[n++]=20,t[n++]=r.os),t[n]=20,n+=2,t[n++]=r.flag<<1|(o<0&&8),t[n++]=e&&8,t[n++]=255&r.compression,t[n++]=r.compression>>8;var l=new Date(null==r.mtime?Date.now():r.mtime),p=l.getFullYear()-1980;if((p<0||p>119)&&I(10),lt(t,n,p<<25|l.getMonth()+1<<21|l.getDate()<<16|l.getHours()<<11|l.getMinutes()<<5|l.getSeconds()>>1),n+=4,-1!=o&&(lt(t,n,r.crc),lt(t,n+4,o<0?-o-2:o),lt(t,n+8,r.size)),lt(t,n+12,u),lt(t,n+14,c),n+=16,null!=s&&(lt(t,n,f),lt(t,n+6,r.attrs),lt(t,n+10,s),n+=14),t.set(i,n),n+=u,c)for(var v in h){var d=h[v],g=d.length;lt(t,n,+v),lt(t,n+2,g),t.set(d,n+4),n+=4+g}return f&&(t.set(a,n),n+=f),n},fn=function(t,n,r,i,e){lt(t,n,101010256),lt(t,n+8,r),lt(t,n+10,r),lt(t,n+12,i),lt(t,n+16,e)},cn=function(){function t(t){this.filename=t,this.c=V(),this.size=0,this.compression=0}return t.prototype.process=function(t,n){this.ondata(null,t,n)},t.prototype.push=function(t,n){this.ondata||I(5),this.c.p(t),this.size+=t.length,n&&(this.crc=this.c.d()),this.process(t,n||!1)},t}();_e.ZipPassThrough=cn;var ln=function(){function t(t,n){var r=this;n||(n={}),cn.call(this,t),this.d=new wt(n,function(t,n){r.ondata(null,t,n)}),this.compression=8,this.flag=en(n.level)}return t.prototype.process=function(t,n){try{this.d.push(t,n)}catch(t){this.ondata(t,null,n)}},t.prototype.push=function(t,n){cn.prototype.push.call(this,t,n)},t}();_e.ZipDeflate=ln;var pn=function(){function t(t,n){var r=this;n||(n={}),cn.call(this,t),this.d=new xt(n,function(t,n,i){r.ondata(t,n,i)}),this.compression=8,this.flag=en(n.level),this.terminate=this.d.terminate}return t.prototype.process=function(t,n){this.d.push(t,n)},t.prototype.push=function(t,n){cn.prototype.push.call(this,t,n)},t}();_e.AsyncZipDeflate=pn;var vn=function(){function t(t){this.ondata=t,this.u=[],this.d=1}return t.prototype.add=function(t){var r=this;if(this.ondata||I(5),2&this.d)this.ondata(I(4+8*(1&this.d),0,1),null,!1);else{var i=nn(t.filename),e=i.length,o=t.comment,s=o&&nn(o),a=e!=t.filename.length||s&&o.length!=s.length,u=e+un(t.extra)+30;e>65535&&this.ondata(I(11,0,1),null,!1);var h=new n(u);hn(h,0,t,i,a,-1);var f=[h],c=function(){for(var t=0,n=f;t<n.length;t++)r.ondata(null,n[t],!1);f=[]},l=this.d;this.d=0;var p=this.u.length,v=K(t,{f:i,u:a,o:s,t:function(){t.terminate&&t.terminate()},r:function(){if(c(),l){var t=r.u[p+1];t?t.r():r.d=1}l=1}}),d=0;t.ondata=function(i,e,o){if(i)r.ondata(i,e,o),r.terminate();else if(d+=e.length,f.push(e),o){var s=new n(16);lt(s,0,134695760),lt(s,4,t.crc),lt(s,8,d),lt(s,12,t.size),f.push(s),v.c=d,v.b=u+d+16,v.crc=t.crc,v.size=t.size,l&&v.r(),l=1}else l&&c()},this.u.push(v)}},t.prototype.end=function(){var t=this;2&this.d?this.ondata(I(4+8*(1&this.d),0,1),null,!0):(this.d?this.e():this.u.push({r:function(){1&t.d&&(t.u.splice(-1,1),t.e())},t:function(){}}),this.d=3)},t.prototype.e=function(){for(var t=0,r=0,i=0,e=0,o=this.u;e<o.length;e++)i+=46+(h=o[e]).f.length+un(h.extra)+(h.o?h.o.length:0);for(var s=new n(i+22),a=0,u=this.u;a<u.length;a++){var h;hn(s,t,h=u[a],h.f,h.u,-h.c-2,r,h.o),t+=46+h.f.length+un(h.extra)+(h.o?h.o.length:0),r+=h.b}fn(s,t,this.u.length,i,r),this.ondata(null,s,!0),this.d=2},t.prototype.terminate=function(){for(var t=0,n=this.u;t<n.length;t++)n[t].t();this.d=2},t}();function dn(t,r,i){i||(i=r,r={}),"function"!=typeof i&&I(7);var e={};Qt(t,"",e,r);var o=Object.keys(e),s=o.length,a=0,u=0,h=s,f=Array(s),c=[],l=function(){for(var t=0;t<c.length;++t)c[t]()},p=function(t,n){xn(function(){i(t,n)})};xn(function(){p=i});var v=function(){var t=new n(u+22),r=a,i=u-a;u=0;for(var e=0;e<h;++e){var o=f[e];try{var s=o.c.length;hn(t,u,o,o.f,o.u,s);var c=30+o.f.length+un(o.extra),l=u+c;t.set(o.c,l),hn(t,a,o,o.f,o.u,s,u,o.m),a+=16+c+(o.m?o.m.length:0),u=l+s}catch(t){return p(t,null)}}fn(t,a,f.length,i,r),p(null,t)};s||v();for(var d=function(t){var n=o[t],r=e[n],i=r[0],h=r[1],d=V(),g=i.length;d.p(i);var y=nn(n),m=y.length,b=h.comment,w=b&&nn(b),x=w&&w.length,z=un(h.extra),k=0==h.level?0:8,M=function(r,i){if(r)l(),p(r,null);else{var e=i.length;f[t]=K(h,{size:g,crc:d.d(),c:i,f:y,m:w,u:m!=n.length||w&&b.length!=x,compression:k}),a+=30+m+z+e,u+=76+2*(m+z)+(x||0)+e,--s||v()}};if(m>65535&&M(I(11,0,1),null),k)if(g<16e4)try{M(null,kt(i,h))}catch(t){M(t,null)}else c.push(zt(i,h,M));else M(null,i)},g=0;g<h;++g)d(g);return l}function gn(t,r){r||(r={});var i={},e=[];Qt(t,"",i,r);var o=0,s=0;for(var a in i){var u=i[a],h=u[0],f=u[1],c=0==f.level?0:8,l=(M=nn(a)).length,p=f.comment,v=p&&nn(p),d=v&&v.length,g=un(f.extra);l>65535&&I(11);var y=c?kt(h,f):h,m=y.length,b=V();b.p(h),e.push(K(f,{size:h.length,crc:b.d(),c:y,f:M,m:v,u:l!=a.length||v&&p.length!=d,o:o,compression:c})),o+=30+l+g+m,s+=76+2*(l+g)+(d||0)+m}for(var w=new n(s+22),x=o,z=s-o,k=0;k<e.length;++k){var M;hn(w,(M=e[k]).o,M,M.f,M.u,M.c.length);var S=30+M.f.length+un(M.extra);w.set(M.c,M.o+S),hn(w,o,M,M.f,M.u,M.c.length,M.o,M.m),o+=16+S+(M.m?M.m.length:0)}return fn(w,o,e.length,z,x),w}_e.Zip=vn;var yn=function(){function t(){}return t.prototype.push=function(t,n){this.ondata(null,t,n)},t.compression=0,t}();_e.UnzipPassThrough=yn;var mn=function(){function t(){var t=this;this.i=new Mt(function(n,r){t.ondata(null,n,r)})}return t.prototype.push=function(t,n){try{this.i.push(t,n)}catch(t){this.ondata(t,null,n)}},t.compression=8,t}();_e.UnzipInflate=mn;var bn=function(){function t(t,n){var r=this;n<32e4?this.i=new Mt(function(t,n){r.ondata(null,t,n)}):(this.i=new St(function(t,n,i){r.ondata(t,n,i)}),this.terminate=this.i.terminate)}return t.prototype.push=function(t,n){this.i.terminate&&(t=D(t,0)),this.i.push(t,n)},t.compression=8,t}();_e.AsyncUnzipInflate=bn;var wn=function(){function t(t){this.onfile=t,this.k=[],this.o={0:yn},this.p=j}return t.prototype.push=function(t,r){var i=this;if(this.onfile||I(5),this.p||I(4),this.c>0){var e=Math.min(this.c,t.length),o=t.subarray(0,e);if(this.c-=e,this.d?this.d.push(o,!this.c):this.k[0].push(o),(t=t.subarray(e)).length)return this.push(t,r)}else{var s=0,a=0,u=void 0,h=void 0;this.p.length?t.length?((h=new n(this.p.length+t.length)).set(this.p),h.set(t,this.p.length)):h=this.p:h=t;for(var f=h.length,c=this.c,l=c&&this.d,p=function(){var t=ft(h,a);if(67324752==t){s=1,u=a,v.d=null,v.c=0;var n=ht(h,a+6),r=ht(h,a+8),e=2048&n,o=8&n,l=ht(h,a+26),p=ht(h,a+28);if(f>a+30+l+p){var d=[];v.k.unshift(d),s=2;var g,y=ft(h,a+18),m=ft(h,a+22),b=rn(h.subarray(a+30,a+=30+l),!e),w=an(h,a,p,2,y,m,0),x=w[0],z=w[1];o&&(x=-1-w[3]),a+=p,v.c=x;var k={name:b,compression:r,start:function(){if(k.ondata||I(5),x){var t=i.o[r];t||k.ondata(I(14,"unknown compression type "+r,1),null,!1),(g=x<0?new t(b):new t(b,x,z)).ondata=function(t,n,r){k.ondata(t,n,r)};for(var n=0,e=d;n<e.length;n++)g.push(e[n],!1);i.k[0]==d&&i.c?i.d=g:g.push(j,!0)}else k.ondata(null,j,!0)},terminate:function(){g&&g.terminate&&g.terminate()}};x>=0&&(k.size=x,k.originalSize=z),v.onfile(k)}return"break"}if(c){if(134695760==t)return u=a+=12+(-2==c&&8),s=3,v.c=0,"break";if(33639248==t)return u=a-=4,s=3,v.c=0,"break"}},v=this;a<f-4&&"break"!==p();++a);if(this.p=j,c<0){var d=h.subarray(0,s?u-12-(-2==c&&8)-(134695760==ft(h,u-16)&&4):a);l?l.push(d,!!s):this.k[+(2==s)].push(d)}if(2&s)return this.push(h.subarray(a),r);this.p=h.subarray(a)}r&&(this.c&&I(13),this.p=null)},t.prototype.register=function(t){this.o[t.compression]=t},t}();_e.Unzip=wn;var xn="function"==typeof queueMicrotask?queueMicrotask:"function"==typeof setTimeout?setTimeout:function(t){t()};function zn(t,r,i){i||(i=r,r={}),"function"!=typeof i&&I(7);var e=[],o=function(){for(var t=0;t<e.length;++t)e[t]()},s={},a=function(t,n){xn(function(){i(t,n)})};xn(function(){a=i});for(var u=t.length-22;101010256!=ft(t,u);--u)if(!u||t.length-u>65558)return a(I(13,0,1),null),o;var h=ht(t,u+8);if(h){var f=h,c=ft(t,u+16),l=117853008==ft(t,u-20);if(l){var p=ft(t,u-12);(l=101075792==ft(t,p))&&(f=h=ft(t,p+32),c=ft(t,p+48))}for(var v=r&&r.filter,d=function(r){var i=sn(t,c,l),u=i[0],f=i[1],p=i[2],d=i[3],g=i[4],y=on(t,i[5]);c=g;var m=function(t,n){t?(o(),a(t,null)):(n&&(s[d]=n),--h||a(null,s))};if(!v||v({name:d,size:f,originalSize:p,compression:u}))if(u)if(8==u){var b=t.subarray(y,y+f);if(p<524288||f>.8*p)try{m(null,Tt(b,{out:new n(p)}))}catch(t){m(t,null)}else e.push(At(b,{size:p},m))}else m(I(14,"unknown compression type "+u,1),null);else m(null,D(t,y,y+f));else m(null,null)},g=0;g<f;++g)d()}else a(null,{});return o}function kn(t,r){for(var i={},e=t.length-22;101010256!=ft(t,e);--e)(!e||t.length-e>65558)&&I(13);var o=ht(t,e+8);if(!o)return{};var s=ft(t,e+16),a=117853008==ft(t,e-20);if(a){var u=ft(t,e-12);(a=101075792==ft(t,u))&&(o=ft(t,u+32),s=ft(t,u+48))}for(var h=r&&r.filter,f=0;f<o;++f){var c=sn(t,s,a),l=c[0],p=c[1],v=c[2],d=c[3],g=c[4],y=on(t,c[5]);s=g,h&&!h({name:d,size:p,originalSize:v,compression:l})||(l?8==l?i[d]=Tt(t.subarray(y,y+p),{out:new n(v)}):I(14,"unknown compression type "+l):i[d]=D(t,y,y+p))}return i}return _e});
+</script>
+<script type="text/plain" id="workerLogicSrc">
+/* Runs inside a Web Worker (blob-constructed at runtime, after the fflate lib source).
+   Custom, targeted .xlsx reader: unzips only the two XML parts we need and extracts
+   only the ~11 columns this report uses, instead of parsing the whole 40-column sheet.
+   This is dramatically faster than a general-purpose spreadsheet library on a
+   270k-row / ~380MB-uncompressed-XML export. */
+
+const FACILITY_MAP = {
+  'АО_Усть_Каменогорская_Птицефабрика':'УКПФ',
+  'ТОО_Макинская_птицефабрика':'МПФ'
+};
+const CATEGORY_ORDER = ['БП','ЗПП','Кормовые компоненты','Инкубационное яйцо',
+  'Инкубационное яйцо газация','Транспорт','Подстилочный материал',
+  'Инкубатор','Входящая сырье','МКО','Столовая'];
+
+const TARGET_HEADERS = {
+  facility: 'Предприятие',
+  subdiv: 'Подразделение',
+  grp: 'Группа материала',
+  subgrp: 'Подгруппа материала',
+  product: 'Наименование продукции / исследуемого объекта',
+  uchastok: 'Участок',
+  korpus: 'Корпус / Помещение',
+  point: 'Точка отбора пробы',
+  indicator: 'Наименование исследования',
+  date: 'Дата отбора пробы',
+  resDate: 'Дата выдачи результата',
+  oknok: 'Результат в допустимых пределах',
+};
+const OPTIONAL_FIELDS = { resDate: true }; // без него отчёт работает, но только по дате отбора
+
+/* ---------- shared helpers (category rules) ---------- */
+function cleanLoc(s){
+  s = (s==null?'':String(s)).trim();
+  if(!s || s.toLowerCase()==='не применимо' || s.toLowerCase()==='nan') return '';
+  return s.replace(/_/g,' ').trim();
+}
+function buildLocationString(r){
+  const u=cleanLoc(r.uchastok), k=cleanLoc(r.korpus), p=cleanLoc(r.point), prod=cleanLoc(r.product);
+  const parts=[]; if(u)parts.push(u); if(k)parts.push(k); if(p)parts.push(p);
+  if(parts.length===0 && prod) parts.push(prod);
+  return parts.length? parts.join(' — ') : '(без указания точки)';
+}
+function getCategoryMemberships(r){
+  const subdiv=r.subdiv, subgrp=r.subgrp, grp=r.grp, indicator=(r.indicator||'');
+  const point=(r.point||'').toLowerCase();
+  const cats=[];
+  const bpDept = (subdiv==='Цех_бройлерного_производства' || subdiv==='Цех_выращивания');
+  if(bpDept && subgrp!=='Бахильная_проба') cats.push('БП');
+
+  const incDept = (subdiv==='Цех_инкубации_' || subdiv==='Цех_инкубации');
+  if(incDept && subgrp!=='Помет') cats.push('Инкубатор');
+
+  const zppDept = ['Производственный_цех_','Производственный_цех','Склады_ЗПП_','Склады_ЗПП',
+    'Отдел_ТО_ЗПП','Служба_главного_инженера_ЗПП','Цех_по_производству_мясокостной_муки_ЗПП'].includes(subdiv);
+  const isListeria = indicator.toLowerCase().includes('listeria');
+  const isCanteenMisfiled = (subgrp==='Оборудование_Столовая' || subgrp==='Посуда_столовая');
+  // «Склад ГП» (склад готовой продукции: камеры хранения, зона отгрузки и т.п.) — это
+  // готовая продукция по сути, даже если Группа_материала для конкретной пробы стоит
+  // не «Готовая_продукция» (напр. смыв/воздух/вода). Бекжан просил не считать готовую
+  // продукцию по ЗПП, поэтому исключаем и по участку отдельно от проверки grp выше.
+  const isSkladGP = ((r.uchastok||'')+'').trim().toLowerCase().replace(/_/g,' ').startsWith('склад гп');
+  // Бекжан просил не учитывать показатель КМАФАнМ по ЗПП для готовой продукции/тушки
+  // (уже отсекается проверкой grp==='Готовая_продукция' выше) — но смывы по
+  // оборудованию по этому показателю учитывать нужно, поэтому их не исключаем.
+  const isKmafanm = indicator.toLowerCase().includes('кмафанм') && !subgrp.includes('Оборудование');
+  if(zppDept && grp!=='Готовая_продукция' && !isListeria && !isCanteenMisfiled && !isSkladGP && !isKmafanm) cats.push('ЗПП');
+
+  if(grp==='Готовая_продукция' && (subgrp==='Комбикорм'||subgrp==='Мука_кормовая')) cats.push('Кормовые компоненты');
+  if(grp==='Сырье') cats.push('Входящая сырье');
+  const isIncubatorBarrierRoom = incDept && (r.korpus||'').trim().toLowerCase()==='дезбарьер';
+  if(subgrp==='Транспорт' && !isIncubatorBarrierRoom) cats.push('Транспорт');
+  if(subgrp==='Подстилочный_материал') cats.push('Подстилочный материал');
+
+  const isEgg = (subgrp==='Яйцо' || subgrp==='Яйцо_инкубационное');
+  const isGas = point.includes('фумигац') || point.includes('газац');
+  if(isEgg && !isGas) cats.push('Инкубационное яйцо');
+  if(isEgg && isGas) cats.push('Инкубационное яйцо газация');
+
+  // Столовая — отдельная категория (оборудование и посуда столовой), не путать
+  // с «МКО» (мясокостной мукой).
+  if(isCanteenMisfiled) cats.push('Столовая');
+  const isMko = (subgrp && subgrp.includes('МКО'));
+  if(isMko) cats.push('МКО');
+
+  return cats;
+}
+function getISOWeek(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = (d.getUTCDay()+6)%7;
+  d.setUTCDate(d.getUTCDate()-dayNum+3);
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(),0,4));
+  const fdDay = (firstThursday.getUTCDay()+6)%7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate()-fdDay+3);
+  const diff = d - firstThursday;
+  const week = 1 + Math.round(diff/(7*24*3600*1000));
+  return {year: d.getUTCFullYear(), week};
+}
+function weekKeyOf(date){
+  const {year,week} = getISOWeek(date);
+  return year+'-W'+String(week).padStart(2,'0');
+}
+function isoWeekToDates(weekKey){
+  const [yStr,wStr] = weekKey.split('-W');
+  const y = parseInt(yStr,10), w = parseInt(wStr,10);
+  const jan4 = new Date(Date.UTC(y,0,4));
+  const jan4Day = (jan4.getUTCDay()+6)%7;
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate()-jan4Day);
+  const monday = new Date(week1Monday);
+  monday.setUTCDate(week1Monday.getUTCDate() + (w-1)*7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate()+6);
+  function fmt(d){ return String(d.getUTCDate()).padStart(2,'0')+'.'+String(d.getUTCMonth()+1).padStart(2,'0')+'.'+d.getUTCFullYear(); }
+  return fmt(monday)+' – '+fmt(sunday);
+}
+function excelSerialToDate(n){
+  return new Date(Date.UTC(1899,11,30) + Math.round(n*86400000));
+}
+
+/* ---------- xml helpers ---------- */
+function decodeXmlEntities(s){
+  if(s.indexOf('&')===-1) return s;
+  return s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'")
+          .replace(/&#(\d+);/g,(m,n)=>String.fromCodePoint(parseInt(n,10)))
+          .replace(/&#x([0-9a-fA-F]+);/g,(m,n)=>String.fromCodePoint(parseInt(n,16)))
+          .replace(/&amp;/g,'&');
+}
+/* Concatenate every <t>-run inside a <si>...</si> (shared string) or
+   <is>...</is> (inline string) block -- a cell's text is sometimes split
+   across several <r><t>...</t></r> "rich text" runs, not just one <t>. */
+function extractRunsText(block){
+  let text = '';
+  const tRe = /<t[^>]*>([\s\S]*?)<\/t>/g;
+  let tm;
+  while((tm = tRe.exec(block))){ text += tm[1]; }
+  return decodeXmlEntities(text);
+}
+function parseSharedStrings(xml){
+  const sst = [];
+  const siRe = /<si>([\s\S]*?)<\/si>/g;
+  let m;
+  while((m = siRe.exec(xml))){
+    sst.push(extractRunsText(m[1]));
+  }
+  return sst;
+}
+
+/* Matches one <c> cell, self-closing ("<c .../>", no value) or not
+   ("<c ...>...</c>"). Using an explicit alternation -- rather than requiring
+   a literal <v> right after the opening tag, as an earlier version did --
+   means it also matches inline-string cells (<is><t>...</t></is>, no <v> at
+   all), which is how some export tools write text (Excel normally uses a
+   shared sharedStrings.xml table instead, but not every writer does).
+   The alternation is what keeps this safe: without it, a lazy match starting
+   at a self-closing cell has no "</c>" of its own to stop at and silently
+   consumes the *next* cell's content instead -- wrong data under the right
+   column, not a visible error. */
+function cellPairRegex(colPattern){
+  return new RegExp('<c r="('+colPattern+')(\\d+)"([^>]*?)(?:/>|>([\\s\\S]*?)<\\/c>)','g');
+}
+function cellValue(attrs, inner, sst){
+  if(inner === undefined) return ''; // self-closing cell: no value
+  if(attrs.indexOf('t="inlineStr"') !== -1) return extractRunsText(inner);
+  const vMatch = /<v>([\s\S]*?)<\/v>/.exec(inner);
+  if(!vMatch) return '';
+  if(attrs.indexOf('t="s"') !== -1) return sst[parseInt(vMatch[1],10)] || '';
+  return decodeXmlEntities(vMatch[1]);
+}
+
+/* A single JS string can't hold more than ~536 million UTF-16 units (V8's own
+   ceiling -- same in Chrome, Edge, and Node, not a size the runtime chooses per
+   app). This file's sheet XML decodes to well over that on its own, decoded
+   whole, so `new TextDecoder().decode(wholeThing)` was the actual failure --
+   it happened before a single row was ever looked at, which is why the error
+   was "can't read the header row" rather than anything about columns.
+   This decodes the raw bytes in ~64MB pieces (TextDecoder's `stream: true`
+   correctly carries over a multi-byte UTF-8 sequence that a piece boundary
+   lands in the middle of) and only cuts each returned string at a place where
+   `boundary` (e.g. "</row>") has just closed, so no <row> or <c> element is
+   ever split across two pieces.
+   `onPiece` is called once per piece instead of collecting them into an array
+   -- with a ~700M-character sheet that's 5-6 pieces, and holding all of them
+   in memory at once (each a ~240MB UTF-16 string) on top of the ~840MB
+   decompressed byte buffer adds up to more than this file alone should need.
+   Returning `false` from `onPiece` stops early (used once we already know the
+   file is bad, so we don't keep decoding the rest of it for nothing). */
+function decodeInChunks(bytes, boundary, maxCharsPerPiece, onPiece){
+  const decoder = new TextDecoder('utf-8');
+  let carry = '';
+  const BYTES_PER_READ = 64 * 1024 * 1024;
+  for(let offset = 0; offset < bytes.length; offset += BYTES_PER_READ){
+    const end = Math.min(offset + BYTES_PER_READ, bytes.length);
+    carry += decoder.decode(bytes.subarray(offset, end), {stream: end < bytes.length});
+    const fracDone = bytes.length ? end / bytes.length : 1;
+    while(carry.length > maxCharsPerPiece){
+      const cut = carry.lastIndexOf(boundary, maxCharsPerPiece);
+      if(cut === -1) break; // no boundary yet inside the window -- read more bytes first
+      const cutPoint = cut + boundary.length;
+      if(onPiece(carry.slice(0, cutPoint), fracDone) === false) return;
+      carry = carry.slice(cutPoint);
+    }
+  }
+  if(carry) onPiece(carry, 1);
+}
+
+/* Find which column letter holds each header, by scanning row 1 (always in
+   the first piece -- row 1 itself is a few KB, nowhere near a chunk boundary).
+   Prefers the row explicitly marked r="1"; if that's not there, some writers
+   omit row numbers and rely on document order instead, so fall back to
+   whichever <row> comes first. */
+function resolveRow1(sheetXml, sst){
+  let row1Match = /<row r="1"[^>]*>([\s\S]*?)<\/row>/.exec(sheetXml);
+  if(!row1Match) row1Match = /<row[^>]*>([\s\S]*?)<\/row>/.exec(sheetXml);
+  if(!row1Match) return null;
+  const row1 = row1Match[1];
+  const cellRe = cellPairRegex('[A-Z]+');
+  const headerByCol = {};
+  let cm;
+  while((cm = cellRe.exec(row1))){
+    headerByCol[cm[1]] = cellValue(cm[3], cm[4], sst);
+  }
+  return headerByCol;
+}
+
+self.onmessage = function(e){
+  const { buffer } = e.data;
+  try{
+    self.postMessage({type:'progress', percent:5, text:'Распаковываю файл…'});
+    const data = new Uint8Array(buffer);
+
+    // Pass 1: list entries cheaply (filter always returns false -> nothing is inflated)
+    const allNames = [];
+    fflate.unzipSync(data, { filter(f){ allNames.push(f.name); return false; } });
+
+    let sheetPath = allNames.find(n => n === 'xl/worksheets/sheet1.xml');
+    if(!sheetPath){
+      const need = { 'xl/workbook.xml':true, 'xl/_rels/workbook.xml.rels':true };
+      const pre = fflate.unzipSync(data, { filter(f){ return !!need[f.name]; } });
+      const dec0 = new TextDecoder('utf-8');
+      const wbXml = pre['xl/workbook.xml'] ? dec0.decode(pre['xl/workbook.xml']) : '';
+      const relsXml = pre['xl/_rels/workbook.xml.rels'] ? dec0.decode(pre['xl/_rels/workbook.xml.rels']) : '';
+      const sheetTagMatch = /<sheet[^>]*r:id="([^"]+)"[^>]*\/>/.exec(wbXml) || /<sheet[^>]*r:id="([^"]+)"/.exec(wbXml);
+      if(sheetTagMatch){
+        const rid = sheetTagMatch[1];
+        const relRe = new RegExp('<Relationship[^>]*Id="'+rid+'"[^>]*Target="([^"]+)"');
+        const relMatch = relRe.exec(relsXml);
+        if(relMatch){
+          let target = relMatch[1].replace(/^\.?\//,'');
+          sheetPath = 'xl/' + target.replace(/^xl\//,'');
+        }
+      }
+      if(!sheetPath){
+        sheetPath = allNames.find(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)) || allNames.find(n => /worksheets\/.*\.xml$/.test(n));
+      }
+    }
+    if(!sheetPath){ self.postMessage({type:'error', message:'Не нашёл лист с данными внутри файла.'}); return; }
+
+    const hasSst = allNames.indexOf('xl/sharedStrings.xml') !== -1;
+    const wanted = {}; wanted[sheetPath] = true;
+    if(hasSst) wanted['xl/sharedStrings.xml'] = true;
+
+    self.postMessage({type:'progress', percent:15, text:'Извлекаю содержимое…'});
+    const unzipped = fflate.unzipSync(data, { filter(f){ return !!wanted[f.name]; } });
+    // ~120M chars/piece leaves generous headroom under the ~536M-per-string ceiling
+    // even for exports several times the size of this one.
+    const MAX_CHARS_PER_PIECE = 120000000;
+
+    self.postMessage({type:'progress', percent:20, text:'Читаю справочник строк…'});
+    let sst = [];
+    if(hasSst){
+      decodeInChunks(unzipped['xl/sharedStrings.xml'], '</si>', MAX_CHARS_PER_PIECE, (piece)=>{
+        sst = sst.concat(parseSharedStrings(piece));
+      });
+    }
+
+    self.postMessage({type:'progress', percent:30, text:'Определяю столбцы и разбираю строки…'});
+    let colToField = null, colPattern = null, headerErrorMsg = null;
+    const rowsMap = new Map();
+
+    decodeInChunks(unzipped[sheetPath], '</row>', MAX_CHARS_PER_PIECE, (piece, fracDone)=>{
+      if(colToField === null){
+        const headerByCol = resolveRow1(piece, sst);
+        if(!headerByCol){
+          headerErrorMsg = 'Не удалось прочитать заголовки (первую строку) файла. '+
+            'Начало содержимого листа (' + piece.length.toLocaleString('ru-RU') + ' символов в этом фрагменте): ' +
+            JSON.stringify(piece.slice(0, 150));
+          return false;
+        }
+        const headerTextByCol = {};
+        Object.keys(headerByCol).forEach(col=>{
+          headerTextByCol[col] = String(headerByCol[col]).split('\n')[0].trim();
+        });
+        const colOf = {};
+        Object.keys(TARGET_HEADERS).forEach(field=>{
+          const wanted2 = TARGET_HEADERS[field];
+          let found = Object.keys(headerTextByCol).find(col => headerTextByCol[col] === wanted2);
+          if(!found) found = Object.keys(headerTextByCol).find(col => headerTextByCol[col].startsWith(wanted2));
+          if(found) colOf[field] = found;
+        });
+        const missingFields = Object.keys(TARGET_HEADERS).filter(f => !colOf[f] && !OPTIONAL_FIELDS[f]);
+        if(missingFields.length){
+          headerErrorMsg = 'Не найдены столбцы: '+missingFields.map(f=>TARGET_HEADERS[f]).join(', ')+
+            '. Проверьте формат файла (должен совпадать со «Свод_Рабочих_журналов_МБ»).';
+          return false;
+        }
+        colToField = {};
+        Object.keys(colOf).forEach(field=>{ colToField[colOf[field]] = field; });
+        const cols = Object.keys(colToField).sort((a,b)=>b.length-a.length);
+        colPattern = cols.map(c=>c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
+      }
+      const cellRe = cellPairRegex(colPattern); // fresh regex per piece: lastIndex starts at 0
+      let cm2;
+      while((cm2 = cellRe.exec(piece))){
+        const col = cm2[1], rowNum = cm2[2], attrs = cm2[3], inner = cm2[4];
+        if(rowNum === '1') continue;
+        const field = colToField[col];
+        let rec = rowsMap.get(rowNum);
+        if(!rec){ rec = {}; rowsMap.set(rowNum, rec); }
+        rec[field] = cellValue(attrs, inner, sst);
+      }
+      self.postMessage({type:'progress', percent: 30 + Math.round(fracDone*40), text:'Извлекаю строки… ('+rowsMap.size.toLocaleString('ru-RU')+')'});
+    });
+
+    if(headerErrorMsg){ self.postMessage({type:'error', message: headerErrorMsg}); return; }
+
+    self.postMessage({type:'progress', percent:75, text:'Считаю показатели… ('+rowsMap.size.toLocaleString('ru-RU')+' строк)'});
+
+    const byFacWeek = {};      // неделя по «Дата отбора пробы»
+    const byFacWeekRes = {};   // неделя по «Дата выдачи результата» (дата обнаружения)
+    let maxDate = null, maxResDate = null;
+    const totalRows = rowsMap.size;
+
+    function parseAnyDate(raw){
+      if(raw===undefined || raw===null || raw==='') return null;
+      const num = Number(raw);
+      let d = null;
+      if(!isNaN(num) && String(raw).indexOf('-')===-1 && String(raw).indexOf(':')===-1){
+        d = excelSerialToDate(num);
+      } else {
+        const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(String(raw).trim());
+        if(m) d = new Date(Date.UTC(+m[3], +m[2]-1, +m[1]));
+        else { const parsed = new Date(raw); d = isNaN(parsed.getTime()) ? null : parsed; }
+      }
+      return (d && !isNaN(d.getTime())) ? d : null;
+    }
+    function addTo(map, fac, wk, r, cats, oknok, locSuffix, sampleWeek){
+      if(!map[fac]) map[fac] = {};
+      if(!map[fac][wk]) map[fac][wk] = {total:0, ok:0, nok:0, cats:{}};
+      const bucket = map[fac][wk];
+      bucket.total++;
+      if(oknok==='OK') bucket.ok++; else if(oknok==='NOK') bucket.nok++;
+      if(sampleWeek){
+        const fw = (bucket.fromWeeks = bucket.fromWeeks || {});
+        const e = (fw[sampleWeek] = fw[sampleWeek] || {total:0, nok:0});
+        e.total++; if(oknok==='NOK') e.nok++;
+      }
+      for(let ci=0; ci<cats.length; ci++){
+        const cn = cats[ci];
+        if(!bucket.cats[cn]) bucket.cats[cn] = {total:0, ok:0, nok:0, nokMap:{}};
+        const c = bucket.cats[cn];
+        c.total++;
+        if(oknok==='OK') c.ok++;
+        else if(oknok==='NOK'){
+          c.nok++;
+          if(!c.nokMap[r.indicator]) c.nokMap[r.indicator] = [];
+          c.nokMap[r.indicator].push(buildLocationString(r) + (locSuffix || ''));
+        }
+      }
+    }
+
+    rowsMap.forEach(rec=>{
+      const facRaw = (rec.facility||'').trim();
+      const fac = FACILITY_MAP[facRaw];
+      if(!fac) return;
+      const d = parseAnyDate(rec.date);
+      if(!d || d.getUTCFullYear() < 2000 || d.getUTCFullYear() > 2100) return;
+
+      const indicator = (rec.indicator||'').trim();
+      const indicatorLc = indicator.toLowerCase();
+      if(indicatorLc.includes('колибактериоз')) return;
+      if(indicatorLc.includes('антибиотикочувствительность')) return;
+      if(indicatorLc.includes('стрептококки') && indicatorLc.includes('энтерококки')) return;
+
+      if(!maxDate || d>maxDate) maxDate = d;
+      const oknok = (rec.oknok||'').trim();
+      const r = {
+        subdiv: (rec.subdiv||'').trim(),
+        grp: (rec.grp||'').trim(),
+        subgrp: (rec.subgrp||'').trim(),
+        product: (rec.product||'').trim(),
+        uchastok: (rec.uchastok||'').trim(),
+        korpus: (rec.korpus||'').trim(),
+        point: (rec.point||'').trim(),
+        indicator,
+        oknok
+      };
+      const cats = getCategoryMemberships(r);
+      addTo(byFacWeek, fac, weekKeyOf(d), r, cats, oknok);
+      // по дате обнаружения — только пробы, по которым результат уже выдан
+      const dr = parseAnyDate(rec.resDate);
+      if(dr && dr.getUTCFullYear() >= 2000 && dr.getUTCFullYear() <= 2100){
+        if(!maxResDate || dr>maxResDate) maxResDate = dr;
+        // для «по дате обнаружения» дописываем, когда и в какую неделю была отобрана проба
+        const dd = (x)=>String(x.getUTCDate()).padStart(2,'0')+'.'+String(x.getUTCMonth()+1).padStart(2,'0');
+        const sw = weekKeyOf(d).split('-W')[1];
+        addTo(byFacWeekRes, fac, weekKeyOf(dr), r, cats, oknok,
+          ` · отбор ${dd(d)} (нед. ${parseInt(sw,10)}) → результат ${dd(dr)}`, parseInt(sw,10));
+      }
+    });
+
+    self.postMessage({type:'progress', percent:95, text:'Формирую итог…'});
+
+    function buildOut(map){
+      const out = {};
+      Object.keys(map).forEach(fac=>{
+        out[fac] = {};
+        Object.keys(map[fac]).forEach(wk=>{
+          const b = map[fac][wk];
+          const categories = {};
+          CATEGORY_ORDER.forEach(cn=>{
+            const c = b.cats[cn] || {total:0, ok:0, nok:0, nokMap:{}};
+            const indicators = Object.keys(c.nokMap).map(name=>({
+              name, count: c.nokMap[name].length, locations: c.nokMap[name]
+            })).sort((a,b2)=>b2.count-a.count);
+            categories[cn] = {total:c.total, ok:c.ok, nok:c.nok, pending:c.total-c.ok-c.nok, indicators};
+          });
+          out[fac][wk] = {
+            range: isoWeekToDates(wk),
+            categories,
+            overall: {total:b.total, ok:b.ok, nok:b.nok, pending:b.total-b.ok-b.nok},
+            fromWeeks: b.fromWeeks || null
+          };
+        });
+      });
+      return out;
+    }
+    const facilitiesOut = buildOut(byFacWeek);
+    const facilitiesResOut = buildOut(byFacWeekRes);
+    const hasResDate = !!(colToField && Object.values(colToField).indexOf('resDate') !== -1);
+
+    let maxDateStr = null;
+    if(maxDate){
+      maxDateStr = String(maxDate.getUTCDate()).padStart(2,'0')+'.'+String(maxDate.getUTCMonth()+1).padStart(2,'0')+'.'+maxDate.getUTCFullYear();
+    }
+
+    self.postMessage({type:'done', result:{ facilities: facilitiesOut, facilitiesRes: facilitiesResOut, hasResDate, maxDateStr, rowCount: totalRows }});
+  } catch(err){
+    self.postMessage({type:'error', message: (err && err.message) ? err.message : String(err)});
+  }
+};
+
+</script>
+<script>
+const DATA = {facilities: {}, facilitiesRes: {}, meta: {}};
+</script>
+<script>
+function nokDateNum(s){ const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(s || ''); return m ? +(m[3] + m[2] + m[1]) : 0; }
+function nokMergeWeeks(dst, src){
+  Object.keys(src || {}).forEach(function(wk){
+    const old = dst[wk], nw = src[wk];
+    if(!old || !old.overall || (nw.overall && nw.overall.total >= old.overall.total)) dst[wk] = nw;
+  });
+}
+(function(){
+'use strict';
+
+const CATEGORY_ORDER = ['БП','ЗПП','Кормовые компоненты','Инкубационное яйцо',
+  'Инкубационное яйцо газация','Транспорт','Подстилочный материал',
+  'Инкубатор','Входящая сырье','МКО','Столовая'];
+
+const FACILITY_MAP = {
+  'АО_Усть_Каменогорская_Птицефабрика':'УКПФ',
+  'ТОО_Макинская_птицефабрика':'МПФ'
+};
+
+let state = { facility: 'УКПФ', week: null, onlyNok: true, basis: 'sample' };
+if(!DATA.facilitiesRes) DATA.facilitiesRes = {};
+const BASIS_LABEL = { sample: 'по дате отбора проб', result: 'по дате обнаружения (выдачи результата)' };
+function dsOf(basis){ return basis==='result' ? DATA.facilitiesRes : DATA.facilities; }
+
+/* ---------- indicator color coding ---------- */
+function getIndicatorColor(name){
+  const n = (name||'').toLowerCase();
+  if(n.includes('бгкп')) return '#dc2626';
+  if(n.includes('сальмонел') || n.includes('salmonella')) return '#7c3aed';
+  if(n.includes('стафилокок') || n.includes('staphylococcus') || n.includes('s. aureus') || n.includes('s.aureus')) return '#f59e0b';
+  if(n.includes('listeria') || n.includes('листери')) return '#be123c';
+  if(n.includes('pseudomonas')) return '#0891b2';
+  if(n.includes('кмафанм')) return '#c2410c';
+  if(n.includes('омч')) return '#ea580c';
+  if(n.includes('энтерококк') || n.includes('стрептококк') || n.includes('streptococcus')) return '#0284c7';
+  if(n.includes('proteus') || n.includes('протей')) return '#64748b';
+  if(n.includes('дрожж') || n.includes('плесен')) return '#65a30d';
+  return '#6b7280';
+}
+
+/* ---------- week helpers ---------- */
+function isoWeekToDates(weekKey){
+  const [yStr,wStr] = weekKey.split('-W');
+  const y = parseInt(yStr,10), w = parseInt(wStr,10);
+  const jan4 = new Date(Date.UTC(y,0,4));
+  const jan4Day = (jan4.getUTCDay()+6)%7;
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate()-jan4Day);
+  const monday = new Date(week1Monday);
+  monday.setUTCDate(week1Monday.getUTCDate() + (w-1)*7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate()+6);
+  function fmt(d){ return String(d.getUTCDate()).padStart(2,'0')+'.'+String(d.getUTCMonth()+1).padStart(2,'0')+'.'+d.getUTCFullYear(); }
+  return fmt(monday)+' – '+fmt(sunday);
+}
+function getISOWeek(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = (d.getUTCDay()+6)%7;
+  d.setUTCDate(d.getUTCDate()-dayNum+3);
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(),0,4));
+  const fdDay = (firstThursday.getUTCDay()+6)%7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate()-fdDay+3);
+  const diff = d - firstThursday;
+  const week = 1 + Math.round(diff/(7*24*3600*1000));
+  return {year: d.getUTCFullYear(), week};
+}
+function weekKeyOf(date){
+  const {year,week} = getISOWeek(date);
+  return year+'-W'+String(week).padStart(2,'0');
+}
+
+/* ---------- rendering ---------- */
+function fmtNum(n){ return (n===undefined||n===null) ? '—' : n.toLocaleString('ru-RU'); }
+function pctOf(part, total){ return total>0 ? ((part/total)*100).toFixed(1) : '0.0'; }
+
+function renderStats(overall){
+  const el = document.getElementById('statsRow');
+  if(!overall){ el.innerHTML=''; return; }
+  const okPct = pctOf(overall.ok, overall.total);
+  const nokPct = pctOf(overall.nok, overall.total);
+  el.innerHTML = `
+    <div class="stat"><div class="num">${fmtNum(overall.total)}</div><div class="lbl">Всего проб за неделю</div></div>
+    <div class="stat okstat"><div class="num">${fmtNum(overall.ok)}</div><div class="lbl">ОК (${okPct}%)</div></div>
+    <div class="stat nokstat"><div class="num">${fmtNum(overall.nok)}</div><div class="lbl">NOK обнаружено (${nokPct}%)</div></div>
+    <div class="stat"><div class="num">${fmtNum(overall.pending)}</div><div class="lbl">В ожидании результата</div></div>
+  `;
+}
+
+function renderDetections(cat){
+  if(!cat.indicators || cat.indicators.length===0){
+    return cat.nok>0 ? '' : '<span class="clean-msg">✓ Нарушений нет</span>';
+  }
+  return cat.indicators.map(ind => {
+    const color = getIndicatorColor(ind.name);
+    const items = ind.locations.map(l=>`<li>${escapeHtml(l)}</li>`).join('');
+    return `<div class="indicator-block">
+      <div class="indicator-head"><span class="chip" style="background:${color};">${escapeHtml(ind.name)}</span><span class="indicator-count">обнаружено: ${ind.count}</span></div>
+      <ul class="loc-list">${items}</ul>
+    </div>`;
+  }).join('');
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function buildRows(wk){
+  let rows = '', shown = 0;
+  CATEGORY_ORDER.forEach(catName => {
+    const cat = wk.categories[catName];
+    if(!cat) return;
+    if(cat.total===0 && catName==='Инкубационное яйцо газация') return; // hide N/A row when facility doesn't use this point
+    if(state.onlyNok && cat.nok===0) return; // show only categories with a detection
+    shown++;
+    const nokClass = cat.nok>0 ? 'has-nok' : 'zero-nok';
+    const pendingTag = cat.pending>0 ? `<span class="pending-tag">${cat.pending} в ожидании</span>` : '';
+    const okPct = pctOf(cat.ok, cat.total);
+    const nokPct = pctOf(cat.nok, cat.total);
+    rows += `<tr>
+      <td class="catname">${catName}</td>
+      <td class="num total">${fmtNum(cat.total)}${pendingTag}</td>
+      <td class="num ok-cell">${fmtNum(cat.ok)}<span class="pct-tag">${okPct}%</span></td>
+      <td class="num nok-cell ${nokClass}">${fmtNum(cat.nok)}<span class="pct-tag">${nokPct}%</span></td>
+      <td>${renderDetections(cat)}</td>
+    </tr>`;
+  });
+  if(shown===0){
+    rows = state.onlyNok
+      ? '<tr class="empty-row"><td colspan="5">✓ За эту неделю обнаружений (NOK) нет ни по одной категории</td></tr>'
+      : '<tr class="empty-row"><td colspan="5">Нет данных за выбранную неделю</td></tr>';
+  }
+  return rows;
+}
+
+function fromWeeksHtml(wk){
+  if(!wk || !wk.fromWeeks) return '';
+  const ks = Object.keys(wk.fromWeeks).map(Number).sort((a,b)=>a-b);
+  if(!ks.length) return '';
+  const parts = ks.map(k=>{ const e = wk.fromWeeks[k]; return `<b>нед. ${k}</b> — ${fmtNum(e.total)} проб${e.nok ? `, <span style="color:var(--nok-text);font-weight:700">NOK ${e.nok}</span>` : ''}`; });
+  return `<div class="from-weeks">Отобраны в неделях: ${parts.join(' · ')}</div>`;
+}
+function splitPanelHtml(basis){
+  const wk = (dsOf(basis)[state.facility] || {})[state.week];
+  const wnum = state.week ? state.week.split('-W')[1] : '—';
+  const range = wk ? wk.range : (state.week ? isoWeekToDates(state.week) : '');
+  const title = `${wnum} неделя — ${basis==='sample' ? 'по дате отбора проб' : 'по дате обнаружения'}`;
+  const sub = basis==='sample'
+    ? `${state.facility} · ${range} · проба попадает в неделю по «Дата отбора пробы»`
+    : `${state.facility} · ${range} · проба попадает в неделю по «Дата выдачи результата»`;
+  if(!wk){
+    const why = (basis==='result' && !Object.keys(DATA.facilitiesRes[state.facility]||{}).length)
+      ? 'Нет данных по дате обнаружения. Во встроенных данных есть только дата отбора — загрузите «Свод» (.xlsx) кнопкой «Загрузить Свод», и эта сторона заполнится.'
+      : 'Нет данных за выбранную неделю.';
+    return `<div class="split-panel"><h2>${title}</h2><div class="basis-sub">${sub}</div><div class="split-empty">${why}</div></div>`;
+  }
+  const o = wk.overall;
+  return `<div class="split-panel">
+    <h2>${title}</h2><div class="basis-sub">${sub}</div>
+    ${basis==='result' ? fromWeeksHtml(wk) : ''}
+    <div class="mini-stats">
+      <div><b>${fmtNum(o.total)}</b>всего проб</div>
+      <div class="o"><b>${fmtNum(o.ok)}</b>ОК (${pctOf(o.ok,o.total)}%)</div>
+      <div class="n"><b>${fmtNum(o.nok)}</b>NOK (${pctOf(o.nok,o.total)}%)</div>
+      <div><b>${fmtNum(o.pending)}</b>в ожидании</div>
+    </div>
+    <table class="dash"><thead><tr>
+      <th style="width:22%;">Объект</th><th class="num">Всего</th><th class="num">ОК</th><th class="num">NOK</th>
+      <th>Обнаружено — показатель и где</th></tr></thead>
+      <tbody>${buildRows(wk)}</tbody></table>
+  </div>`;
+}
+
+function renderTable(){
+  const split = state.basis==='both';
+  document.body.classList.toggle('split-mode', split);
+  document.getElementById('singleView').style.display = split ? 'none' : '';
+  document.getElementById('splitView').style.display = split ? '' : 'none';
+  const wnum = state.week ? state.week.split('-W')[1] : '—', wyr = state.week ? state.week.split('-W')[0] : '';
+  if(split){
+    document.getElementById('metaLine').textContent =
+      `${state.facility} · неделя ${wnum}, ${wyr} (${state.week ? isoWeekToDates(state.week) : ''}) · слева — по дате отбора, справа — по дате обнаружения · данные по: ${DATA.meta.data_through || '—'}`;
+    document.getElementById('splitView').innerHTML = splitPanelHtml('sample') + splitPanelHtml('result');
+    return;
+  }
+  const facData = dsOf(state.basis)[state.facility] || {};
+  const wk = facData[state.week];
+  const tbody = document.getElementById('tbody');
+  if(!wk){
+    const noRes = state.basis==='result' && !Object.keys(DATA.facilitiesRes[state.facility]||{}).length;
+    tbody.innerHTML = noRes
+      ? '<tr class="empty-row"><td colspan="5">Нет данных по дате обнаружения. Во встроенных данных есть только дата отбора — загрузите «Свод» (.xlsx) кнопкой «Загрузить Свод».</td></tr>'
+      : '<tr class="empty-row"><td colspan="5">Нет данных за выбранную неделю</td></tr>';
+    renderStats(null);
+    document.getElementById('metaLine').textContent = `${state.facility} · неделя ${wnum}, ${wyr} · ${BASIS_LABEL[state.basis]}`;
+    return;
+  }
+  renderStats(wk.overall);
+  document.getElementById('metaLine').innerHTML =
+    escapeHtml(`${state.facility} · неделя ${wnum}, ${wyr} (${wk.range}) · ${BASIS_LABEL[state.basis]} · данные по: ${DATA.meta.data_through || '—'}`)
+    + (state.basis==='result' ? fromWeeksHtml(wk) : '');
+  tbody.innerHTML = buildRows(wk);
+}
+
+function populateWeekSelect(keepWeek){
+  const sel = document.getElementById('weekSelect');
+  const A = DATA.facilities[state.facility] || {}, Bm = DATA.facilitiesRes[state.facility] || {};
+  const pool = state.basis==='sample' ? A : state.basis==='result' ? Bm : Object.assign({}, Bm, A);
+  const weeks = Object.keys(Object.keys(pool).length ? pool : A).sort().reverse();
+  sel.innerHTML = weeks.map(wk => {
+    const label = `Неделя ${wk.split('-W')[1]}, ${wk.split('-W')[0]} · ${isoWeekToDates(wk)}`;
+    return `<option value="${wk}">${label}</option>`;
+  }).join('');
+  if(keepWeek && weeks.includes(keepWeek)){
+    sel.value = keepWeek; state.week = keepWeek;
+  } else if(weeks.length){
+    sel.value = weeks[0]; state.week = weeks[0];
+  } else {
+    state.week = null;
+  }
+}
+
+function setFacility(fac){
+  state.facility = fac;
+  document.querySelectorAll('#facilitySeg button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.fac===fac);
+  });
+  populateWeekSelect(state.week);
+  renderTable();
+}
+
+/* ---------- upload & client-side recompute ----------
+   Uses a small, purpose-built .xlsx reader (fflate for unzip + targeted regex
+   cell extraction) instead of a general spreadsheet library. On a ~270k-row /
+   ~380MB-uncompressed export this finishes in seconds instead of minutes,
+   because it only reads the ~11 columns this report actually needs.
+   The exact same worker_logic.js text is used both inside a real Web Worker
+   (primary path, keeps the page responsive) and, if Workers are unavailable,
+   evaluated directly on the main thread as a fallback (still fast, just blocking). */
+
+function formatDateUTC(d){
+  return String(d.getUTCDate()).padStart(2,'0')+'.'+String(d.getUTCMonth()+1).padStart(2,'0')+'.'+d.getUTCFullYear();
+}
+
+function mergeIntoData(facilities, maxDateStr, facilitiesRes){
+  Object.keys(facilities).forEach(fac=>{
+    if(!DATA.facilities[fac]) DATA.facilities[fac] = {};
+    nokMergeWeeks(DATA.facilities[fac], facilities[fac]);
+  });
+  Object.keys(facilitiesRes || {}).forEach(fac=>{
+    if(!DATA.facilitiesRes[fac]) DATA.facilitiesRes[fac] = {};
+    nokMergeWeeks(DATA.facilitiesRes[fac], facilitiesRes[fac]);
+  });
+  if(maxDateStr && nokDateNum(maxDateStr) >= nokDateNum(DATA.meta.data_through)) DATA.meta.data_through = maxDateStr;
+}
+
+function showLoading(text, percent){
+  if(window.nokQuiet && window.nokQuiet(text, percent)) return;
+  document.getElementById('loadingText').textContent = text;
+  if(typeof percent === 'number'){
+    const p = Math.max(0, Math.min(100, percent));
+    document.getElementById('progressFill').style.width = p+'%';
+    document.getElementById('loadingPct').textContent = Math.round(p)+'%';
+  }
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading(){
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+function onWorkerResult(msg, file){
+  if(msg.type === 'progress'){
+    showLoading(msg.text, msg.percent);
+  } else if(msg.type === 'done'){
+    mergeIntoData(msg.result.facilities, msg.result.maxDateStr, msg.result.facilitiesRes);
+    populateWeekSelect(null); // jump to the newest week after a refresh, not whatever was open before
+    renderTable();
+    hideLoading();
+    if(window.nokOnDone && window.nokOnDone(msg.result, file)) return;
+    alert('Готово! Обработано строк: '+msg.result.rowCount.toLocaleString('ru-RU')+'. Показана самая свежая неделя.'
+      + (msg.result.hasResDate ? '' : '\n\nВ файле нет столбца «Дата выдачи результата» — сторона «по дате обнаружения» останется пустой.'));
+  } else if(msg.type === 'error'){
+    hideLoading();
+    if(window.nokOnError && window.nokOnError(msg.message, file)) return;
+    alert('Не удалось обработать файл: '+msg.message);
+  }
+}
+
+/* ---------- primary path: background Web Worker (keeps the page responsive) ---------- */
+let bgWorker = null;
+function ensureWorker(){
+  if(bgWorker) return true;
+  if(typeof Worker === 'undefined') return false;
+  try{
+    const fflateSrc = document.getElementById('fflateLibSrc').textContent;
+    const workerSrc = document.getElementById('workerLogicSrc').textContent;
+    const blob = new Blob([fflateSrc, '\nconst fflate = self.fflate;\n', workerSrc], {type:'application/javascript'});
+    const url = URL.createObjectURL(blob);
+    bgWorker = new Worker(url);
+    return true;
+  }catch(err){
+    console.warn('Фоновый Worker недоступен, использую обработку в основном потоке', err);
+    bgWorker = null;
+    return false;
+  }
+}
+
+function processWithWorker(file){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    showLoading('Передаю данные в фоновую обработку…', 8);
+    const buffer = e.target.result;
+    bgWorker.onmessage = function(ev){ onWorkerResult(ev.data, file); };
+    bgWorker.onerror = function(err){
+      console.error('Worker error, falling back to main thread', err);
+      hideLoading();
+      processWithFallback(file);
+    };
+    try{
+      bgWorker.postMessage({buffer}, [buffer]);
+    }catch(err){
+      hideLoading();
+      processWithFallback(file);
+    }
+  };
+  reader.onerror = function(){ alert('Ошибка чтения файла'); hideLoading(); };
+  showLoading('Читаю файл…', 2);
+  reader.readAsArrayBuffer(file);
+}
+
+/* ---------- fallback path: main thread (used only if Web Workers are unavailable) ----------
+   Evaluates the exact same worker_logic.js text directly, with a tiny `self` shim so
+   the identical parsing/aggregation code runs synchronously instead of via postMessage. */
+function processWithFallback(file){
+  showLoading('Читаю файл (без фоновой обработки, окно может подвисать)…', 5);
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const fflateSrc = document.getElementById('fflateLibSrc').textContent;
+      const workerSrc = document.getElementById('workerLogicSrc').textContent;
+      const runner = new Function('buffer', 'onMessage', `
+        const self = { postMessage: onMessage };
+        ${fflateSrc}
+        const fflate = self.fflate;
+        ${workerSrc}
+        self.onmessage({ data: { buffer } });
+      `);
+      runner(e.target.result, (msg)=>onWorkerResult(msg, file));
+    }catch(err){
+      console.error(err);
+      alert('Не удалось обработать файл: '+err.message);
+      hideLoading();
+    }
+  };
+  reader.onerror = function(){ alert('Ошибка чтения файла'); hideLoading(); };
+  reader.readAsArrayBuffer(file);
+}
+
+function handleFile(file){
+  if(ensureWorker()){
+    processWithWorker(file);
+  } else {
+    processWithFallback(file);
+  }
+}
+
+/* ---------- wiring ---------- */
+document.getElementById('facilitySeg').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-fac]');
+  if(!btn) return;
+  setFacility(btn.dataset.fac);
+});
+document.getElementById('basisSeg').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-basis]');
+  if(!btn) return;
+  state.basis = btn.dataset.basis;
+  document.querySelectorAll('#basisSeg button').forEach(b=>b.classList.toggle('active', b===btn));
+  populateWeekSelect(state.week);
+  renderTable();
+});
+document.getElementById('weekSelect').addEventListener('change', e=>{
+  state.week = e.target.value;
+  renderTable();
+});
+document.getElementById('onlyNokToggle').addEventListener('change', e=>{
+  state.onlyNok = e.target.checked;
+  renderTable();
+});
+document.getElementById('uploadBtn').addEventListener('click', ()=>{
+  document.getElementById('fileInput').click();
+});
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(file) handleFile(file);
+  e.target.value = '';
+});
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const facData = DATA.facilities[state.facility] || {};
+  const wk = facData[state.week];
+  const blob = new Blob([JSON.stringify(wk || {}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `NOK_${state.facility}_${state.week}.json`;
+  a.click();
+});
+document.getElementById('printBtn').addEventListener('click', ()=>{
+  // А4 с двумя сторонами печатается альбомным листом (левая половина — по дате отбора, правая — по дате обнаружения)
+  let st = document.getElementById('pageSizeStyle');
+  if(!st){ st = document.createElement('style'); st.id = 'pageSizeStyle'; document.head.appendChild(st); }
+  st.textContent = state.basis==='both' ? '@page{ size: A4 landscape; margin: 8mm; }' : '@page{ size: A4; margin: 10mm; }';
+  window.print();
+});
+
+/* ---------- init ---------- */
+window.NOK = {
+  DATA, state, handleFile, mergeIntoData,
+  refresh(keep){ populateWeekSelect(keep ? state.week : null); renderTable(); }
+};
+populateWeekSelect(null);
+renderTable();
+
+})();
+
+</script>
+<script>
+/* Приложение «NOK-дашборд»: недели хранятся на устройстве, «Свод» подтягивается сам.
+   Windows-программа следит за папкой «Документы\NOK-дашборд» (или выбранной).
+   Chrome/Edge на ПК — за привязанной папкой, проверка раз в минуту.
+   Телефон — «Свод» загружается кнопкой, недели всё равно копятся. */
+(function(){
+'use strict';
+const N = window.NOK, $ = id => document.getElementById(id);
+const CHECK_MS = 60000;
+
+/* ---------- хранилище (IndexedDB: данных больше, чем вмещает localStorage) ---------- */
+let dbp = null;
+function db(){
+  if(!dbp) dbp = new Promise((ok, no) => {
+    const r = indexedDB.open('nok-dashboard', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+  });
+  return dbp;
+}
+async function kvGet(k){ try{ const d = await db(); return await new Promise(ok => { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => ok(undefined); }); }catch(e){ return undefined; } }
+async function kvSet(k, v){ try{ const d = await db(); await new Promise(ok => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = ok; t.onerror = ok; }); }catch(e){} }
+async function kvDel(k){ try{ const d = await db(); await new Promise(ok => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').delete(k); t.oncomplete = ok; t.onerror = ok; }); }catch(e){} }
+function save(){ return kvSet('data', {facilities: N.DATA.facilities, facilitiesRes: N.DATA.facilitiesRes, meta: N.DATA.meta, savedAt: Date.now()}); }
+
+/* ---------- сообщения ---------- */
+let toastT = null;
+function toast(msg){ const t = $('nokToast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 5000); }
+function hhmm(d){ d = d || new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function dstr(ms){ const d = new Date(ms); return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + hhmm(d); }
+function setSync(text, mode){ $('nokSync').textContent = text; $('nokDot').className = 'nok-dot' + (mode ? ' ' + mode : ''); }
+const wkLabel = k => 'нед. ' + parseInt(k.split('-W')[1], 10) + '/' + k.split('-W')[0];
+function renderWeeks(){
+  const parts = [];
+  ['УКПФ', 'МПФ'].forEach(f => {
+    const ks = Object.keys(N.DATA.facilities[f] || {}).sort();
+    if(ks.length) parts.push(`${f}: ${ks.length} нед. (${wkLabel(ks[0])} – ${wkLabel(ks[ks.length - 1])})`);
+  });
+  const any = parts.length > 0;
+  $('nokWeeks').textContent = any ? 'Сохранено на устройстве — ' + parts.join(' · ') + (N.DATA.meta.data_through ? ' · данные по ' + N.DATA.meta.data_through : '') : '';
+  $('nokEmpty').style.display = any ? 'none' : '';
+}
+
+/* ---------- обработка «Свода» ---------- */
+let busy = false, auto = false, pending = null;
+window.nokQuiet = (text, pct) => { if(!auto) return false; setSync(`Обрабатываю новый Свод: ${text} ${Math.round(pct || 0)}%`, 'busy'); return true; };
+window.nokOnDone = (res, file) => {
+  const wasAuto = auto; busy = false; auto = false;
+  save().then(() => { if(file && file.nokKey) kvSet('seen', file.nokKey); });
+  SEEN = file && file.nokKey ? file.nokKey : SEEN;
+  renderWeeks();
+  const msg = `Свод обновлён: ${res.rowCount.toLocaleString('ru-RU')} строк, данные по ${res.maxDateStr || '—'}. Недели сохранены.`;
+  if(wasAuto){ toast(msg); idle(); runPending(); return true; }
+  idle(); runPending();
+  if(!res.hasResDate){ alert(msg + '\n\nВ файле нет столбца «Дата выдачи результата» — сторона «по дате обнаружения» останется пустой.'); return true; }
+  toast(msg); return true;
+};
+window.nokOnError = (message, file) => {
+  const wasAuto = auto; busy = false; auto = false;
+  if(file && file.nokKey){ SEEN = file.nokKey; kvSet('seen', file.nokKey); } // не повторять один и тот же плохой файл
+  if(wasAuto){ setSync(`Не удалось обработать «${file.name}»: ${message}`, 'err'); runPending(); return true; }
+  idle(); runPending(); return false;
+};
+function runFile(file, key, isAuto){
+  if(busy){ pending = [file, key, isAuto]; return; }
+  busy = true; auto = isAuto; file.nokKey = key;
+  if(isAuto) setSync(`Найден новый Свод «${file.name}» — обрабатываю…`, 'busy');
+  N.handleFile(file);
+}
+function runPending(){ if(pending && !busy){ const p = pending; pending = null; runFile(p[0], p[1], p[2]); } }
+// ручная загрузка через кнопку дашборда тоже сохраняет недели
+$('fileInput').addEventListener('change', () => { busy = true; auto = false; }, true);
+
+/* ---------- источники: программа Windows, папка в Chrome/Edge, телефон ---------- */
+let SEEN = null, idle = () => setSync('Свод загружается кнопкой «Загрузить Свод». Недели сохраняются на устройстве.');
+const keyOf = f => f.name + '|' + f.size + '|' + Math.round(f.mtime || f.lastModified || 0);
+
+// Windows: папка программы
+async function desktopCheck(manual){
+  if(busy) return;
+  let info; try{ info = await window.desktop.info(); }catch(e){ return; }
+  if(!info.latest){ setSync(`Положите «Свод» (.xlsx) в папку ${info.dir} — он загрузится сам.`); return; }
+  const k = keyOf(info.latest);
+  if(k === SEEN){ idle(); if(manual) toast('Нового Свода нет.'); return; }
+  // ждём, пока файл допишется (размер и время не меняются 3 секунды)
+  await new Promise(r => setTimeout(r, 3000));
+  const again = await window.desktop.info();
+  if(!again.latest || keyOf(again.latest) !== k){ setTimeout(() => desktopCheck(false), 2000); return; }
+  setSync(`Читаю «${info.latest.name}»…`, 'busy');
+  const u8 = await window.desktop.read(info.latest.path);
+  runFile(new File([u8], info.latest.name, {lastModified: info.latest.mtime}), k, true);
+}
+async function desktopSetup(){
+  const info = await window.desktop.info();
+  let DIR = info.dir;
+  idle = () => setSync(`⟳ Автообновление: папка ${DIR} · проверено в ${hhmm()}`, 'on');
+  ['nokOpenBtn', 'nokChooseBtn', 'nokCheckBtn'].forEach(id => $(id).style.display = '');
+  $('nokOpenBtn').onclick = () => window.desktop.open();
+  $('nokCheckBtn').onclick = () => desktopCheck(true);
+  $('nokChooseBtn').onclick = async () => { const r = await window.desktop.choose(); if(r){ DIR = r.dir; desktopCheck(true); } };
+  window.desktop.onChanged(() => desktopCheck(false));
+  setInterval(() => desktopCheck(false), CHECK_MS); // сетевые диски не всегда сообщают об изменениях
+  desktopCheck(false);
+}
+
+// Chrome/Edge на ПК: привязанная папка
+let DIR_HANDLE = null;
+async function latestInDir(dir){
+  let best = null;
+  for await (const h of dir.values()){
+    if(h.kind !== 'file' || !/\.xlsx$/i.test(h.name) || h.name.startsWith('~$')) continue;
+    const f = await h.getFile();
+    if(!best || f.lastModified > best.lastModified) best = f;
+  }
+  return best;
+}
+async function browserCheck(manual){
+  if(busy || !DIR_HANDLE) return;
+  if(await DIR_HANDLE.queryPermission({mode: 'read'}) !== 'granted'){
+    setSync(`Нужно разрешение на папку «${DIR_HANDLE.name}» — нажмите «Разрешить доступ».`, 'err');
+    $('nokAllowBtn').style.display = ''; return;
+  }
+  $('nokAllowBtn').style.display = 'none';
+  let f; try{ f = await latestInDir(DIR_HANDLE); }catch(e){ setSync(`Папка «${DIR_HANDLE.name}» недоступна: ${e.message}`, 'err'); return; }
+  if(!f){ setSync(`В папке «${DIR_HANDLE.name}» нет файлов .xlsx — положите туда «Свод».`); return; }
+  const k = keyOf(f);
+  if(k === SEEN){ idle(); if(manual) toast('Нового Свода нет.'); return; }
+  runFile(f, k, true);
+}
+async function browserSetup(){
+  idle = () => DIR_HANDLE
+    ? setSync(`⟳ Автообновление: папка «${DIR_HANDLE.name}», проверка раз в минуту · проверено в ${hhmm()}`, 'on')
+    : setSync('Привяжите папку, куда сохраняете «Свод», — новые выгрузки будут подтягиваться сами.');
+  DIR_HANDLE = await kvGet('dir') || null;
+  $('nokPinBtn').style.display = '';
+  if(DIR_HANDLE){ $('nokPinBtn').textContent = '📁 Сменить папку'; $('nokCheckBtn').style.display = ''; }
+  $('nokPinBtn').onclick = async () => {
+    try{ DIR_HANDLE = await window.showDirectoryPicker({id: 'nok-svod', mode: 'read'}); }catch(e){ return; }
+    await kvSet('dir', DIR_HANDLE);
+    $('nokPinBtn').textContent = '📁 Сменить папку'; $('nokCheckBtn').style.display = '';
+    browserCheck(true);
+  };
+  $('nokAllowBtn').onclick = async () => { if(await DIR_HANDLE.requestPermission({mode: 'read'}) === 'granted') browserCheck(true); };
+  $('nokCheckBtn').onclick = () => browserCheck(true);
+  setInterval(() => { if(!document.hidden) browserCheck(false); }, CHECK_MS);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) browserCheck(false); });
+  idle(); browserCheck(false);
+}
+
+/* ---------- перенос недель из старого дашборда / копии ---------- */
+function cleanWeeks(map){ const out = {}; Object.keys(map || {}).forEach(f => { out[f] = {}; Object.keys(map[f] || {}).forEach(wk => { const y = +wk.slice(0, 4); if(y >= 2000 && y <= 2100) out[f][wk] = map[f][wk]; }); }); return out; }
+function extractData(text){
+  const t = text.trim();
+  if(t.startsWith('{')) return JSON.parse(t);
+  const i = text.indexOf('const DATA = {');
+  if(i < 0) throw new Error('в файле нет данных NOK-дашборда');
+  const j = text.indexOf('};\n', i);
+  return JSON.parse(text.slice(i + 13, j + 1));
+}
+$('nokImportBtn').onclick = () => $('nokImportInput').click();
+$('nokImportInput').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+  try{
+    const d = extractData(await f.text());
+    if(!d.facilities) throw new Error('в файле нет недель');
+    const before = countWeeks();
+    N.mergeIntoData(cleanWeeks(d.facilities), d.meta && d.meta.data_through, cleanWeeks(d.facilitiesRes));
+    await save(); N.refresh(true); renderWeeks();
+    toast(`Перенесено из «${f.name}»: добавлено недель — ${countWeeks() - before}. Всё сохранено.`);
+  }catch(err){ alert('Не удалось перенести недели: ' + err.message); }
+};
+function countWeeks(){ let n = 0; ['facilities', 'facilitiesRes'].forEach(k => Object.values(N.DATA[k] || {}).forEach(w => n += Object.keys(w).length)); return n; }
+$('nokBackupBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify({facilities: N.DATA.facilities, facilitiesRes: N.DATA.facilitiesRes, meta: N.DATA.meta})], {type: 'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `NOK_все_недели_${(N.DATA.meta.data_through || '').replace(/\./g, '-')}.json`; a.click();
+};
+
+/* ---------- запуск ---------- */
+(async () => {
+  const saved = await kvGet('data');
+  if(saved && saved.facilities){
+    N.mergeIntoData(saved.facilities, saved.meta && saved.meta.data_through, saved.facilitiesRes);
+    N.refresh(false);
+  }
+  SEEN = await kvGet('seen') || null;
+  renderWeeks();
+  if(window.desktop) desktopSetup();
+  else if(window.showDirectoryPicker && !/Android|iPhone|iPad/i.test(navigator.userAgent)) browserSetup();
+  else idle();
+})();
+})();
+</script>
+</body>
+</html>
