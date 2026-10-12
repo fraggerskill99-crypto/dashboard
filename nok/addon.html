@@ -1,0 +1,22 @@
+<div class="nok-bar" id="nokBar">
+  <div class="nok-line">
+    <span class="nok-dot" id="nokDot"></span>
+    <span id="nokSync">Загрузка сохранённых недель…</span>
+  </div>
+  <div class="nok-line nok-small" id="nokWeeks"></div>
+  <div class="nok-actions">
+    <button class="btn" id="nokPinBtn" style="display:none">📁 Привязать папку со Сводом</button>
+    <button class="btn" id="nokAllowBtn" style="display:none">🔓 Разрешить доступ к папке</button>
+    <button class="btn" id="nokOpenBtn" style="display:none">📂 Открыть папку</button>
+    <button class="btn" id="nokChooseBtn" style="display:none">Другая папка…</button>
+    <button class="btn" id="nokCheckBtn" style="display:none">⟳ Проверить сейчас</button>
+    <button class="btn" id="nokImportBtn" title="Старый файл NOK-дашборда (.html) или резервная копия (.json): недели добавятся к сохранённым">⬆ Перенести недели из файла</button>
+    <button class="btn" id="nokBackupBtn" title="Все сохранённые недели одним файлом — для другого компьютера">💾 Копия всех недель</button>
+    <input type="file" id="nokImportInput" accept=".html,.htm,.json" style="display:none">
+  </div>
+  <div class="nok-empty" id="nokEmpty" style="display:none">
+    <b>Недель пока нет.</b> Один раз перенесите их из старого файла NOK-дашборда (кнопка «Перенести недели из файла»)
+    или загрузите «Свод» .xlsx. Дальше новые недели добавляются, а старые сохраняются на этом устройстве.
+  </div>
+</div>
+<div class="nok-toast" id="nokToast"></div>

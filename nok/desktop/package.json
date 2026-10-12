@@ -1,0 +1,16 @@
+{
+  "name": "nok",
+  "productName": "NOK-дашборд",
+  "version": "1.0.0",
+  "description": "NOK-дашборд микробиологии УКПФ и МПФ: недели OK/NOK, автообновление из Свода",
+  "author": "UKPF",
+  "main": "main.js",
+  "build": {
+    "appId": "kz.ukpf.nok",
+    "productName": "NOK-дашборд",
+    "files": ["main.js", "preload.js", "www/**/*"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }], "icon": "www/icon-512.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "NOK-дашборд", "artifactName": "nok-setup.exe" },
+    "portable": { "artifactName": "nok-portable.exe" }
+  }
+}

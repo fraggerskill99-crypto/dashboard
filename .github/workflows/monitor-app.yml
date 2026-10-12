@@ -63,7 +63,7 @@ jobs:
           ./gradlew assembleDebug --no-daemon -q
           cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/monitor-ptits.apk"
 
-      - name: Веб-версия → ветка gh-pages (корень, папки sanrazryv/, chernotelka/ и moika/ не трогаем)
+      - name: Веб-версия → ветка gh-pages (корень, папки sanrazryv/, chernotelka/, moika/ и nok/ не трогаем)
         run: |
           URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
           for i in 1 2 3 4; do
@@ -72,7 +72,7 @@ jobs:
             cd pages
             git config user.name "github-actions"
             git config user.email "github-actions@users.noreply.github.com"
-            find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sanrazryv ! -name chernotelka ! -name moika -exec rm -rf {} +
+            find . -mindepth 1 -maxdepth 1 ! -name .git ! -name sanrazryv ! -name chernotelka ! -name moika ! -name nok -exec rm -rf {} +
             cp -r ../monitor/dist_app/www/. .
             touch .nojekyll
             git add -A && git commit -qm "Веб-версия монитора птиц: ${GITHUB_SHA::7}" || exit 0

@@ -1,0 +1,17 @@
+.nok-bar{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 16px; margin:0 0 14px;}
+.nok-line{display:flex; align-items:center; gap:8px; font-size:13px; color:#33394a; font-weight:600;}
+.nok-small{font-size:12px; color:var(--muted); font-weight:400; margin-top:3px; padding-left:18px;}
+.nok-dot{width:10px; height:10px; border-radius:50%; background:#9aa1b3; flex:none;}
+.nok-dot.on{background:#16a34a; box-shadow:0 0 0 3px #dcfce7;}
+.nok-dot.busy{background:#f59e0b; box-shadow:0 0 0 3px #fef3c7; animation:nokPulse 1s infinite alternate;}
+.nok-dot.err{background:#dc2626;}
+@keyframes nokPulse{to{opacity:.4;}}
+.nok-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;}
+.nok-actions .btn{padding:6px 12px; font-size:12.5px;}
+.nok-empty{margin-top:10px; padding:12px 14px; background:#fef3c7; color:#713f12; border-radius:8px; font-size:13px; line-height:1.5;}
+.nok-toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:var(--navy); color:#fff;
+  padding:11px 18px; border-radius:10px; font-size:13.5px; box-shadow:0 8px 30px rgba(0,0,0,.25); opacity:0; pointer-events:none;
+  transition:.25s; z-index:60; max-width:calc(100% - 32px);}
+.nok-toast.show{opacity:1; transform:translateX(-50%);}
+@media (max-width:760px){ .nok-actions .btn{flex:1 1 auto; justify-content:center;} }
+@media print{ .nok-bar, .nok-toast{display:none !important;} }
