@@ -228,3 +228,72 @@ $('nokBackupBtn').onclick = () => {
   else idle();
 })();
 })();
+
+/* ===== Лист «По объектам»: смывы, OK и % по каждому объекту исследования за выбранную неделю ===== */
+(function(){
+'use strict';
+const N = window.NOK, $ = id => document.getElementById(id);
+let VIEW = 'table';
+try { VIEW = localStorage.getItem('nokView') || 'table'; } catch (e) {}
+const box = document.createElement('div'); box.id = 'nokChartView'; box.className = 'oc-wrap'; box.style.display = 'none';
+$('splitView').insertAdjacentElement('afterend', box);
+const fmt = n => (n || 0).toLocaleString('ru-RU');
+const pct = (a, t) => t ? (a / t * 100).toFixed(1).replace('.', ',') + '%' : '0%';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+function rangeOf(wk){ const [y, w] = wk.split('-W').map(Number); const j4 = new Date(Date.UTC(y, 0, 4)); const m = new Date(j4); m.setUTCDate(j4.getUTCDate() - (j4.getUTCDay() + 6) % 7 + (w - 1) * 7);
+  const s = new Date(m); s.setUTCDate(m.getUTCDate() + 6); const f = d => String(d.getUTCDate()).padStart(2, '0') + '.' + String(d.getUTCMonth() + 1).padStart(2, '0') + '.' + d.getUTCFullYear(); return f(m) + ' – ' + f(s); }
+function panel(basis){
+  const st = N.state, data = basis === 'result' ? N.DATA.facilitiesRes : N.DATA.facilities;
+  const wk = ((data || {})[st.facility] || {})[st.week];
+  const title = basis === 'result' ? 'по дате обнаружения (выдачи результата)' : 'по дате отбора проб';
+  const head = `<h2>Смывы по объектам — ${esc(st.facility)}, неделя ${st.week ? parseInt(st.week.split('-W')[1], 10) : '—'}</h2>
+    <div class="oc-sub">${st.week ? rangeOf(st.week) : ''} · ${title}</div>`;
+  if (!wk) return `<div class="oc-panel">${head}<div class="oc-empty">Нет данных за выбранную неделю${basis === 'result' ? ' по дате обнаружения' : ''}.</div></div>`;
+  const cats = Object.entries(wk.categories || {}).filter(([, c]) => c.total > 0);
+  const max = Math.max(1, ...cats.map(([, c]) => c.total));
+  const row = (name, c, cls) => {
+    const pend = c.pending != null ? c.pending : c.total - c.ok - c.nok;
+    const w = (x, t) => t ? (x / t * 100) : 0;
+    const bw = cls ? 100 : c.total / max * 100;            // ширина всей полосы, % от дорожки
+    const lab = (x, t) => x && w(x, t) * bw / 100 > 5 ? fmt(x) : '';   // цифра — только если сегмент достаточно широкий
+    return `<div class="oc-row ${cls || ''}">
+      <div class="oc-name">${esc(name)}</div>
+      <div class="oc-track"><div class="oc-bar" style="width:${bw.toFixed(1)}%">
+        <span class="oc-ok" style="width:${w(c.ok, c.total)}%">${lab(c.ok, c.total)}</span>
+        <span class="oc-nok" style="width:${w(c.nok, c.total)}%">${lab(c.nok, c.total)}</span>
+        <span class="oc-pend" style="width:${w(pend, c.total)}%">${lab(pend, c.total)}</span>
+      </div></div>
+      <div class="oc-nums">Смывов: <b>${fmt(c.total)}</b> · <span class="ok">OK ${fmt(c.ok)} (${pct(c.ok, c.total)})</span> · <span class="nok">NOK ${fmt(c.nok)} (${pct(c.nok, c.total)})</span>${pend ? ` · <span class="pend">ждут ${fmt(pend)}</span>` : ''}</div>
+    </div>`;
+  };
+  const o = wk.overall || {};
+  return `<div class="oc-panel">${head}
+    <div class="oc-legend"><span><i class="oc-ok"></i>OK — в норме</span><span><i class="oc-nok"></i>NOK — обнаружено</span><span><i class="oc-pend"></i>ждут результата</span><span style="color:var(--muted)">длина полосы — число смывов</span></div>
+    ${cats.length ? cats.map(([n, c]) => row(n, c)).join('') : '<div class="oc-empty">Смывов за неделю нет.</div>'}
+    ${row('Итого за неделю', {total: o.total || 0, ok: o.ok || 0, nok: o.nok || 0, pending: o.pending}, 'oc-total')}
+    <div class="oc-sub" style="margin:8px 0 0">«Итого» — все пробы недели; один смыв может входить в несколько объектов (например, «Транспорт» и «БП»), поэтому сумма по строкам бывает больше итога.</div>
+  </div>`;
+}
+function draw(){
+  document.querySelectorAll('#nokTabs .nok-tab').forEach(b => b.classList.toggle('on', b.dataset.view === VIEW));
+  const chart = VIEW === 'chart';
+  document.body.classList.toggle('oc-mode', chart);
+  box.style.display = chart ? '' : 'none';
+  if (chart){
+    $('singleView').style.display = 'none'; $('splitView').style.display = 'none';
+    const b = N.state.basis;
+    box.innerHTML = b === 'both' ? panel('sample') + panel('result') : panel(b);
+  } else {
+    const split = N.state.basis === 'both';
+    $('singleView').style.display = split ? 'none' : ''; $('splitView').style.display = split ? '' : 'none';
+  }
+}
+$('nokTabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-view]'); if (!b) return;
+  VIEW = b.dataset.view; try { localStorage.setItem('nokView', VIEW); } catch (err) {}
+  draw();
+});
+// перерисовываем при каждой смене недели, площадки, основы и после загрузки Свода
+new MutationObserver(() => { if (VIEW === 'chart') draw(); }).observe($('metaLine'), {childList: true, characterData: true, subtree: true});
+draw();
+})();
