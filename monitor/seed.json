@@ -1,6 +1,74 @@
 {
- "updatedAt": "2026-10-12",
+ "updatedAt": "2026-10-13",
  "episodes": [
+  {
+   "id": "w-2026-10-07-spain-valencia-nd",
+   "scope": "world",
+   "topic": "nd",
+   "date": "2026-10-07",
+   "status": "confirmed",
+   "place": "Испания, провинция Валенсия, Утьель-Рекена (Утьель, Синаркас, Фуэнтерроблес)",
+   "country": "Испания",
+   "birds": 123155,
+   "title": "Болезнь Ньюкасла вернулась в Валенсию: 4 очага, более 123 тыс. птиц",
+   "summary": "2 октября подтверждены три очага велогенной болезни Ньюкасла: родительское стадо мясных кур (30 776 голов) и две бройлерные фермы (50 790 и 35 517). По данным MAPA от 7 октября, добавился четвёртый очаг — бройлеры, 6 072 головы. До этого в провинции не было вспышек с 8 мая.",
+   "sources": [
+    {
+     "name": "agronewscastillayleon.com",
+     "url": "https://www.agronewscastillayleon.com/newcastle-valencia-tres-focos-utiel-117000-aves",
+     "kind": "media"
+    },
+    {
+     "name": "agronewscastillayleon.com",
+     "url": "https://www.agronewscastillayleon.com/newcastle-valencia-cuarto-foco-utiel-46-granjas-restricciones",
+     "kind": "media"
+    }
+   ],
+   "addedBy": "claude",
+   "keyword": "Newcastle Valencia"
+  },
+  {
+   "id": "w-2026-10-09-minnesota-kandiyohi",
+   "scope": "world",
+   "topic": "hpai",
+   "date": "2026-10-09",
+   "status": "confirmed",
+   "place": "США, штат Миннесота, округ Кандийохай",
+   "country": "США",
+   "birds": 25900,
+   "title": "Миннесота: грипп птиц в племенном стаде индеек, 25 900 голов",
+   "summary": "9 октября ГПГП подтверждён в коммерческом племенном стаде индеек-несушек (25 900 голов) в округе Кандийохай — 19-е коммерческое стадо штата в 2026 году. В те же дни новые случаи подтверждены в Альберте (8 октября) и Манитобе (9 октября).",
+   "sources": [
+    {
+     "name": "wattagnet.com",
+     "url": "https://wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15837235/minnesota-alberta-manitoba-hit-by-avian-influenza",
+     "kind": "media"
+    }
+   ],
+   "addedBy": "claude",
+   "keyword": "Kandiyohi avian influenza"
+  },
+  {
+   "id": "w-2026-10-12-europe-5-states",
+   "scope": "world",
+   "topic": "hpai",
+   "date": "2026-10-12",
+   "status": "info",
+   "place": "Европа: Бельгия, Болгария, Франция, Германия, Великобритания",
+   "country": "Европа",
+   "birds": null,
+   "title": "Европа: грипп птиц H5 в птицеводстве пяти стран за месяц",
+   "summary": "За последний месяц вспышки H5 в птицеводстве подтверждены в Бельгии, Болгарии, Франции, Германии и Великобритании. Всего в Европе в 2026 году — 316 вспышек на фермах (больше всего в Польше — 143, в Германии — 40).",
+   "sources": [
+    {
+     "name": "wattagnet.com",
+     "url": "https://www.wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15837180/avian-flu-cases-confirmed-in-poultry-in-5-european-states",
+     "kind": "media"
+    }
+   ],
+   "addedBy": "claude",
+   "keyword": "avian flu Europe October 2026"
+  },
   {
    "id": "w-2026-10-08-hungary-nd-5th",
    "scope": "world",
