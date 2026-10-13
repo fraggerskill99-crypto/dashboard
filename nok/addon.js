@@ -253,17 +253,17 @@ function panel(basis){
   const max = Math.max(1, ...cats.map(([, c]) => c.total));
   const row = (name, c, cls) => {
     const pend = c.pending != null ? c.pending : c.total - c.ok - c.nok;
-    const w = (x, t) => t ? (x / t * 100) : 0;
-    const bw = cls ? 100 : c.total / max * 100;            // ширина всей полосы, % от дорожки
-    const lab = (x, t) => x && w(x, t) * bw / 100 > 5 ? fmt(x) : '';   // цифра — только если сегмент достаточно широкий
+    const w = (x) => c.total ? (x / c.total * 100) : 0;
+    const bw = cls ? 100 : c.total / max * 100;            // длина полосы — число смывов
+    // подпись на каждом куске: название, количество, процент; узкий кусок всё равно получает место под подпись
+    const seg = (x, k, label) => {
+      if (!x) return '';
+      const t = `${label} ${fmt(x)} · ${pct(x, c.total)}`;
+      return `<span class="oc-${k}" style="flex:${w(x).toFixed(2)} 1 0;min-width:${Math.round(t.length * 6.6 + 14)}px" title="${t}">${t}</span>`;
+    };
     return `<div class="oc-row ${cls || ''}">
-      <div class="oc-name">${esc(name)}</div>
-      <div class="oc-track"><div class="oc-bar" style="width:${bw.toFixed(1)}%">
-        <span class="oc-ok" style="width:${w(c.ok, c.total)}%">${lab(c.ok, c.total)}</span>
-        <span class="oc-nok" style="width:${w(c.nok, c.total)}%">${lab(c.nok, c.total)}</span>
-        <span class="oc-pend" style="width:${w(pend, c.total)}%">${lab(pend, c.total)}</span>
-      </div></div>
-      <div class="oc-nums">Смывов: <b>${fmt(c.total)}</b> · <span class="ok">OK ${fmt(c.ok)} (${pct(c.ok, c.total)})</span> · <span class="nok">NOK ${fmt(c.nok)} (${pct(c.nok, c.total)})</span>${pend ? ` · <span class="pend">ждут ${fmt(pend)}</span>` : ''}</div>
+      <div class="oc-name">${esc(name)}<div class="oc-tot">${fmt(c.total)} смывов</div></div>
+      <div class="oc-track"><div class="oc-bar" style="width:${bw.toFixed(1)}%">${seg(c.ok, 'ok', 'OK')}${seg(c.nok, 'nok', 'NOK')}${seg(pend, 'pend', 'ждут')}</div></div>
     </div>`;
   };
   const o = wk.overall || {};
@@ -271,8 +271,49 @@ function panel(basis){
     <div class="oc-legend"><span><i class="oc-ok"></i>OK — в норме</span><span><i class="oc-nok"></i>NOK — обнаружено</span><span><i class="oc-pend"></i>ждут результата</span><span style="color:var(--muted)">длина полосы — число смывов</span></div>
     ${cats.length ? cats.map(([n, c]) => row(n, c)).join('') : '<div class="oc-empty">Смывов за неделю нет.</div>'}
     ${row('Итого за неделю', {total: o.total || 0, ok: o.ok || 0, nok: o.nok || 0, pending: o.pending}, 'oc-total')}
-    <div class="oc-sub" style="margin:8px 0 0">«Итого» — все пробы недели; один смыв может входить в несколько объектов (например, «Транспорт» и «БП»), поэтому сумма по строкам бывает больше итога.</div>
+    <div class="oc-sub" style="margin:8px 0 0">«Итого» — все пробы недели; один смыв может входить в несколько объектов (например, «Транспорт» и «БП»), поэтому сумма по строкам бывает больше итога. Проценты — от числа смывов за неделю.</div>
+    ${monthBlock(basis)}
   </div>`;
+}
+// ---------- за месяц: улучшения / ухудшения ----------
+const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+function monthOfWeek(wk){ const [y, w] = wk.split('-W').map(Number); const j4 = new Date(Date.UTC(y, 0, 4)); const th = new Date(j4);
+  th.setUTCDate(j4.getUTCDate() - (j4.getUTCDay() + 6) % 7 + (w - 1) * 7 + 3); return th.getUTCFullYear() * 12 + th.getUTCMonth(); }   // месяц недели — по её четвергу
+function monthAgg(weeks, m){
+  const by = {}, tot = {total: 0, ok: 0, nok: 0}, used = [];
+  Object.keys(weeks).forEach(k => {
+    if (monthOfWeek(k) !== m) return; used.push(k);
+    const wk = weeks[k];
+    Object.entries(wk.categories || {}).forEach(([n, c]) => { const a = by[n] = by[n] || {total: 0, ok: 0, nok: 0}; a.total += c.total; a.ok += c.ok; a.nok += c.nok; });
+    const o = wk.overall || {}; tot.total += o.total || 0; tot.ok += o.ok || 0; tot.nok += o.nok || 0;
+  });
+  return {by, tot, weeks: used.sort()};
+}
+function monthBlock(basis){
+  const st = N.state, data = basis === 'result' ? N.DATA.facilitiesRes : N.DATA.facilities;
+  const weeks = (data || {})[st.facility] || {};
+  if (!st.week) return '';
+  const m = monthOfWeek(st.week), cur = monthAgg(weeks, m), prev = monthAgg(weeks, m - 1);
+  const mName = x => MONTHS[((x % 12) + 12) % 12] + ' ' + Math.floor(x / 12);
+  if (!prev.weeks.length) return `<div class="oc-month"><h3>За месяц: ${mName(m)} к ${mName(m - 1)}</h3><div class="oc-empty">Нет данных за ${mName(m - 1)} — сравнить не с чем.</div></div>`;
+  const rate = a => (a.ok + a.nok) ? a.nok / (a.ok + a.nok) * 100 : null;      // % NOK от полученных результатов
+  const f1 = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + '%';
+  const line = (name, a, b, cls) => {
+    const ra = rate(a || {ok: 0, nok: 0}), rb = rate(b || {ok: 0, nok: 0});
+    let verdict = '<span class="oc-same">нет данных</span>', d = '';
+    if (ra != null && rb != null){
+      const dd = rb - ra; d = (Math.abs(dd) < 0.05 ? '±' : dd > 0 ? '+' : '−') + Math.abs(dd).toFixed(1).replace('.', ',') + ' п.п.';
+      verdict = Math.abs(dd) < 0.05 ? '<span class="oc-same">без изменений</span>' : dd < 0 ? '<span class="oc-better">▼ улучшение</span>' : '<span class="oc-worse">▲ ухудшение</span>';
+    }
+    const cell = (x, r) => x && (x.ok + x.nok) ? `<b>${f1(r)}</b><span class="oc-small">NOK ${fmt(x.nok)} из ${fmt(x.ok + x.nok)}</span>` : '<span class="oc-small">нет проб</span>';
+    return `<tr class="${cls || ''}"><td>${esc(name)}</td><td>${cell(a, ra)}</td><td>${cell(b, rb)}</td><td>${d}</td><td>${verdict}</td></tr>`;
+  };
+  const names = [...new Set(Object.keys(cur.by).concat(Object.keys(prev.by)))].filter(n => (cur.by[n] || {}).total || (prev.by[n] || {}).total);
+  const wl = ws => ws.length ? `нед. ${parseInt(ws[0].split('-W')[1], 10)}–${parseInt(ws[ws.length - 1].split('-W')[1], 10)}` : '';
+  return `<div class="oc-month"><h3>За месяц: ${mName(m)} к ${mName(m - 1)} — улучшения и ухудшения</h3>
+    <div class="oc-sub">% NOK — доля обнаружений среди полученных результатов (OK + NOK) за все недели месяца: ${mName(m - 1)} — ${wl(prev.weeks)}, ${mName(m)} — ${wl(cur.weeks)}${cur.weeks.length < 4 ? ' (месяц ещё неполный)' : ''}. Меньше % NOK — лучше.</div>
+    <table class="oc-mtab"><thead><tr><th>Объект</th><th>${mName(m - 1)}</th><th>${mName(m)}</th><th>Изменение</th><th>Итог</th></tr></thead>
+    <tbody>${names.map(n => line(n, prev.by[n], cur.by[n])).join('')}${line('Всего', prev.tot, cur.tot, 'oc-mtot')}</tbody></table></div>`;
 }
 function draw(){
   document.querySelectorAll('#nokTabs .nok-tab').forEach(b => b.classList.toggle('on', b.dataset.view === VIEW));
