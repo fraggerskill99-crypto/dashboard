@@ -241,6 +241,23 @@
 .oc-small{display:block;font-size:11px;color:var(--muted);font-weight:400}
 .oc-better{color:#166534;font-weight:800}.oc-worse{color:#991b1b;font-weight:800}.oc-same{color:var(--muted)}
 @media print{ .oc-mtab th{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+.oc-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:18px;align-items:start}
+.oc-right{display:grid;gap:12px}
+.oc-side{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.oc-side h3{margin:0 0 4px;font-size:14px;color:var(--navy)}
+.oc-side .oc-mtab{font-size:12.5px}
+.oc-side .oc-mtab th,.oc-side .oc-mtab td{padding:5px 7px}
+.oc-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.oc-tile{border-radius:8px;padding:8px;text-align:center;background:#fff;border:1px solid var(--line)}
+.oc-tv{font-size:20px;font-weight:800;line-height:1.1}
+.oc-tl{font-size:12px;font-weight:700;margin-top:2px}
+.oc-ts{font-size:10.5px;color:var(--muted);margin-top:2px}
+.t-ok .oc-tv{color:#166534}.t-nok .oc-tv{color:#991b1b}.t-res .oc-tv{color:var(--navy)}.t-pend .oc-tv{color:#64748b}
+.oc-count{display:flex;gap:14px;font-size:12.5px;margin:2px 0 4px}
+.oc-mtab tr.oc-cur td{background:#eef2ff}
+@media (max-width:1100px){ .oc-grid{grid-template-columns:1fr} }
+@media (max-width:560px){ .oc-tiles{grid-template-columns:repeat(2,1fr)} }
+@media print{ .oc-side,.oc-tile{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
 </style>
 <meta name="theme-color" content="#1a1f2e">
 <link rel="manifest" href="manifest.webmanifest">
@@ -1513,13 +1530,62 @@ function panel(basis){
     </div>`;
   };
   const o = wk.overall || {};
-  return `<div class="oc-panel">${head}
+  return `<div class="oc-panel">${head}<div class="oc-grid"><div class="oc-left">
     <div class="oc-legend"><span><i class="oc-ok"></i>OK — в норме</span><span><i class="oc-nok"></i>NOK — обнаружено</span><span><i class="oc-pend"></i>ждут результата</span><span style="color:var(--muted)">длина полосы — число смывов</span></div>
     ${cats.length ? cats.map(([n, c]) => row(n, c)).join('') : '<div class="oc-empty">Смывов за неделю нет.</div>'}
     ${row('Итого за неделю', {total: o.total || 0, ok: o.ok || 0, nok: o.nok || 0, pending: o.pending}, 'oc-total')}
     <div class="oc-sub" style="margin:8px 0 0">«Итого» — все пробы недели; один смыв может входить в несколько объектов (например, «Транспорт» и «БП»), поэтому сумма по строкам бывает больше итога. Проценты — от числа смывов за неделю.</div>
-    ${monthBlock(basis)}
+    </div><div class="oc-right">${weekSummary(o)}${weekBlock(basis)}${monthBlock(basis)}</div></div>
   </div>`;
+}
+// ---------- правая колонка: неделя в процентах ----------
+function weekSummary(o){
+  const t = o.total || 0, ok = o.ok || 0, nok = o.nok || 0, res = ok + nok, pend = t - res;
+  const tile = (cls, label, v, sub) => `<div class="oc-tile ${cls}"><div class="oc-tv">${v}</div><div class="oc-tl">${label}</div><div class="oc-ts">${sub}</div></div>`;
+  return `<div class="oc-side"><h3>Сводка за неделю, %</h3>
+    <div class="oc-tiles">
+      ${tile('t-ok', 'OK', pct(ok, t), `${fmt(ok)} из ${fmt(t)} смывов`)}
+      ${tile('t-nok', 'NOK', pct(nok, t), `${fmt(nok)} из ${fmt(t)} смывов`)}
+      ${tile('t-res', 'В результате', pct(res, t), `результат получен: ${fmt(res)} из ${fmt(t)}`)}
+      ${tile('t-pend', 'Ждут результата', pct(pend, t), `${fmt(pend)} смывов`)}
+    </div>
+    <div class="oc-sub" style="margin:6px 0 0">Среди полученных результатов: OK <b>${pct(ok, res)}</b>, NOK <b>${pct(nok, res)}</b>.</div></div>`;
+}
+// ---------- сравнение двух периодов по % NOK (меньше — лучше) ----------
+const rateOf = a => a && (a.ok + a.nok) ? a.nok / (a.ok + a.nok) * 100 : null;
+const f1 = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + '%';
+function verdictOf(ra, rb){
+  if (ra == null || rb == null) return {d: '', v: '<span class="oc-same">нет данных</span>'};
+  const dd = rb - ra, same = Math.abs(dd) < 0.05;
+  return {d: (same ? '±' : dd > 0 ? '+' : '−') + Math.abs(dd).toFixed(1).replace('.', ',') + ' п.п.',
+    v: same ? '<span class="oc-same">без изменений</span>' : dd < 0 ? '<span class="oc-better">▼ улучшение</span>' : '<span class="oc-worse">▲ ухудшение</span>'};
+}
+function compareTable(la, lb, byA, byB, totA, totB){
+  const line = (name, a, b, cls) => {
+    const ra = rateOf(a), rb = rateOf(b), x = verdictOf(ra, rb);
+    const cell = (q, r) => q && (q.ok + q.nok) ? `<b>${f1(r)}</b><span class="oc-small">NOK ${fmt(q.nok)} из ${fmt(q.ok + q.nok)}</span>` : '<span class="oc-small">нет проб</span>';
+    return `<tr class="${cls || ''}"><td>${esc(name)}</td><td>${cell(a, ra)}</td><td>${cell(b, rb)}</td><td>${x.d}<div>${x.v}</div></td></tr>`;
+  };
+  const names = [...new Set(Object.keys(byA).concat(Object.keys(byB)))].filter(n => (byA[n] || {}).total || (byB[n] || {}).total);
+  let up = 0, down = 0;
+  names.forEach(n => { const ra = rateOf(byA[n]), rb = rateOf(byB[n]); if (ra != null && rb != null && Math.abs(rb - ra) >= 0.05) (rb < ra ? down++ : up++); });
+  return `<div class="oc-count"><span class="oc-better">▼ улучшений: ${down}</span><span class="oc-worse">▲ ухудшений: ${up}</span></div>
+    <table class="oc-mtab"><thead><tr><th>Объект</th><th>${la}</th><th>${lb}</th><th>Итог</th></tr></thead>
+    <tbody>${names.map(n => line(n, byA[n], byB[n])).join('')}${line('Всего', totA, totB, 'oc-mtot')}</tbody></table>`;
+}
+function catsOf(wk){ const by = {}; Object.entries((wk || {}).categories || {}).forEach(([n, c]) => { by[n] = {total: c.total, ok: c.ok, nok: c.nok}; }); return by; }
+function prevWeekKey(weeks, wk){ return Object.keys(weeks).filter(k => k < wk).sort().pop() || null; }
+const wNum = k => parseInt(k.split('-W')[1], 10);
+// ---------- правая колонка: неделя к прошлой неделе ----------
+function weekBlock(basis){
+  const st = N.state, data = basis === 'result' ? N.DATA.facilitiesRes : N.DATA.facilities;
+  const weeks = (data || {})[st.facility] || {};
+  const cur = weeks[st.week], pk = prevWeekKey(weeks, st.week), prev = pk && weeks[pk];
+  if (!cur) return '';
+  if (!prev) return `<div class="oc-side"><h3>Неделя к прошлой неделе</h3><div class="oc-empty">Нет данных за прошлую неделю — сравнить не с чем.</div></div>`;
+  return `<div class="oc-side"><h3>Неделя ${wNum(st.week)} к неделе ${wNum(pk)} — улучшения и ухудшения</h3>
+    <div class="oc-sub">% NOK среди полученных результатов. Меньше — лучше.</div>
+    ${compareTable('нед. ' + wNum(pk), 'нед. ' + wNum(st.week), catsOf(prev), catsOf(cur), prev.overall, cur.overall)}</div>`;
 }
 // ---------- за месяц: улучшения / ухудшения ----------
 const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
@@ -1541,25 +1607,46 @@ function monthBlock(basis){
   if (!st.week) return '';
   const m = monthOfWeek(st.week), cur = monthAgg(weeks, m), prev = monthAgg(weeks, m - 1);
   const mName = x => MONTHS[((x % 12) + 12) % 12] + ' ' + Math.floor(x / 12);
-  if (!prev.weeks.length) return `<div class="oc-month"><h3>За месяц: ${mName(m)} к ${mName(m - 1)}</h3><div class="oc-empty">Нет данных за ${mName(m - 1)} — сравнить не с чем.</div></div>`;
-  const rate = a => (a.ok + a.nok) ? a.nok / (a.ok + a.nok) * 100 : null;      // % NOK от полученных результатов
-  const f1 = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + '%';
-  const line = (name, a, b, cls) => {
-    const ra = rate(a || {ok: 0, nok: 0}), rb = rate(b || {ok: 0, nok: 0});
-    let verdict = '<span class="oc-same">нет данных</span>', d = '';
-    if (ra != null && rb != null){
-      const dd = rb - ra; d = (Math.abs(dd) < 0.05 ? '±' : dd > 0 ? '+' : '−') + Math.abs(dd).toFixed(1).replace('.', ',') + ' п.п.';
-      verdict = Math.abs(dd) < 0.05 ? '<span class="oc-same">без изменений</span>' : dd < 0 ? '<span class="oc-better">▼ улучшение</span>' : '<span class="oc-worse">▲ ухудшение</span>';
-    }
-    const cell = (x, r) => x && (x.ok + x.nok) ? `<b>${f1(r)}</b><span class="oc-small">NOK ${fmt(x.nok)} из ${fmt(x.ok + x.nok)}</span>` : '<span class="oc-small">нет проб</span>';
-    return `<tr class="${cls || ''}"><td>${esc(name)}</td><td>${cell(a, ra)}</td><td>${cell(b, rb)}</td><td>${d}</td><td>${verdict}</td></tr>`;
-  };
-  const names = [...new Set(Object.keys(cur.by).concat(Object.keys(prev.by)))].filter(n => (cur.by[n] || {}).total || (prev.by[n] || {}).total);
-  const wl = ws => ws.length ? `нед. ${parseInt(ws[0].split('-W')[1], 10)}–${parseInt(ws[ws.length - 1].split('-W')[1], 10)}` : '';
-  return `<div class="oc-month"><h3>За месяц: ${mName(m)} к ${mName(m - 1)} — улучшения и ухудшения</h3>
-    <div class="oc-sub">% NOK — доля обнаружений среди полученных результатов (OK + NOK) за все недели месяца: ${mName(m - 1)} — ${wl(prev.weeks)}, ${mName(m)} — ${wl(cur.weeks)}${cur.weeks.length < 4 ? ' (месяц ещё неполный)' : ''}. Меньше % NOK — лучше.</div>
-    <table class="oc-mtab"><thead><tr><th>Объект</th><th>${mName(m - 1)}</th><th>${mName(m)}</th><th>Изменение</th><th>Итог</th></tr></thead>
-    <tbody>${names.map(n => line(n, prev.by[n], cur.by[n])).join('')}${line('Всего', prev.tot, cur.tot, 'oc-mtot')}</tbody></table></div>`;
+  if (!prev.weeks.length) return `<div class="oc-side"><h3>За месяц: ${mName(m)} к ${mName(m - 1)}</h3><div class="oc-empty">Нет данных за ${mName(m - 1)} — сравнить не с чем.</div></div>`;
+  const wl = ws => ws.length ? `нед. ${wNum(ws[0])}–${wNum(ws[ws.length - 1])}` : '';
+  // динамика: % NOK по неделям прошлого и текущего месяца
+  const dyn = prev.weeks.concat(cur.weeks);
+  let last = null;
+  const dynRows = dyn.map(k => {
+    const o = weeks[k].overall || {}, r = rateOf(o), x = verdictOf(last, r); last = r;
+    return `<tr${k === st.week ? ' class="oc-cur"' : ''}><td>нед. ${wNum(k)}<span class="oc-small">${monthOfWeek(k) === m ? mName(m) : mName(m - 1)}</span></td><td>${fmt(o.total)}</td><td><b>${f1(rateOf(o))}</b><span class="oc-small">NOK ${fmt(o.nok)}</span></td><td>${x.v}</td></tr>`;
+  }).join('');
+  return `<div class="oc-side"><h3>За месяц: ${mName(m)} к ${mName(m - 1)}</h3>
+    <div class="oc-sub">% NOK за все недели месяца: ${mName(m - 1)} — ${wl(prev.weeks)}, ${mName(m)} — ${wl(cur.weeks)}${cur.weeks.length < 4 ? ' (месяц ещё неполный)' : ''}. Меньше — лучше.</div>
+    ${compareTable(mName(m - 1), mName(m), prev.by, cur.by, prev.tot, cur.tot)}
+    <h3 style="margin-top:12px">Динамика по неделям</h3>
+    <table class="oc-mtab"><thead><tr><th>Неделя</th><th>Смывов</th><th>% NOK</th><th>К прошлой неделе</th></tr></thead><tbody>${dynRows}</tbody></table></div>`;
+}
+// ---------- отдельная таблица: результаты подтвердились ----------
+// Неделя отбора: сколько проб отобрано, сколько результатов выдано (OK/NOK), сколько ждут; и сверка с журналом
+// «по дате обнаружения» — те же пробы недели отбора должны найтись там с тем же числом NOK.
+function confirmBlock(){
+  const st = N.state, S = ((N.DATA.facilities || {})[st.facility]) || {}, R = ((N.DATA.facilitiesRes || {})[st.facility]) || {};
+  if (!st.week) return '';
+  const ks = Object.keys(S).filter(k => k <= st.week).sort().slice(-8);
+  if (!ks.length) return '';
+  const rows = ks.map(k => {
+    const o = S[k].overall || {}, w = wNum(k), y = k.split('-W')[0];
+    let rt = 0, rn = 0, has = false;
+    Object.keys(R).forEach(rk => { const fw = R[rk].fromWeeks; if (!fw || rk < k || !fw[w] || rk.split('-W')[0] < y) return; has = true; rt += fw[w].total; rn += fw[w].nok; });
+    const res = (o.ok || 0) + (o.nok || 0), pend = (o.total || 0) - res;
+    let status;
+    if (!has && res) status = '<span class="oc-same">нет данных по дате выдачи</span>';
+    else if (!res) status = '<span class="oc-same">результатов ещё нет</span>';
+    else if (rt === res && rn === (o.nok || 0)) status = pend ? '<span class="oc-better">✓ подтверждено</span><span class="oc-small">остальные ждут результата</span>' : '<span class="oc-better">✓ подтверждено полностью</span>';
+    else status = `<span class="oc-worse">⚠ расхождение</span><span class="oc-small">в журнале выдачи: ${fmt(rt)} результатов, NOK ${fmt(rn)}</span>`;
+    return `<tr${k === st.week ? ' class="oc-cur"' : ''}><td>нед. ${w}<span class="oc-small">${rangeOf(k)}</span></td><td>${fmt(o.total)}</td>
+      <td><b>${fmt(res)}</b><span class="oc-small">${pct(res, o.total)}</span></td><td>${fmt(o.ok)}<span class="oc-small">${pct(o.ok, res)}</span></td>
+      <td>${fmt(o.nok)}<span class="oc-small">${pct(o.nok, res)}</span></td><td>${fmt(pend)}</td><td>${has ? `${fmt(rt)} · NOK ${fmt(rn)}` : '—'}</td><td>${status}</td></tr>`;
+  }).join('');
+  return `<div class="oc-panel"><h2>Подтверждение результатов — ${esc(st.facility)}</h2>
+    <div class="oc-sub">По неделе отбора проб: сколько результатов уже выдано и подтверждено. «Подтверждено» — пробы этой недели нашлись в журнале по дате выдачи результата с тем же числом OK и NOK.</div>
+    <table class="oc-mtab"><thead><tr><th>Неделя отбора</th><th>Отобрано</th><th>Результат выдан</th><th>OK</th><th>NOK</th><th>Ждут</th><th>По дате выдачи</th><th>Подтверждение</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function draw(){
   document.querySelectorAll('#nokTabs .nok-tab').forEach(b => b.classList.toggle('on', b.dataset.view === VIEW));
@@ -1569,7 +1656,7 @@ function draw(){
   if (chart){
     $('singleView').style.display = 'none'; $('splitView').style.display = 'none';
     const b = N.state.basis;
-    box.innerHTML = b === 'both' ? panel('sample') + panel('result') : panel(b);
+    box.innerHTML = (b === 'both' ? panel('sample') + panel('result') : panel(b)) + confirmBlock();
   } else {
     const split = N.state.basis === 'both';
     $('singleView').style.display = split ? 'none' : ''; $('splitView').style.display = split ? '' : 'none';
