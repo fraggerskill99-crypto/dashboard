@@ -96,12 +96,13 @@ self.addEventListener('fetch', e => {
 ''' % VERSION
 
 
-def icon(size, maskable=False):
+def icon(size, maskable=False, k=None):
     """Зелёная плитка с белым листом календаря и галочкой."""
     s = size
     img = Image.new('RGB', (s, s), GREEN)
     d = ImageDraw.Draw(img)
-    k = 0.62 if maskable else 0.78  # у maskable значка безопасная зона — круг 80%
+    if k is None:
+        k = 0.62 if maskable else 0.78  # у maskable значка безопасная зона — круг 80%
     w = s * k
     x0, y0 = (s - w) / 2, (s - w * 0.92) / 2 + s * 0.02
     x1, y1 = x0 + w, y0 + w * 0.92
