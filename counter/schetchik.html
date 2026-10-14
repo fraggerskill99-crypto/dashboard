@@ -226,11 +226,11 @@ button:focus-visible, #habit:focus-visible { outline: 2px solid var(--accent); o
     var n = streak(today);
     if (today < s) {
       var ms = s - now, h = Math.floor(ms / 36e5), m = Math.floor(ms % 36e5 / 6e4), sec = Math.floor(ms % 6e4 / 1e3);
-      $("heroLabel").textContent = "Старт " + human(s) + (diffDays(today, s) === 1 ? ", завтра" : "");
-      $("big").textContent = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+      $("heroLabel").textContent = "Старт " + (diffDays(today, s) === 1 ? "завтра, " : "") + human(s) + " в 00:00";
+      $("big").textContent = "0";
       $("big").classList.add("waiting");
-      $("bigUnit").textContent = "до старта";
-      $("clock").textContent = "Осталось " + h + " ч " + m + " мин " + sec + " с. Сегодня последний день — дальше счёт пойдёт сам.";
+      $("bigUnit").textContent = "дней";
+      $("clock").textContent = "До старта: " + h + " ч " + String(m).padStart(2, "0") + " мин " + String(sec).padStart(2, "0") + " с. В полночь счёт пойдёт сам.";
     } else {
       var ms2 = now - s, d = Math.floor(ms2 / 864e5), hh = Math.floor(ms2 % 864e5 / 36e5), mm = Math.floor(ms2 % 36e5 / 6e4);
       $("heroLabel").textContent = "Без срывов · день " + n;
