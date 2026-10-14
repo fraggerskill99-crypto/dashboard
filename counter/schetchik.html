@@ -62,7 +62,7 @@ h1, h2 { margin: 0; text-wrap: balance; }
   font-variant-numeric: tabular-nums; color: var(--clean);
 }
 .big.waiting { color: var(--accent); }
-.big-unit { font-family: var(--f-display); font-weight: 500; font-size: 20px; }
+.big-unit { display: block; margin-top: 4px; font-family: var(--f-display); font-weight: 500; font-size: 20px; }
 .clock { font-family: var(--f-mono); color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 
 .mile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; }
@@ -109,9 +109,9 @@ button:focus-visible, #habit:focus-visible { outline: 2px solid var(--accent); o
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
-.stat b { display: block; font-family: var(--f-display); font-weight: 500; font-size: 22px; font-variant-numeric: tabular-nums; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
+.stat b { display: block; font-family: var(--f-display); font-weight: 500; font-size: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .stat span { font-size: 12px; color: var(--muted); }
 
 .reset { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 18px; }
@@ -161,7 +161,7 @@ button:focus-visible, #habit:focus-visible { outline: 2px solid var(--accent); o
 
   <section class="stats">
     <div class="stat"><b id="sStart"></b><span>дата старта</span></div>
-    <div class="stat"><b id="sBest"></b><span>лучшая серия, дней</span></div>
+    <div class="stat"><b id="sBest"></b><span>лучшая серия</span></div>
     <div class="stat"><b id="sTries"></b><span>попытка</span></div>
   </section>
 
@@ -286,7 +286,7 @@ button:focus-visible, #habit:focus-visible { outline: 2px solid var(--accent); o
   function renderStats() {
     var n = streak(midnight(new Date()));
     var best = state.history.reduce(function (b, h) { return Math.max(b, diffDays(parse(h.start), parse(h.end)) + 1); }, n);
-    $("sStart").textContent = human(parse(state.start));
+    var sd = parse(state.start); $("sStart").textContent = sd.getDate() + " " + MONTHS_GEN[sd.getMonth()].slice(0, 3);
     $("sBest").textContent = best;
     $("sTries").textContent = "№ " + (state.history.length + 1);
     $("slipBtn").disabled = midnight(new Date()) < parse(state.start);
