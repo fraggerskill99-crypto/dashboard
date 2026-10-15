@@ -299,6 +299,13 @@
 .dg-fac td.dg-has b{color:#991b1b}
 .dg-fac th:first-child{position:sticky;left:0;background:#fff;z-index:1}
 .dg-fac thead th:first-child{background:var(--navy)}
+.dg-fac td i em{font-style:normal;color:#991b1b;font-weight:800}
+.dg-fac td.dg-wait{color:#64748b;background:#f8fafc}
+.dg-fac tr.dg-uch th{background:#eef2f8;color:var(--navy);text-align:left;font-size:13px}
+.dg-fac tr.dg-tot th i{display:block;font-style:normal;font-weight:400;font-size:10.5px;color:var(--muted)}
+.dg-fac td.dg-zero b,.dg-fac td.dg-has b{color:#1f2430}
+.dg-uchsel{font-size:13px;font-weight:600;color:#33394a}
+.dg-uchsel select{font-size:13px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;margin-left:4px}
 </style>
 <meta name="theme-color" content="#1a1f2e">
 <link rel="manifest" href="manifest.webmanifest">
@@ -772,6 +779,11 @@ self.onmessage = function(e){
       const bucket = map[fac][wk];
       bucket.total++;
       if(oknok==='OK') bucket.ok++; else if(oknok==='NOK') bucket.nok++;
+      // смывы по участкам и корпусам — для листа «По объектам»
+      const pu = cleanLoc(r.uchastok) || '(без участка)', pk = cleanLoc(r.korpus) || '(без корпуса)';
+      const pl = (bucket.places = bucket.places || {}), pu2 = (pl[pu] = pl[pu] || {});
+      const pe = (pu2[pk] = pu2[pk] || {total:0, ok:0, nok:0});
+      pe.total++; if(oknok==='OK') pe.ok++; else if(oknok==='NOK') pe.nok++;
       if(sampleWeek){
         const fw = (bucket.fromWeeks = bucket.fromWeeks || {});
         const e = (fw[sampleWeek] = fw[sampleWeek] || {total:0, nok:0});
@@ -853,7 +865,8 @@ self.onmessage = function(e){
             range: isoWeekToDates(wk),
             categories,
             overall: {total:b.total, ok:b.ok, nok:b.nok, pending:b.total-b.ok-b.nok},
-            fromWeeks: b.fromWeeks || null
+            fromWeeks: b.fromWeeks || null,
+            places: b.places || null
           };
         });
       });
@@ -1778,35 +1791,49 @@ function dynBlock(){
     <h3 class="dg-h">Улучшения и ухудшения по объектам — по неделям</h3>
     ${objTable}</div>`;
 }
-// ---------- по площадкам: УКПФ и МПФ отдельными колонками, все объекты по неделям (и с NOK, и без) ----------
-function facBlock(){
+// ---------- по участкам: все корпуса выбранного участка по неделям (и где пробы были, и где не было) ----------
+let PL_UCH = null;
+try { PL_UCH = localStorage.getItem('nokUch') || null; } catch (e) {}
+function placeBlock(){
   const st = N.state, basis = st.basis === 'result' ? 'result' : 'sample';
-  const src = (basis === 'result' ? N.DATA.facilitiesRes : N.DATA.facilities) || {};
+  const all = ((basis === 'result' ? N.DATA.facilitiesRes : N.DATA.facilities) || {})[st.facility] || {};
   if (!st.week) return '';
-  const col = (fac) => {
-    const all = src[fac] || {};
-    let ks = Object.keys(all).filter(k => k <= st.week).sort();
-    if (DYN_N) ks = ks.slice(-DYN_N);
-    if (!ks.length) return `<div class="oc-side"><h3>${esc(fac)}</h3><div class="oc-empty">Нет данных.</div></div>`;
-    const tot = {}; ks.forEach(k => Object.entries(all[k].categories || {}).forEach(([nm, c]) => { tot[nm] = (tot[nm] || 0) + (c.total || 0); }));
-    const objs = Object.keys(tot).filter(nm => tot[nm] > 0).sort((a, b) => tot[b] - tot[a]);
-    const cell = (c, pc) => {
-      if (!c || !c.total) return '<td class="dg-na">—</td>';
-      const v = nokOf(c);
-      if (v == null) return `<td class="dg-na" title="Смывов ${fmt(c.total)}, результатов ещё нет"><b>…</b><i>${fmt(c.total)} см.</i></td>`;
-      let ch = '', cls = v ? 'dg-has' : 'dg-zero';
-      if (pc != null){ if (v > pc){ cls = 'dg-up'; ch = `▲${pc ? Math.round((v - pc) / pc * 100) + '%' : ' было 0'}`; } else if (v < pc){ cls = 'dg-down'; ch = `▼${Math.round((pc - v) / pc * 100)}%`; } else ch = '='; }
-      return `<td class="${cls}" title="Смывов ${fmt(c.total)} · OK ${fmt(c.ok)} · NOK ${fmt(c.nok)} (${f1(rateOf(c))})"><b>${fmt(v)}</b><i>${fmt(c.total)} см.</i>${ch ? `<span>${ch}</span>` : ''}</td>`;
-    };
-    const row = (nm, get, cls) => { let pc = null; return `<tr class="${cls || ''}"><th>${esc(nm)}</th>${ks.map(k => { const c = get(k), td = cell(c, pc), v = nokOf(c); if (v != null) pc = v; return td; }).join('')}</tr>`; };
-    return `<div class="oc-side"><h3>${esc(fac)}</h3><div class="dg-tw"><table class="dg-tab dg-fac"><thead><tr><th>Объект</th>${ks.map(k => `<th${k === st.week ? ' class="dg-curc"' : ''}>нед. ${wNum(k)}</th>`).join('')}</tr></thead><tbody>
-      ${objs.map(nm => row(nm, k => (all[k].categories || {})[nm])).join('')}${row('Всего', k => all[k].overall, 'dg-tot')}</tbody></table></div></div>`;
+  let ks = Object.keys(all).filter(k => k <= st.week).sort();
+  if (DYN_N) ks = ks.slice(-DYN_N);
+  // список участков и их корпусов — по всем сохранённым неделям площадки
+  const U = {};
+  Object.values(all).forEach(w => Object.entries(w.places || {}).forEach(([u, ks2]) => { const s = (U[u] = U[u] || {}); Object.keys(ks2).forEach(k => { s[k] = 1; }); }));
+  const uchs = Object.keys(U).sort((a, b) => a.localeCompare(b, 'ru', {numeric: true}));
+  const head = `<h2>По участкам и корпусам — ${esc(st.facility)}</h2>`;
+  if (!uchs.length) return `<div class="oc-panel">${head}<div class="oc-empty">Нет разбивки по корпусам — загрузите «Свод» ещё раз (старые сохранённые недели её не содержат).</div></div>`;
+  if (!PL_UCH || (PL_UCH !== '*' && !U[PL_UCH])) PL_UCH = uchs[0];
+  const show = PL_UCH === '*' ? uchs : [PL_UCH];
+  const cell = (c, pc) => {
+    if (!c || !c.total) return '<td class="dg-na" title="Проб не было">—</td>';
+    const v = nokOf(c);
+    if (v == null) return `<td class="dg-wait" title="Смывов ${fmt(c.total)}, результатов ещё нет"><b>${fmt(c.total)}</b><i>ждут</i></td>`;
+    let ch = '', cls = v ? 'dg-has' : 'dg-zero';
+    if (pc != null){ if (v > pc){ cls = 'dg-up'; ch = `▲${pc ? Math.round((v - pc) / pc * 100) + '%' : ' было 0'}`; } else if (v < pc){ cls = 'dg-down'; ch = `▼${Math.round((pc - v) / pc * 100)}%`; } }
+    return `<td class="${cls}" title="Смывов ${fmt(c.total)} · OK ${fmt(c.ok)} · NOK ${fmt(c.nok)}"><b>${fmt(c.total)}</b><i>${v ? `<em>NOK ${fmt(v)}</em>` : 'OK'}</i>${ch ? `<span>${ch}</span>` : ''}</td>`;
   };
-  const facs = ['УКПФ', 'МПФ'].filter(f => src[f]).concat(Object.keys(src).filter(f => f !== 'УКПФ' && f !== 'МПФ'));
-  return `<div class="oc-panel"><h2>По площадкам — все объекты по неделям</h2>
-    <div class="oc-sub">${basis === 'result' ? 'по дате обнаружения (выдачи результата)' : 'по дате отбора проб'} · все объекты, где были смывы, — и с NOK, и без · в ячейке: число NOK (крупно), число смывов, изменение NOK к прошлой неделе: <b class="oc-better">▼ меньше</b>, <b class="oc-worse">▲ больше</b>, «=» — так же; «…» — результатов ещё нет, «—» — смывов не было</div>
-    <div class="dg-facs">${facs.map(col).join('')}</div></div>`;
+  const sum = (arr) => arr.reduce((a, c) => c ? {total: a.total + c.total, ok: a.ok + c.ok, nok: a.nok + c.nok} : a, {total: 0, ok: 0, nok: 0});
+  const row = (label, get, cls) => { let pc = null; return `<tr class="${cls || ''}"><th>${label}</th>${ks.map(k => { const c = get(k), td = cell(c, pc), v = c && c.total ? nokOf(c) : null; if (v != null) pc = v; return td; }).join('')}</tr>`; };
+  const body = show.map(u => {
+    const corps = Object.keys(U[u]).sort((a, b) => a.localeCompare(b, 'ru', {numeric: true}));
+    const g = (k, kp) => ((all[k].places || {})[u] || {})[kp];
+    const sampled = corps.filter(kp => ks.some(k => (g(k, kp) || {}).total)).length;
+    return (show.length > 1 ? `<tr class="dg-uch"><th colspan="${ks.length + 1}">${esc(u)}</th></tr>` : '')
+      + corps.map(kp => row(esc(kp), k => g(k, kp))).join('')
+      + row(`Итого ${esc(u)}<i>корпусов с пробами: ${sampled} из ${corps.length}</i>`, k => sum(corps.map(kp => g(k, kp))), 'dg-tot');
+  }).join('');
+  const opts = `<option value="*"${PL_UCH === '*' ? ' selected' : ''}>Все участки</option>` + uchs.map(u => `<option value="${esc(u)}"${u === PL_UCH ? ' selected' : ''}>${esc(u)}</option>`).join('');
+  return `<div class="oc-panel">${head}
+    <div class="oc-sub">${basis === 'result' ? 'по дате обнаружения (выдачи результата)' : 'по дате отбора проб'} · все корпуса участка, где хоть раз отбирали пробы, — по каждой неделе, были пробы или нет</div>
+    <div class="dg-bar"><label class="dg-uchsel">Участок: <select id="plUch">${opts}</select></label></div>
+    <div class="dg-tw"><table class="dg-tab dg-fac"><thead><tr><th>Корпус</th>${ks.map(k => `<th${k === st.week ? ' class="dg-curc"' : ''}>нед. ${wNum(k)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
+    <div class="oc-sub" style="margin-top:4px">В ячейке — число смывов; ниже: <b style="color:#166534">OK</b> — всё в норме, <b class="oc-worse">NOK n</b> — обнаружено; ▲/▼ — изменение NOK к прошлой неделе с пробами; «ждут» — результатов ещё нет; «—» — проб не было.</div></div>`;
 }
+box.addEventListener('change', e => { if (e.target.id === 'plUch') { PL_UCH = e.target.value; try { localStorage.setItem('nokUch', PL_UCH); } catch (err) {} draw(); } });
 box.addEventListener('click', e => {
   const r = e.target.closest('[data-n]'); if (r) { DYN_N = +r.dataset.n; try { localStorage.setItem('nokDynN', DYN_N); } catch (err) {} draw(); return; }
   const o = e.target.closest('[data-obj]'); if (o) { DYN_HIDE[o.dataset.obj] = !DYN_HIDE[o.dataset.obj]; draw(); return; }
@@ -1820,7 +1847,7 @@ function draw(){
   if (chart){
     $('singleView').style.display = 'none'; $('splitView').style.display = 'none';
     const b = N.state.basis;
-    box.innerHTML = dynBlock() + facBlock() + (b === 'both' ? panel('sample') + panel('result') : panel(b)) + confirmBlock();
+    box.innerHTML = dynBlock() + placeBlock() + (b === 'both' ? panel('sample') + panel('result') : panel(b)) + confirmBlock();
     box.querySelectorAll('.dg-tw').forEach(el => { el.scrollLeft = el.scrollWidth; });   // сразу видны последние недели
   } else {
     const split = N.state.basis === 'both';
