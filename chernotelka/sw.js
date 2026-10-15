@@ -1,5 +1,5 @@
 /* Офлайн-работа: всё приложение из кэша, обновление в фоне */
-const CACHE = 'chernotelka-v202610111017';
+const CACHE = 'chernotelka-v202610150557';
 const SHELL = ['./', './index.html', './xlsx.full.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
