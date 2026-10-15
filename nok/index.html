@@ -258,6 +258,27 @@
 @media (max-width:1100px){ .oc-grid{grid-template-columns:1fr} }
 @media (max-width:560px){ .oc-tiles{grid-template-columns:repeat(2,1fr)} }
 @media print{ .oc-side,.oc-tile{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+.dg-svg{width:100%;height:auto;display:block}
+.dg-grid{stroke:#e5e7eb;stroke-width:1}
+.dg-ax{font-size:12px;fill:#64748b}.dg-axr{fill:#1e293b}
+.dg-cur{fill:var(--navy);font-weight:800}
+.dg-curbg{fill:#eef2ff}
+.dg-ok{fill:#16a34a}.dg-nok{fill:#dc2626}.dg-pend{fill:#cbd5e1}
+.dg-val{font-size:11px;fill:#475569}
+.dg-line{fill:none;stroke:#1e293b;stroke-width:2.2}
+.dg-dot{fill:#1e293b}.dg-dot.dg-better{fill:#16a34a}.dg-dot.dg-worse{fill:#dc2626}
+.dg-pct{font-size:12px;font-weight:800;fill:#1e293b}.dg-pct.dg-better{fill:#166534}.dg-pct.dg-worse{fill:#991b1b}
+.dg-hit{fill:transparent;cursor:pointer}.dg-hit:hover{fill:rgba(37,99,235,.06)}
+.dg-h{margin:12px 0 6px;font-size:14px;color:var(--navy)}
+.dg-bar{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
+.dg-rg,.dg-lg{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;color:#33394a}
+.dg-rg.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.dg-legend{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px}
+.dg-lg i{display:inline-block;width:12px;height:4px;border-radius:2px;margin-right:6px;vertical-align:3px}
+.dg-lg.off{opacity:.4;text-decoration:line-through}
+@media print{ .dg-bar{display:none} .dg-svg *{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+.dg-pct,.dg-val{paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.dg-dot{stroke:#fff;stroke-width:2}
 </style>
 <meta name="theme-color" content="#1a1f2e">
 <link rel="manifest" href="manifest.webmanifest">
@@ -1648,6 +1669,78 @@ function confirmBlock(){
     <div class="oc-sub">По неделе отбора проб: сколько результатов уже выдано и подтверждено. «Подтверждено» — пробы этой недели нашлись в журнале по дате выдачи результата с тем же числом OK и NOK.</div>
     <table class="oc-mtab"><thead><tr><th>Неделя отбора</th><th>Отобрано</th><th>Результат выдан</th><th>OK</th><th>NOK</th><th>Ждут</th><th>По дате выдачи</th><th>Подтверждение</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
+// ---------- динамика по неделям: графики (SVG, без библиотек — работает и офлайн) ----------
+let DYN_N = 12, DYN_HIDE = {};
+try { DYN_N = +localStorage.getItem('nokDynN') || 12; } catch (e) {}
+const PALETTE = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#ca8a04', '#db2777', '#475569', '#65a30d'];
+function dynBlock(){
+  const st = N.state, basis = st.basis === 'result' ? 'result' : 'sample';
+  const all = ((basis === 'result' ? N.DATA.facilitiesRes : N.DATA.facilities) || {})[st.facility] || {};
+  if (!st.week) return '';
+  let ks = Object.keys(all).filter(k => k <= st.week).sort();
+  if (DYN_N) ks = ks.slice(-DYN_N);
+  if (ks.length < 2) return `<div class="oc-panel"><h2>Динамика по неделям</h2><div class="oc-empty">Для динамики нужно хотя бы 2 недели.</div></div>`;
+  const W = 1100, H1 = 300, L = 46, R = 46, T = 26, B = 46, iw = W - L - R, ih = H1 - T - B, n = ks.length, step = iw / n, bw = Math.min(46, step * 0.62);
+  const X = i => L + step * i + step / 2;
+  const ov = ks.map(k => all[k].overall || {total: 0, ok: 0, nok: 0});
+  const maxT = Math.max(1, ...ov.map(o => o.total || 0));
+  const nice = (raw) => { const p = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1e-9)))); return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw); };
+  const stp = Math.max(1, nice(maxT / 5)), TK = Math.ceil(maxT / stp), yMax = stp * TK, Y = v => T + ih - v / yMax * ih;
+  const rates = ov.map(o => rateOf(o)), rStep = nice(Math.max(5, ...rates.filter(r => r != null)) / TK), rMax = rStep * TK, YR = v => T + ih - v / rMax * ih;
+  let g = '';
+  for (let i = 0; i <= TK; i++) { const v = stp * i, y = Y(v); g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" class="dg-grid"/><text x="${L - 6}" y="${y + 4}" class="dg-ax" text-anchor="end">${fmt(Math.round(v))}</text><text x="${W - R + 6}" y="${y + 4}" class="dg-ax dg-axr">${+(rStep * i).toFixed(1)}%</text>`; }
+  let bars = '', pts = [], lab = '';
+  ks.forEach((k, i) => {
+    const o = ov[i], x = X(i) - bw / 2, pend = (o.total || 0) - (o.ok || 0) - (o.nok || 0);
+    let y = Y(0);
+    [['ok', o.ok || 0], ['nok', o.nok || 0], ['pend', pend]].forEach(([c, v]) => { if (!v) return; const hh = v / yMax * ih; y -= hh; bars += `<rect x="${x}" y="${y}" width="${bw}" height="${hh}" class="dg-${c}"><title>Нед. ${wNum(k)} · ${c === 'ok' ? 'OK' : c === 'nok' ? 'NOK' : 'ждут'}: ${fmt(v)}</title></rect>`; });
+    bars += `<text x="${X(i)}" y="${Y(o.total) - 4}" class="dg-val" text-anchor="middle">${fmt(o.total)}</text>`;
+    if (rates[i] != null) pts.push([X(i), YR(rates[i]), rates[i], k]);
+    lab += `<text x="${X(i)}" y="${H1 - B + 18}" class="dg-ax${k === st.week ? ' dg-cur' : ''}" text-anchor="middle">нед. ${wNum(k)}</text><rect x="${L + step * i}" y="${T}" width="${step}" height="${ih + 24}" class="dg-hit" data-wk="${k}"><title>Открыть неделю ${wNum(k)}</title></rect>`;
+  });
+  const line = pts.length ? `<polyline points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}" class="dg-line"/>` + pts.map((p, j) => {
+    const prev = j ? pts[j - 1][2] : null, cls = prev == null || Math.abs(p[2] - prev) < 0.05 ? '' : p[2] < prev ? ' dg-better' : ' dg-worse';
+    return `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" class="dg-dot${cls}"/><text x="${p[0]}" y="${p[1] - 9}" class="dg-pct${cls}" text-anchor="middle">${f1(p[2])}</text>`; }).join('') : '';
+  const cur = ks.indexOf(st.week), hl = cur >= 0 ? `<rect x="${L + step * cur}" y="${T}" width="${step}" height="${ih}" class="dg-curbg"/>` : '';
+  const chart1 = `<svg viewBox="0 0 ${W} ${H1}" class="dg-svg">${hl}${g}${bars}${line}${lab}</svg>`;
+  // график 2: % NOK по объектам
+  const tot = {}; ks.forEach(k => Object.entries(all[k].categories || {}).forEach(([nm, c]) => { tot[nm] = (tot[nm] || 0) + (c.total || 0); }));
+  const objs = Object.keys(tot).filter(nm => tot[nm] > 0).sort((a, b) => tot[b] - tot[a]).slice(0, 10);
+  const H2 = 300, ih2 = H2 - T - B;
+  let r2 = 5; objs.forEach(nm => ks.forEach(k => { const r = rateOf((all[k].categories || {})[nm]); if (r != null && !DYN_HIDE[nm]) r2 = Math.max(r2, r); }));
+  r2 = Math.min(100, Math.ceil(r2 / 5) * 5);
+  const Y2 = v => T + ih2 - v / r2 * ih2;
+  let g2 = '';
+  for (let i = 0; i <= 4; i++) { const v = r2 * i / 4, y = Y2(v); g2 += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" class="dg-grid"/><text x="${L - 6}" y="${y + 4}" class="dg-ax" text-anchor="end">${v.toFixed(0)}%</text>`; }
+  let lines2 = '';
+  objs.forEach((nm, oi) => {
+    if (DYN_HIDE[nm]) return;
+    const col = PALETTE[oi % PALETTE.length];
+    const p = ks.map((k, i) => { const c = (all[k].categories || {})[nm]; const r = rateOf(c); return r == null ? null : [X(i), Y2(r), r, c, k]; });
+    let seg = [], d = '';
+    p.forEach(q => { if (q) seg.push(q[0] + ',' + q[1]); else { if (seg.length > 1) d += `<polyline points="${seg.join(' ')}" fill="none" stroke="${col}" stroke-width="2.2"/>`; seg = []; } });
+    if (seg.length > 1) d += `<polyline points="${seg.join(' ')}" fill="none" stroke="${col}" stroke-width="2.2"/>`;
+    lines2 += d + p.filter(Boolean).map(q => `<circle cx="${q[0]}" cy="${q[1]}" r="3.6" fill="${col}"><title>${esc(nm)} · нед. ${wNum(q[4])}: ${f1(q[2])} (NOK ${fmt(q[3].nok)} из ${fmt(q[3].ok + q[3].nok)})</title></circle>`).join('');
+  });
+  const lab2 = ks.map((k, i) => `<text x="${X(i)}" y="${H2 - B + 18}" class="dg-ax${k === st.week ? ' dg-cur' : ''}" text-anchor="middle">нед. ${wNum(k)}</text>`).join('');
+  const chart2 = `<svg viewBox="0 0 ${W} ${H2}" class="dg-svg">${hl.replace(`height="${ih}"`, `height="${ih2}"`)}${g2}${lines2}${lab2}</svg>`;
+  const legend2 = objs.map((nm, oi) => `<button class="dg-lg${DYN_HIDE[nm] ? ' off' : ''}" data-obj="${esc(nm)}"><i style="background:${PALETTE[oi % PALETTE.length]}"></i>${esc(nm)}</button>`).join('');
+  const ranges = [[8, '8 недель'], [12, '12 недель'], [26, 'полгода'], [0, 'все']].map(([v, t]) => `<button class="dg-rg${DYN_N === v ? ' on' : ''}" data-n="${v}">${t}</button>`).join('');
+  return `<div class="oc-panel"><h2>Динамика по неделям — ${esc(st.facility)}</h2>
+    <div class="oc-sub">${basis === 'result' ? 'по дате обнаружения (выдачи результата)' : 'по дате отбора проб'} · нажмите на неделю, чтобы открыть её</div>
+    <div class="dg-bar">${ranges}</div>
+    <h3 class="dg-h">Смывы за неделю и % NOK</h3>
+    <div class="oc-legend"><span><i class="oc-ok"></i>OK</span><span><i class="oc-nok"></i>NOK</span><span><i class="oc-pend"></i>ждут результата</span><span><i style="background:#1e293b;height:3px;vertical-align:3px"></i>% NOK среди результатов (правая шкала): <b class="oc-better">зелёная точка</b> — лучше прошлой недели, <b class="oc-worse">красная</b> — хуже</span></div>
+    ${chart1}
+    <h3 class="dg-h">% NOK по объектам</h3>
+    <div class="dg-legend">${legend2}</div>
+    ${chart2}</div>`;
+}
+box.addEventListener('click', e => {
+  const r = e.target.closest('[data-n]'); if (r) { DYN_N = +r.dataset.n; try { localStorage.setItem('nokDynN', DYN_N); } catch (err) {} draw(); return; }
+  const o = e.target.closest('[data-obj]'); if (o) { DYN_HIDE[o.dataset.obj] = !DYN_HIDE[o.dataset.obj]; draw(); return; }
+  const w = e.target.closest('[data-wk]'); if (w) { const sel = $('weekSelect'); if ([...sel.options].some(op => op.value === w.dataset.wk)) { sel.value = w.dataset.wk; sel.dispatchEvent(new Event('change')); } }
+});
 function draw(){
   document.querySelectorAll('#nokTabs .nok-tab').forEach(b => b.classList.toggle('on', b.dataset.view === VIEW));
   const chart = VIEW === 'chart';
@@ -1656,7 +1749,7 @@ function draw(){
   if (chart){
     $('singleView').style.display = 'none'; $('splitView').style.display = 'none';
     const b = N.state.basis;
-    box.innerHTML = (b === 'both' ? panel('sample') + panel('result') : panel(b)) + confirmBlock();
+    box.innerHTML = dynBlock() + (b === 'both' ? panel('sample') + panel('result') : panel(b)) + confirmBlock();
   } else {
     const split = N.state.basis === 'both';
     $('singleView').style.display = split ? 'none' : ''; $('splitView').style.display = split ? '' : 'none';
