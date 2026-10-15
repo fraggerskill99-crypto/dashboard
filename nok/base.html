@@ -626,6 +626,11 @@ self.onmessage = function(e){
       const bucket = map[fac][wk];
       bucket.total++;
       if(oknok==='OK') bucket.ok++; else if(oknok==='NOK') bucket.nok++;
+      // смывы по участкам и корпусам — для листа «По объектам»
+      const pu = cleanLoc(r.uchastok) || '(без участка)', pk = cleanLoc(r.korpus) || '(без корпуса)';
+      const pl = (bucket.places = bucket.places || {}), pu2 = (pl[pu] = pl[pu] || {});
+      const pe = (pu2[pk] = pu2[pk] || {total:0, ok:0, nok:0});
+      pe.total++; if(oknok==='OK') pe.ok++; else if(oknok==='NOK') pe.nok++;
       if(sampleWeek){
         const fw = (bucket.fromWeeks = bucket.fromWeeks || {});
         const e = (fw[sampleWeek] = fw[sampleWeek] || {total:0, nok:0});
@@ -707,7 +712,8 @@ self.onmessage = function(e){
             range: isoWeekToDates(wk),
             categories,
             overall: {total:b.total, ok:b.ok, nok:b.nok, pending:b.total-b.ok-b.nok},
-            fromWeeks: b.fromWeeks || null
+            fromWeeks: b.fromWeeks || null,
+            places: b.places || null
           };
         });
       });
