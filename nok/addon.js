@@ -295,8 +295,10 @@ const f1 = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + '%';
 function verdictOf(ra, rb){
   if (ra == null || rb == null) return {d: '', v: '<span class="oc-same">нет данных</span>'};
   const dd = rb - ra, same = dd === 0;
+  // на сколько процентов изменилось число NOK относительно прошлого периода
+  const pc = same ? '' : ra ? ` на ${Math.round(Math.abs(dd) / ra * 100)}%` : ' (было 0)';
   return {d: (same ? '±0' : (dd > 0 ? '+' : '−') + fmt(Math.abs(dd))) + ' NOK',
-    v: same ? '<span class="oc-same">без изменений</span>' : dd < 0 ? '<span class="oc-better">▼ улучшение</span>' : '<span class="oc-worse">▲ ухудшение</span>'};
+    v: same ? '<span class="oc-same">без изменений</span>' : dd < 0 ? `<span class="oc-better">▼ улучшение${pc}</span>` : `<span class="oc-worse">▲ ухудшение${pc}</span>`};
 }
 function compareTable(la, lb, byA, byB, totA, totB){
   const line = (name, a, b, cls) => {
@@ -417,7 +419,9 @@ function dynBlock(){
   });
   const line = pts.length ? `<polyline points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}" class="dg-line"/>` + pts.map((p, j) => {
     const prev = j ? pts[j - 1][2] : null, cls = prev == null || p[2] === prev ? '' : p[2] < prev ? ' dg-better' : ' dg-worse';
-    return `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" class="dg-dot${cls}"/><text x="${p[0]}" y="${p[1] - 9}" class="dg-pct${cls}" text-anchor="middle">NOK ${fmt(p[2])}</text>`; }).join('') : '';
+    const vv = prev == null ? null : verdictOf(prev, p[2]), tip = vv ? `<title>Нед. ${wNum(p[3])}: NOK ${fmt(p[2])}, к прошлой неделе ${vv.d} — ${vv.v.replace(/<[^>]+>/g, '')}</title>` : '';
+    return `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" class="dg-dot${cls}">${tip}</circle>`
+      + (vv && cls ? `<text x="${p[0]}" y="${p[1] + 18}" class="dg-pct${cls}" text-anchor="middle" style="font-size:10.5px">${p[2] > prev ? '▲' : '▼'}${prev ? Math.round(Math.abs(p[2] - prev) / prev * 100) + '%' : ''}</text>` : '') + `<text x="${p[0]}" y="${p[1] - 9}" class="dg-pct${cls}" text-anchor="middle">NOK ${fmt(p[2])}</text>`; }).join('') : '';
   const cur = ks.indexOf(st.week), hl = cur >= 0 ? `<rect x="${L + step * cur}" y="${T}" width="${step}" height="${ih}" class="dg-curbg"/>` : '';
   const chart1 = `<svg viewBox="0 0 ${W} ${H1}" class="dg-svg">${hl}${g}${bars}${line}${lab}</svg>`;
   // график 2: число NOK по объектам
