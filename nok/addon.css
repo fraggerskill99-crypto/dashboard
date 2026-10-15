@@ -101,3 +101,9 @@
 .dg-tab tr.dg-tot th,.dg-tab tr.dg-tot td{border-top:2px solid var(--line);background-clip:padding-box}
 .dg-tab tr.dg-tot th{background:#f8fafc}
 @media print{ .dg-tab td,.dg-tab th{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+.dg-facs{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:12px}
+.dg-fac td i{display:block;font-style:normal;font-size:10.5px;color:var(--muted)}
+.dg-fac td.dg-zero b{color:#166534}
+.dg-fac td.dg-has b{color:#991b1b}
+.dg-fac th:first-child{position:sticky;left:0;background:#fff;z-index:1}
+.dg-fac thead th:first-child{background:var(--navy)}

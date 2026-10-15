@@ -474,6 +474,35 @@ function dynBlock(){
     <h3 class="dg-h">Улучшения и ухудшения по объектам — по неделям</h3>
     ${objTable}</div>`;
 }
+// ---------- по площадкам: УКПФ и МПФ отдельными колонками, все объекты по неделям (и с NOK, и без) ----------
+function facBlock(){
+  const st = N.state, basis = st.basis === 'result' ? 'result' : 'sample';
+  const src = (basis === 'result' ? N.DATA.facilitiesRes : N.DATA.facilities) || {};
+  if (!st.week) return '';
+  const col = (fac) => {
+    const all = src[fac] || {};
+    let ks = Object.keys(all).filter(k => k <= st.week).sort();
+    if (DYN_N) ks = ks.slice(-DYN_N);
+    if (!ks.length) return `<div class="oc-side"><h3>${esc(fac)}</h3><div class="oc-empty">Нет данных.</div></div>`;
+    const tot = {}; ks.forEach(k => Object.entries(all[k].categories || {}).forEach(([nm, c]) => { tot[nm] = (tot[nm] || 0) + (c.total || 0); }));
+    const objs = Object.keys(tot).filter(nm => tot[nm] > 0).sort((a, b) => tot[b] - tot[a]);
+    const cell = (c, pc) => {
+      if (!c || !c.total) return '<td class="dg-na">—</td>';
+      const v = nokOf(c);
+      if (v == null) return `<td class="dg-na" title="Смывов ${fmt(c.total)}, результатов ещё нет"><b>…</b><i>${fmt(c.total)} см.</i></td>`;
+      let ch = '', cls = v ? 'dg-has' : 'dg-zero';
+      if (pc != null){ if (v > pc){ cls = 'dg-up'; ch = `▲${pc ? Math.round((v - pc) / pc * 100) + '%' : ' было 0'}`; } else if (v < pc){ cls = 'dg-down'; ch = `▼${Math.round((pc - v) / pc * 100)}%`; } else ch = '='; }
+      return `<td class="${cls}" title="Смывов ${fmt(c.total)} · OK ${fmt(c.ok)} · NOK ${fmt(c.nok)} (${f1(rateOf(c))})"><b>${fmt(v)}</b><i>${fmt(c.total)} см.</i>${ch ? `<span>${ch}</span>` : ''}</td>`;
+    };
+    const row = (nm, get, cls) => { let pc = null; return `<tr class="${cls || ''}"><th>${esc(nm)}</th>${ks.map(k => { const c = get(k), td = cell(c, pc), v = nokOf(c); if (v != null) pc = v; return td; }).join('')}</tr>`; };
+    return `<div class="oc-side"><h3>${esc(fac)}</h3><div class="dg-tw"><table class="dg-tab dg-fac"><thead><tr><th>Объект</th>${ks.map(k => `<th${k === st.week ? ' class="dg-curc"' : ''}>нед. ${wNum(k)}</th>`).join('')}</tr></thead><tbody>
+      ${objs.map(nm => row(nm, k => (all[k].categories || {})[nm])).join('')}${row('Всего', k => all[k].overall, 'dg-tot')}</tbody></table></div></div>`;
+  };
+  const facs = ['УКПФ', 'МПФ'].filter(f => src[f]).concat(Object.keys(src).filter(f => f !== 'УКПФ' && f !== 'МПФ'));
+  return `<div class="oc-panel"><h2>По площадкам — все объекты по неделям</h2>
+    <div class="oc-sub">${basis === 'result' ? 'по дате обнаружения (выдачи результата)' : 'по дате отбора проб'} · все объекты, где были смывы, — и с NOK, и без · в ячейке: число NOK (крупно), число смывов, изменение NOK к прошлой неделе: <b class="oc-better">▼ меньше</b>, <b class="oc-worse">▲ больше</b>, «=» — так же; «…» — результатов ещё нет, «—» — смывов не было</div>
+    <div class="dg-facs">${facs.map(col).join('')}</div></div>`;
+}
 box.addEventListener('click', e => {
   const r = e.target.closest('[data-n]'); if (r) { DYN_N = +r.dataset.n; try { localStorage.setItem('nokDynN', DYN_N); } catch (err) {} draw(); return; }
   const o = e.target.closest('[data-obj]'); if (o) { DYN_HIDE[o.dataset.obj] = !DYN_HIDE[o.dataset.obj]; draw(); return; }
@@ -487,7 +516,8 @@ function draw(){
   if (chart){
     $('singleView').style.display = 'none'; $('splitView').style.display = 'none';
     const b = N.state.basis;
-    box.innerHTML = dynBlock() + (b === 'both' ? panel('sample') + panel('result') : panel(b)) + confirmBlock();
+    box.innerHTML = dynBlock() + facBlock() + (b === 'both' ? panel('sample') + panel('result') : panel(b)) + confirmBlock();
+    box.querySelectorAll('.dg-tw').forEach(el => { el.scrollLeft = el.scrollWidth; });   // сразу видны последние недели
   } else {
     const split = N.state.basis === 'both';
     $('singleView').style.display = split ? 'none' : ''; $('splitView').style.display = split ? '' : 'none';
