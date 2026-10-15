@@ -288,24 +288,25 @@ function weekSummary(o){
     </div>
     <div class="oc-sub" style="margin:6px 0 0">Среди полученных результатов: OK <b>${pct(ok, res)}</b>, NOK <b>${pct(nok, res)}</b>.</div></div>`;
 }
-// ---------- сравнение двух периодов по % NOK (меньше — лучше) ----------
+// ---------- сравнение двух периодов по ЧИСЛУ NOK (меньше — лучше) ----------
 const rateOf = a => a && (a.ok + a.nok) ? a.nok / (a.ok + a.nok) * 100 : null;
+const nokOf = a => a && (a.ok + a.nok) ? a.nok : null;      // null — результатов ещё нет
 const f1 = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + '%';
 function verdictOf(ra, rb){
   if (ra == null || rb == null) return {d: '', v: '<span class="oc-same">нет данных</span>'};
-  const dd = rb - ra, same = Math.abs(dd) < 0.05;
-  return {d: (same ? '±' : dd > 0 ? '+' : '−') + Math.abs(dd).toFixed(1).replace('.', ',') + ' п.п.',
+  const dd = rb - ra, same = dd === 0;
+  return {d: (same ? '±0' : (dd > 0 ? '+' : '−') + fmt(Math.abs(dd))) + ' NOK',
     v: same ? '<span class="oc-same">без изменений</span>' : dd < 0 ? '<span class="oc-better">▼ улучшение</span>' : '<span class="oc-worse">▲ ухудшение</span>'};
 }
 function compareTable(la, lb, byA, byB, totA, totB){
   const line = (name, a, b, cls) => {
-    const ra = rateOf(a), rb = rateOf(b), x = verdictOf(ra, rb);
-    const cell = (q, r) => q && (q.ok + q.nok) ? `<b>${f1(r)}</b><span class="oc-small">NOK ${fmt(q.nok)} из ${fmt(q.ok + q.nok)}</span>` : '<span class="oc-small">нет проб</span>';
+    const ra = nokOf(a), rb = nokOf(b), x = verdictOf(ra, rb);
+    const cell = (q, r) => q && (q.ok + q.nok) ? `<b>NOK ${fmt(r)}</b><span class="oc-small">из ${fmt(q.ok + q.nok)} результатов · ${f1(rateOf(q))}</span>` : '<span class="oc-small">нет проб</span>';
     return `<tr class="${cls || ''}"><td>${esc(name)}</td><td>${cell(a, ra)}</td><td>${cell(b, rb)}</td><td>${x.d}<div>${x.v}</div></td></tr>`;
   };
   const names = [...new Set(Object.keys(byA).concat(Object.keys(byB)))].filter(n => (byA[n] || {}).total || (byB[n] || {}).total);
   let up = 0, down = 0;
-  names.forEach(n => { const ra = rateOf(byA[n]), rb = rateOf(byB[n]); if (ra != null && rb != null && Math.abs(rb - ra) >= 0.05) (rb < ra ? down++ : up++); });
+  names.forEach(n => { const ra = nokOf(byA[n]), rb = nokOf(byB[n]); if (ra != null && rb != null && rb !== ra) (rb < ra ? down++ : up++); });
   return `<div class="oc-count"><span class="oc-better">▼ улучшений: ${down}</span><span class="oc-worse">▲ ухудшений: ${up}</span></div>
     <table class="oc-mtab"><thead><tr><th>Объект</th><th>${la}</th><th>${lb}</th><th>Итог</th></tr></thead>
     <tbody>${names.map(n => line(n, byA[n], byB[n])).join('')}${line('Всего', totA, totB, 'oc-mtot')}</tbody></table>`;
@@ -321,7 +322,7 @@ function weekBlock(basis){
   if (!cur) return '';
   if (!prev) return `<div class="oc-side"><h3>Неделя к прошлой неделе</h3><div class="oc-empty">Нет данных за прошлую неделю — сравнить не с чем.</div></div>`;
   return `<div class="oc-side"><h3>Неделя ${wNum(st.week)} к неделе ${wNum(pk)} — улучшения и ухудшения</h3>
-    <div class="oc-sub">% NOK среди полученных результатов. Меньше — лучше.</div>
+    <div class="oc-sub">По числу NOK: меньше обнаружений — улучшение, больше — ухудшение.</div>
     ${compareTable('нед. ' + wNum(pk), 'нед. ' + wNum(st.week), catsOf(prev), catsOf(cur), prev.overall, cur.overall)}</div>`;
 }
 // ---------- за месяц: улучшения / ухудшения ----------
@@ -346,18 +347,18 @@ function monthBlock(basis){
   const mName = x => MONTHS[((x % 12) + 12) % 12] + ' ' + Math.floor(x / 12);
   if (!prev.weeks.length) return `<div class="oc-side"><h3>За месяц: ${mName(m)} к ${mName(m - 1)}</h3><div class="oc-empty">Нет данных за ${mName(m - 1)} — сравнить не с чем.</div></div>`;
   const wl = ws => ws.length ? `нед. ${wNum(ws[0])}–${wNum(ws[ws.length - 1])}` : '';
-  // динамика: % NOK по неделям прошлого и текущего месяца
+  // динамика: число NOK по неделям прошлого и текущего месяца
   const dyn = prev.weeks.concat(cur.weeks);
   let last = null;
   const dynRows = dyn.map(k => {
-    const o = weeks[k].overall || {}, r = rateOf(o), x = verdictOf(last, r); last = r;
-    return `<tr${k === st.week ? ' class="oc-cur"' : ''}><td>нед. ${wNum(k)}<span class="oc-small">${monthOfWeek(k) === m ? mName(m) : mName(m - 1)}</span></td><td>${fmt(o.total)}</td><td><b>${f1(rateOf(o))}</b><span class="oc-small">NOK ${fmt(o.nok)}</span></td><td>${x.v}</td></tr>`;
+    const o = weeks[k].overall || {}, r = nokOf(o), x = verdictOf(last, r); last = r;
+    return `<tr${k === st.week ? ' class="oc-cur"' : ''}><td>нед. ${wNum(k)}<span class="oc-small">${monthOfWeek(k) === m ? mName(m) : mName(m - 1)}</span></td><td>${fmt(o.total)}</td><td><b>${fmt(o.nok)}</b><span class="oc-small">${f1(rateOf(o))}</span></td><td>${x.d}<div>${x.v}</div></td></tr>`;
   }).join('');
   return `<div class="oc-side"><h3>За месяц: ${mName(m)} к ${mName(m - 1)}</h3>
-    <div class="oc-sub">% NOK за все недели месяца: ${mName(m - 1)} — ${wl(prev.weeks)}, ${mName(m)} — ${wl(cur.weeks)}${cur.weeks.length < 4 ? ' (месяц ещё неполный)' : ''}. Меньше — лучше.</div>
+    <div class="oc-sub">Число NOK за все недели месяца: ${mName(m - 1)} — ${wl(prev.weeks)}, ${mName(m)} — ${wl(cur.weeks)}${cur.weeks.length < prev.weeks.length ? ` <b class="oc-worse">(${mName(m)} ещё неполный: недель ${cur.weeks.length} из ${prev.weeks.length} — NOK будет больше)</b>` : ''}. Меньше NOK — лучше.</div>
     ${compareTable(mName(m - 1), mName(m), prev.by, cur.by, prev.tot, cur.tot)}
     <h3 style="margin-top:12px">Динамика по неделям</h3>
-    <table class="oc-mtab"><thead><tr><th>Неделя</th><th>Смывов</th><th>% NOK</th><th>К прошлой неделе</th></tr></thead><tbody>${dynRows}</tbody></table></div>`;
+    <table class="oc-mtab"><thead><tr><th>Неделя</th><th>Смывов</th><th>NOK</th><th>К прошлой неделе</th></tr></thead><tbody>${dynRows}</tbody></table></div>`;
 }
 // ---------- отдельная таблица: результаты подтвердились ----------
 // Неделя отбора: сколько проб отобрано, сколько результатов выдано (OK/NOK), сколько ждут; и сверка с журналом
@@ -402,9 +403,9 @@ function dynBlock(){
   const maxT = Math.max(1, ...ov.map(o => o.total || 0));
   const nice = (raw) => { const p = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1e-9)))); return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw); };
   const stp = Math.max(1, nice(maxT / 5)), TK = Math.ceil(maxT / stp), yMax = stp * TK, Y = v => T + ih - v / yMax * ih;
-  const rates = ov.map(o => rateOf(o)), rStep = nice(Math.max(5, ...rates.filter(r => r != null)) / TK), rMax = rStep * TK, YR = v => T + ih - v / rMax * ih;
+  const rates = ov.map(o => nokOf(o)), rStep = Math.max(1, nice(Math.max(5, ...rates.filter(r => r != null)) / TK)), rMax = rStep * TK, YR = v => T + ih - v / rMax * ih;
   let g = '';
-  for (let i = 0; i <= TK; i++) { const v = stp * i, y = Y(v); g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" class="dg-grid"/><text x="${L - 6}" y="${y + 4}" class="dg-ax" text-anchor="end">${fmt(Math.round(v))}</text><text x="${W - R + 6}" y="${y + 4}" class="dg-ax dg-axr">${+(rStep * i).toFixed(1)}%</text>`; }
+  for (let i = 0; i <= TK; i++) { const v = stp * i, y = Y(v); g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" class="dg-grid"/><text x="${L - 6}" y="${y + 4}" class="dg-ax" text-anchor="end">${fmt(Math.round(v))}</text><text x="${W - R + 6}" y="${y + 4}" class="dg-ax dg-axr">${fmt(rStep * i)}</text>`; }
   let bars = '', pts = [], lab = '';
   ks.forEach((k, i) => {
     const o = ov[i], x = X(i) - bw / 2, pend = (o.total || 0) - (o.ok || 0) - (o.nok || 0);
@@ -415,28 +416,28 @@ function dynBlock(){
     lab += `<text x="${X(i)}" y="${H1 - B + 18}" class="dg-ax${k === st.week ? ' dg-cur' : ''}" text-anchor="middle">нед. ${wNum(k)}</text><rect x="${L + step * i}" y="${T}" width="${step}" height="${ih + 24}" class="dg-hit" data-wk="${k}"><title>Открыть неделю ${wNum(k)}</title></rect>`;
   });
   const line = pts.length ? `<polyline points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}" class="dg-line"/>` + pts.map((p, j) => {
-    const prev = j ? pts[j - 1][2] : null, cls = prev == null || Math.abs(p[2] - prev) < 0.05 ? '' : p[2] < prev ? ' dg-better' : ' dg-worse';
-    return `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" class="dg-dot${cls}"/><text x="${p[0]}" y="${p[1] - 9}" class="dg-pct${cls}" text-anchor="middle">${f1(p[2])}</text>`; }).join('') : '';
+    const prev = j ? pts[j - 1][2] : null, cls = prev == null || p[2] === prev ? '' : p[2] < prev ? ' dg-better' : ' dg-worse';
+    return `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" class="dg-dot${cls}"/><text x="${p[0]}" y="${p[1] - 9}" class="dg-pct${cls}" text-anchor="middle">NOK ${fmt(p[2])}</text>`; }).join('') : '';
   const cur = ks.indexOf(st.week), hl = cur >= 0 ? `<rect x="${L + step * cur}" y="${T}" width="${step}" height="${ih}" class="dg-curbg"/>` : '';
   const chart1 = `<svg viewBox="0 0 ${W} ${H1}" class="dg-svg">${hl}${g}${bars}${line}${lab}</svg>`;
-  // график 2: % NOK по объектам
+  // график 2: число NOK по объектам
   const tot = {}; ks.forEach(k => Object.entries(all[k].categories || {}).forEach(([nm, c]) => { tot[nm] = (tot[nm] || 0) + (c.total || 0); }));
   const objs = Object.keys(tot).filter(nm => tot[nm] > 0).sort((a, b) => tot[b] - tot[a]).slice(0, 10);
   const H2 = 300, ih2 = H2 - T - B;
-  let r2 = 5; objs.forEach(nm => ks.forEach(k => { const r = rateOf((all[k].categories || {})[nm]); if (r != null && !DYN_HIDE[nm]) r2 = Math.max(r2, r); }));
-  r2 = Math.min(100, Math.ceil(r2 / 5) * 5);
+  let r2 = 4; objs.forEach(nm => ks.forEach(k => { const r = nokOf((all[k].categories || {})[nm]); if (r != null && !DYN_HIDE[nm]) r2 = Math.max(r2, r); }));
+  r2 = Math.ceil(r2 / 4) * 4;
   const Y2 = v => T + ih2 - v / r2 * ih2;
   let g2 = '';
-  for (let i = 0; i <= 4; i++) { const v = r2 * i / 4, y = Y2(v); g2 += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" class="dg-grid"/><text x="${L - 6}" y="${y + 4}" class="dg-ax" text-anchor="end">${v.toFixed(0)}%</text>`; }
+  for (let i = 0; i <= 4; i++) { const v = r2 * i / 4, y = Y2(v); g2 += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" class="dg-grid"/><text x="${L - 6}" y="${y + 4}" class="dg-ax" text-anchor="end">${fmt(v)}</text>`; }
   let lines2 = '';
   objs.forEach((nm, oi) => {
     if (DYN_HIDE[nm]) return;
     const col = PALETTE[oi % PALETTE.length];
-    const p = ks.map((k, i) => { const c = (all[k].categories || {})[nm]; const r = rateOf(c); return r == null ? null : [X(i), Y2(r), r, c, k]; });
+    const p = ks.map((k, i) => { const c = (all[k].categories || {})[nm]; const r = nokOf(c); return r == null ? null : [X(i), Y2(r), r, c, k]; });
     let seg = [], d = '';
     p.forEach(q => { if (q) seg.push(q[0] + ',' + q[1]); else { if (seg.length > 1) d += `<polyline points="${seg.join(' ')}" fill="none" stroke="${col}" stroke-width="2.2"/>`; seg = []; } });
     if (seg.length > 1) d += `<polyline points="${seg.join(' ')}" fill="none" stroke="${col}" stroke-width="2.2"/>`;
-    lines2 += d + p.filter(Boolean).map(q => `<circle cx="${q[0]}" cy="${q[1]}" r="3.6" fill="${col}"><title>${esc(nm)} · нед. ${wNum(q[4])}: ${f1(q[2])} (NOK ${fmt(q[3].nok)} из ${fmt(q[3].ok + q[3].nok)})</title></circle>`).join('');
+    lines2 += d + p.filter(Boolean).map(q => `<circle cx="${q[0]}" cy="${q[1]}" r="3.6" fill="${col}"><title>${esc(nm)} · нед. ${wNum(q[4])}: NOK ${fmt(q[2])} из ${fmt(q[3].ok + q[3].nok)} (${f1(rateOf(q[3]))})</title></circle>`).join('');
   });
   const lab2 = ks.map((k, i) => `<text x="${X(i)}" y="${H2 - B + 18}" class="dg-ax${k === st.week ? ' dg-cur' : ''}" text-anchor="middle">нед. ${wNum(k)}</text>`).join('');
   const chart2 = `<svg viewBox="0 0 ${W} ${H2}" class="dg-svg">${hl.replace(`height="${ih}"`, `height="${ih2}"`)}${g2}${lines2}${lab2}</svg>`;
@@ -445,10 +446,10 @@ function dynBlock(){
   return `<div class="oc-panel"><h2>Динамика по неделям — ${esc(st.facility)}</h2>
     <div class="oc-sub">${basis === 'result' ? 'по дате обнаружения (выдачи результата)' : 'по дате отбора проб'} · нажмите на неделю, чтобы открыть её</div>
     <div class="dg-bar">${ranges}</div>
-    <h3 class="dg-h">Смывы за неделю и % NOK</h3>
-    <div class="oc-legend"><span><i class="oc-ok"></i>OK</span><span><i class="oc-nok"></i>NOK</span><span><i class="oc-pend"></i>ждут результата</span><span><i style="background:#1e293b;height:3px;vertical-align:3px"></i>% NOK среди результатов (правая шкала): <b class="oc-better">зелёная точка</b> — лучше прошлой недели, <b class="oc-worse">красная</b> — хуже</span></div>
+    <h3 class="dg-h">Смывы за неделю и число NOK</h3>
+    <div class="oc-legend"><span><i class="oc-ok"></i>OK</span><span><i class="oc-nok"></i>NOK</span><span><i class="oc-pend"></i>ждут результата</span><span><i style="background:#1e293b;height:3px;vertical-align:3px"></i>число NOK (правая шкала): <b class="oc-better">зелёная точка</b> — NOK меньше, чем на прошлой неделе, <b class="oc-worse">красная</b> — больше</span></div>
     ${chart1}
-    <h3 class="dg-h">% NOK по объектам</h3>
+    <h3 class="dg-h">Число NOK по объектам</h3>
     <div class="dg-legend">${legend2}</div>
     ${chart2}</div>`;
 }
