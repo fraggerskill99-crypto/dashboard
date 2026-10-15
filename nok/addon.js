@@ -445,6 +445,21 @@ function dynBlock(){
   });
   const lab2 = ks.map((k, i) => `<text x="${X(i)}" y="${H2 - B + 18}" class="dg-ax${k === st.week ? ' dg-cur' : ''}" text-anchor="middle">нед. ${wNum(k)}</text>`).join('');
   const chart2 = `<svg viewBox="0 0 ${W} ${H2}" class="dg-svg">${hl.replace(`height="${ih}"`, `height="${ih2}"`)}${g2}${lines2}${lab2}</svg>`;
+  // таблица: объекты × недели — число NOK и изменение к прошлой неделе в %
+  const cellObj = (c, pc) => {
+    const v = nokOf(c);
+    if (v == null) return '<td class="dg-na">—</td>';
+    let ch = '', cls = '';
+    if (pc != null){ if (v > pc){ cls = 'dg-up'; ch = `▲${pc ? Math.round((v - pc) / pc * 100) + '%' : ' было 0'}`; } else if (v < pc){ cls = 'dg-down'; ch = `▼${Math.round((pc - v) / pc * 100)}%`; } else ch = '='; }
+    return `<td class="${cls}" title="NOK ${fmt(v)} из ${fmt(c.ok + c.nok)} результатов (${f1(rateOf(c))})"><b>${fmt(v)}</b>${ch ? `<span>${ch}</span>` : ''}</td>`;
+  };
+  const objRow = (nm, get, cls) => {
+    let pc = null;
+    return `<tr class="${cls || ''}"><th>${esc(nm)}</th>${ks.map(k => { const c = get(k), td = cellObj(c, pc); const v = nokOf(c); if (v != null) pc = v; return td; }).join('')}</tr>`;
+  };
+  const objTable = `<div class="dg-tw"><table class="dg-tab"><thead><tr><th>Объект</th>${ks.map(k => `<th${k === st.week ? ' class="dg-curc"' : ''}>нед. ${wNum(k)}</th>`).join('')}</tr></thead><tbody>
+    ${objs.map(nm => objRow(nm, k => (all[k].categories || {})[nm])).join('')}${objRow('Всего', k => all[k].overall, 'dg-tot')}</tbody></table></div>
+    <div class="oc-sub" style="margin-top:4px">В ячейке — число NOK за неделю; ниже — изменение к предыдущей неделе: <b class="oc-better">▼ меньше NOK (улучшение)</b>, <b class="oc-worse">▲ больше NOK (ухудшение)</b>, «=» — без изменений.</div>`;
   const legend2 = objs.map((nm, oi) => `<button class="dg-lg${DYN_HIDE[nm] ? ' off' : ''}" data-obj="${esc(nm)}"><i style="background:${PALETTE[oi % PALETTE.length]}"></i>${esc(nm)}</button>`).join('');
   const ranges = [[8, '8 недель'], [12, '12 недель'], [26, 'полгода'], [0, 'все']].map(([v, t]) => `<button class="dg-rg${DYN_N === v ? ' on' : ''}" data-n="${v}">${t}</button>`).join('');
   return `<div class="oc-panel"><h2>Динамика по неделям — ${esc(st.facility)}</h2>
@@ -455,7 +470,9 @@ function dynBlock(){
     ${chart1}
     <h3 class="dg-h">Число NOK по объектам</h3>
     <div class="dg-legend">${legend2}</div>
-    ${chart2}</div>`;
+    ${chart2}
+    <h3 class="dg-h">Улучшения и ухудшения по объектам — по неделям</h3>
+    ${objTable}</div>`;
 }
 box.addEventListener('click', e => {
   const r = e.target.closest('[data-n]'); if (r) { DYN_N = +r.dataset.n; try { localStorage.setItem('nokDynN', DYN_N); } catch (err) {} draw(); return; }
