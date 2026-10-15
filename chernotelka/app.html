@@ -199,9 +199,53 @@ details.more[open] summary{border-bottom:1px solid var(--line)}
   #perTable td:nth-child(2){display:none}
   #perTable td:nth-child(5){grid-column:1/-1;margin-top:6px}
 }
+
+/* «Общая»: сводка, фильтры, диаграмма по корпусам */
+.ovtiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.ovtiles .tile b{font-size:22px}
+.ovtiles .tile.good b{color:var(--ok)} .ovtiles .tile.bad b{color:var(--bad)} .ovtiles .tile.same b{color:var(--muted)}
+.ovtiles .tile.wide b{font-size:16px;white-space:normal;line-height:1.3}
+.ovf{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;padding:10px 14px;border-bottom:1px solid var(--line)}
+.ovf label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.ovf select,.ovf input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;height:36px;font-size:14px;color:var(--ink);min-width:0;max-width:200px}
+.ovf .seg{align-self:flex-end}
+.ovlegend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:8px 14px;font-size:13px;color:var(--muted)}
+.ovlegend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.ovt td{vertical-align:middle}
+.ovt .site{font:700 15px var(--f-display);color:var(--accent)}
+.ovt tr.grp td{background:var(--info-bg);font:600 13px var(--f-body);padding:6px 10px}
+.ovt tr.res-good td:first-child{box-shadow:inset 4px 0 var(--good)}
+.ovt tr.res-bad td:first-child{box-shadow:inset 4px 0 var(--crit)}
+.ovt tr.res-same td:first-child{box-shadow:inset 4px 0 var(--axis)}
+.ovt tr.res-bad td{background:#f7e6df}
+.ovt tr.res-good td{background:#e7eedc}
+.ovt .house{font-weight:700;white-space:nowrap}
+.ovt .tour{display:block;font-size:11px;color:var(--muted);font-family:var(--f-mono);white-space:nowrap}
+.ovt .v{font:600 16px var(--f-mono);font-variant-numeric:tabular-nums}
+.ovt .drug{display:inline-flex;gap:6px;align-items:center;font-size:13px;max-width:190px}
+.ovt .drug span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ovt .badge{display:inline-block;border-radius:999px;padding:3px 10px;font-weight:600;font-size:13px;white-space:nowrap}
+.badge.good{background:var(--ok-bg);color:var(--ok)} .badge.bad{background:var(--bad-bg);color:var(--bad)} .badge.same{background:var(--before);color:var(--muted)}
+.ovt svg{display:block}
+.ovt .arrowcell{min-width:220px;width:30%}
+@media (max-width:900px){.ovtiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.ovtiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){
+  .ovt thead{display:none}
+  .ovt tbody tr:not(.grp){display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .ovt tbody tr:not(.grp) td{border:0;padding:2px 0;text-align:left!important;box-shadow:none!important}
+  .ovt tbody tr:not(.grp) td[data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted)}
+  .ovt td.arrowcell{grid-column:1/-1;min-width:0;width:auto}
+  .ovt td.c-site{display:none}
+  .ovt tbody tr.res-bad{box-shadow:inset 4px 0 var(--crit)} .ovt tbody tr.res-good{box-shadow:inset 4px 0 var(--good)} .ovt tbody tr.res-same{box-shadow:inset 4px 0 var(--axis)}
+  .ovt tr.grp{display:block} .ovt tr.grp td{display:block}
+  .ovt tbody tr:not(.grp) td{background:transparent!important}
+  .ovt tbody tr.res-bad{background:#f7e6df} .ovt tbody tr.res-good{background:#e7eedc}
+}
 </style>
 
 <nav class="bnav" aria-label="Разделы">
+  <button type="button" data-view="ov"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg><span>Общая</span></button>
   <button type="button" data-view="dyn"><svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M4 16l5-6 4 3 7-8"/></svg><span>Динамика</span></button>
   <button type="button" data-view="drugs"><svg viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M10 3v5l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7 14h10"/></svg><span>Препараты</span></button>
   <button type="button" data-view="cmp"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="5" height="11" rx="1"/><rect x="15" y="5" width="5" height="15" rx="1"/><path d="M11 7h2M11 12h2"/></svg><span>Сравнение</span></button>
@@ -219,6 +263,7 @@ details.more[open] summary{border-bottom:1px solid var(--line)}
   </header>
 
   <nav class="tabs">
+    <button type="button" class="tab" data-view="ov">Общая</button>
     <button type="button" class="tab" data-view="dyn">Динамика</button>
     <button type="button" class="tab" data-view="drugs">Препараты</button>
     <button type="button" class="tab" data-view="cmp">Сравнение</button>
@@ -231,6 +276,25 @@ details.more[open] summary{border-bottom:1px solid var(--line)}
     Файл Excel с листом «Журнал»: дата, птичник, тур, препарат, метод обработки, трубы 1–4.
     <div style="margin-top:12px"><button type="button" class="btn" data-view="files">Загрузить журнал</button></div>
   </div>
+
+  <section id="v-ov" class="sec" hidden>
+    <div class="ovtiles" id="ovTiles"></div>
+    <div class="panel">
+      <div class="sechead"><h2>Прошлый тур → текущий по каждому корпусу</h2><span class="note" id="ovScope"></span></div>
+      <div class="ovf">
+        <label>Препарат<select id="ovDrug"></select></label>
+        <label>Тур<select id="ovTour"></select></label>
+        <label>Период с<input type="date" id="ovFrom"></label>
+        <label>по<input type="date" id="ovTo"></label>
+        <label>Результат<select id="ovRes"><option value="">все</option><option value="bad">ухудшение</option><option value="good">улучшение</option><option value="same">без изменений</option></select></label>
+        <span class="seg" id="ovSort"><button type="button" data-v="site">по площадкам</button><button type="button" data-v="bad">сначала проблемы</button></span>
+        <button type="button" class="btn ghost" id="ovReset">Сбросить</button>
+      </div>
+      <div class="ovlegend"><span><i style="background:var(--before-line)"></i>прошлый тур</span><span><i style="background:var(--crit)"></i>стало больше — ухудшение</span><span><i style="background:var(--good)"></i>стало меньше — улучшение</span><span><i style="background:var(--axis)"></i>без изменений (разница не больше фона или 10%)</span></div>
+      <div class="tablewrap"><table class="tbl ovt" id="ovTable"></table></div>
+      <p class="note" style="padding:8px 14px 12px" id="ovNote"></p>
+    </div>
+  </section>
 
   <section id="v-dyn" class="sec" hidden>
     <div class="tiles" id="tilesDyn"></div>
@@ -372,7 +436,8 @@ let BOOK = LS.get('ch:book', null);         // {file, loadedAt, sheet, rows, dru
 let settings = Object.assign({mode: 'next', bg: 4}, LS.get('ch:settings', {}));
 let CONC = LS.get('ch:conc', {});           // концентрации, введённые в приложении: {нормализованное имя: текст}
 let view = LS.get('ch:view', 'dyn');
-if (!['dyn','drugs','cmp','ev','files'].includes(view)) view = 'dyn';
+if (!['ov','dyn','drugs','cmp','ev','files'].includes(view)) view = 'ov';
+let OV = Object.assign({drug: '', tour: '', from: '', to: '', res: '', sort: 'site'}, LS.get('ch:ov', {}));
 let by = LS.get('ch:by', 'month');
 let fSite = LS.get('ch:site', ''), fHouse = LS.get('ch:house', '');
 let cmpA = '', cmpB = '', evDrug = '', drugSort = LS.get('ch:drugSort', 'n');
@@ -408,13 +473,14 @@ function render(){
   for (const b of document.querySelectorAll('.tab[data-view], .bnav [data-view]')) b.dataset.view === view ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
   const has = !!M;
   $('noData').hidden = has || view === 'files';
-  for (const v of ['dyn','drugs','cmp','ev','files']) $('v-' + v).hidden = v !== view || (!has && v !== 'files');
+  for (const v of ['ov','dyn','drugs','cmp','ev','files']) $('v-' + v).hidden = v !== view || (!has && v !== 'files');
   $('fSite').disabled = $('fHouse').disabled = !has;
   for (const b of document.querySelectorAll('#segMode button')) b.setAttribute('aria-pressed', b.dataset.v === settings.mode);
   $('bg').value = settings.bg;
   renderFiles();
   if (!has) return;
   renderScope();
+  if (view === 'ov') renderOv();
   if (view === 'dyn') renderDyn();
   if (view === 'drugs') renderDrugs();
   if (view === 'cmp') renderCmp();
@@ -858,7 +924,7 @@ async function handleFile(file, quiet){
     if (!LS.set('ch:book', BOOK)) toast('Не хватило памяти устройства, чтобы сохранить журнал');
     if (window.desktop) window.desktop.saveData(JSON.stringify(BOOK)).catch(() => {});
     rebuild();
-    if (!quiet){ toast('Журнал загружен'); setView('dyn'); }
+    if (!quiet){ toast('Журнал загружен'); setView('ov'); }
     return true;
   }catch(e){ if (!quiet) $('uplNote').textContent = `Не удалось прочитать «${file.name}».`; return false; }
 }
@@ -894,6 +960,104 @@ drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add(
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (M && view === 'dyn') drawDyn(); }, 150); });
+
+/* ===== «Общая»: площадка → корпус → прошлый тур (препарат) → текущий тур (препарат) → результат ===== */
+const rowDate = r => r.set || r.date || r.removed || null;
+function ovPairs(){
+  const out = [];
+  for (const h of Object.values(M.houses)){
+    if (!inScopeHouse(h)) continue;
+    const obs = h.rows.filter(r => r.catch != null);
+    if (!obs.length) continue;
+    // текущий тур: выбранный тур или последний учёт (в пределах периода)
+    let cand = obs.filter(r => (!OV.tour || r.tour === +OV.tour) && (!OV.from || (rowDate(r) && rowDate(r) >= OV.from)) && (!OV.to || (rowDate(r) && rowDate(r) <= OV.to)));
+    const cur = cand[cand.length - 1]; if (!cur) continue;
+    const prev = obs[obs.indexOf(cur) - 1] || null;
+    const B = prev ? prev.catch : null, A = cur.catch;
+    const d = B != null ? A - B : null, pct = d != null && B > 0 ? d / B * 100 : null;
+    let res = 'none';
+    if (d != null) res = (Math.abs(d) <= (+settings.bg || 0) || (pct != null && Math.abs(pct) < 10)) ? 'same' : d < 0 ? 'good' : 'bad';
+    const p = {h, site: h.site, prev, cur, B, A, d, pct, res, dPrev: prev ? prev.drug || '' : '', dCur: cur.drug || ''};
+    if (OV.drug && p.dPrev !== OV.drug && p.dCur !== OV.drug) continue;
+    out.push(p);
+  }
+  return out;
+}
+const RES = {good: ['good', '▼ улучшение'], bad: ['bad', '▲ ухудшение'], same: ['same', '● без изменений'], none: ['same', 'нет прошлого тура']};
+function ovDrugCell(d){ return d ? `<span class="drug">${swatch(d)}<span title="${esc(d)}">${esc(d)}</span></span>` : '<span class="note">—</span>'; }
+function renderOv(){
+  // фильтры
+  const drugs = M.drugs;
+  $('ovDrug').innerHTML = '<option value="">все препараты</option>' + drugs.map(d => `<option${d === OV.drug ? ' selected' : ''}>${esc(d)}</option>`).join('');
+  const tours = [...new Set(Object.values(M.houses).flatMap(h => h.rows.map(r => r.tour)).filter(t => t != null))].sort((a, b) => a - b);
+  $('ovTour').innerHTML = '<option value="">последний</option>' + tours.map(t => `<option value="${t}"${String(t) === String(OV.tour) ? ' selected' : ''}>тур ${t}</option>`).join('');
+  $('ovFrom').value = OV.from; $('ovTo').value = OV.to; $('ovRes').value = OV.res;
+  for (const b of document.querySelectorAll('#ovSort button')) b.setAttribute('aria-pressed', b.dataset.v === OV.sort);
+  $('ovScope').textContent = scopeName() + (OV.tour ? ` · тур ${OV.tour}` : ' · последний тур каждого корпуса');
+  const all = ovPairs();
+  const cmp = all.filter(p => p.res !== 'none');
+  const n = k => cmp.filter(p => p.res === k).length;
+  // лучший препарат текущего тура: больше всего снизил улов (по сумме, от 2 корпусов, если есть)
+  const byDrug = {};
+  for (const p of cmp) if (p.dCur){ const g = byDrug[p.dCur] = byDrug[p.dCur] || {B: 0, A: 0, n: 0, good: 0}; g.B += p.B; g.A += p.A; g.n++; if (p.res === 'good') g.good++; }
+  const dl = Object.entries(byDrug).filter(([, g]) => g.B > 0).map(([d, g]) => ({d, ...g, pct: (g.A - g.B) / g.B * 100}));
+  const pool = dl.some(x => x.n >= 2) ? dl.filter(x => x.n >= 2) : dl;
+  const best = pool.sort((a, b) => a.pct - b.pct)[0];
+  const worst = cmp.filter(p => p.d > 0).sort((a, b) => b.d - a.d)[0];
+  $('ovTiles').innerHTML = [
+    `<div class="tile"><b>${all.length}</b><span>Всего корпусов</span><small>сравнимо: ${cmp.length}</small></div>`,
+    `<div class="tile good"><b>${n('good')}</b><span>▼ Улучшение</span></div>`,
+    `<div class="tile bad"><b>${n('bad')}</b><span>▲ Ухудшение</span></div>`,
+    `<div class="tile same"><b>${n('same')}</b><span>● Без изменений</span></div>`,
+    `<div class="tile wide"><b>${best ? dname(best.d) : '—'}</b><span>Лучший результат</span><small>${best ? `${fP(best.pct)} · ${best.n} ${plural(best.n, 'корпус', 'корпуса', 'корпусов')}` : ''}</small></div>`,
+    `<div class="tile wide bad"><b>${worst ? `${esc(worst.site)} / ${esc(worst.h.name)}` : '—'}</b><span>Наибольшее ухудшение</span><small>${worst ? `${fN(worst.B)} → ${fN(worst.A)} (+${fN(worst.d)})` : ''}</small></div>`
+  ].join('');
+  let list = all.filter(p => !OV.res || p.res === OV.res);
+  const byName = (a, b) => a.site.localeCompare(b.site, 'ru', {numeric: true}) || a.h.name.localeCompare(b.h.name, 'ru', {numeric: true});
+  list.sort(OV.sort === 'bad' ? ((a, b) => (b.d ?? -1e9) - (a.d ?? -1e9) || byName(a, b)) : byName);
+  // шкала стрелки: корень — чтобы и 4, и 1700 были видны
+  const mx = Math.max(10, ...list.flatMap(p => [p.A, p.B ?? 0]));
+  const W = 260, H = 26, X = v => 8 + Math.sqrt(v / mx) * (W - 16);
+  const arrow = p => {
+    const ca = p.res === 'good' ? 'var(--good)' : p.res === 'bad' ? 'var(--crit)' : 'var(--axis)';
+    if (p.B == null) return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><line x1="8" x2="${W - 8}" y1="13" y2="13" stroke="var(--grid)" stroke-width="2"/><circle cx="${X(p.A)}" cy="13" r="6" fill="${ca}"/></svg>`;
+    const x1 = X(p.B), x2 = X(p.A), dir = x2 >= x1 ? 1 : -1, tip = Math.abs(x2 - x1) > 10 ? x2 - dir * 7 : x2;
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><line x1="8" x2="${W - 8}" y1="13" y2="13" stroke="var(--grid)" stroke-width="2"/>`
+      + `<line x1="${x1}" x2="${tip}" y1="13" y2="13" stroke="${ca}" stroke-width="4" stroke-linecap="round"/>`
+      + (Math.abs(x2 - x1) > 10 ? `<path d="M${x2} 13 L${x2 - dir * 9} 7 L${x2 - dir * 9} 19 Z" fill="${ca}"/>` : `<circle cx="${x2}" cy="13" r="6" fill="${ca}"/>`)
+      + `<circle cx="${x1}" cy="13" r="5" fill="var(--panel)" stroke="var(--before-line)" stroke-width="2.5"/></svg>`;
+  };
+  let lastSite = null;
+  const rowsHtml = list.map(p => {
+    let g = '';
+    if (OV.sort === 'site' && p.site !== lastSite){
+      lastSite = p.site;
+      const s = list.filter(q => q.site === p.site), c = s.filter(q => q.res !== 'none');
+      const sb = c.reduce((a, q) => a + q.B, 0), sa = c.reduce((a, q) => a + q.A, 0);
+      g = `<tr class="grp"><td colspan="9"><span class="site">Площадка ${esc(p.site)}</span> · ${s.length} ${plural(s.length, 'корпус', 'корпуса', 'корпусов')} · было ${fN(sb)} → стало ${fN(sa)} ${c.length ? deltaHtml(sb > 0 ? (sa - sb) / sb * 100 : null) : ''} · <span style="color:var(--ok)">▼ ${c.filter(q => q.res === 'good').length}</span> · <span style="color:var(--bad)">▲ ${c.filter(q => q.res === 'bad').length}</span></td></tr>`;
+    }
+    const [cls, word] = RES[p.res];
+    return g + `<tr class="res-${p.res === 'none' ? 'same' : p.res}">
+      <td class="c-site"><span class="site">${esc(p.site)}</span></td>
+      <td class="house" data-l="Площадка ${esc(p.site)} · корпус">${esc(p.h.name)}</td>
+      <td class="r" data-l="Прошлый тур"><span class="v">${p.B == null ? '—' : fN(p.B)}</span><span class="tour">${p.prev ? `тур ${p.prev.tour ?? '?'} · ${fDs(rowDate(p.prev))}` : ''}</span></td>
+      <td data-l="Препарат прошлого тура">${p.prev ? ovDrugCell(p.dPrev) : '—'}</td>
+      <td class="arrowcell">${arrow(p)}</td>
+      <td class="r" data-l="Текущий тур"><span class="v">${fN(p.A)}</span><span class="tour">тур ${p.cur.tour ?? '?'} · ${fDs(rowDate(p.cur))}</span></td>
+      <td data-l="Препарат текущего тура">${ovDrugCell(p.dCur)}</td>
+      <td class="r n" data-l="Разница">${p.d == null ? '—' : (p.d > 0 ? '+' : p.d < 0 ? '−' : '') + fN(Math.abs(p.d))}<span class="sub">${p.pct == null ? '' : fP(p.pct)}</span></td>
+      <td data-l="Результат"><span class="badge ${cls}">${word}</span></td></tr>`;
+  }).join('');
+  $('ovTable').innerHTML = `<thead><tr><th>Площадка</th><th>Корпус</th><th class="r">Прошлый тур</th><th>Препарат прошлого тура</th><th>Изменение</th><th class="r">Текущий тур</th><th>Препарат текущего тура</th><th class="r">Разница</th><th>Результат</th></tr></thead><tbody>${rowsHtml || '<tr><td colspan="9" class="empty">Нет корпусов по выбранным фильтрам</td></tr>'}</tbody>`;
+  $('ovNote').textContent = 'Показатель — улов жуков за тур (сумма 4 труб). Текущий тур — последний учёт корпуса (или выбранный тур / период), прошлый — учёт перед ним. Препарат — записанный в строке журнала этого тура. «Без изменений» — разница не больше фонового улова (' + (+settings.bg || 0) + ' шт) или меньше 10%. Стрелка: кружок — прошлый тур, острие — текущий.';
+}
+function ovSet(k, v){ OV[k] = v; LS.set('ch:ov', OV); renderOv(); }
+$('ovDrug').addEventListener('change', e => ovSet('drug', e.target.value));
+$('ovTour').addEventListener('change', e => ovSet('tour', e.target.value));
+$('ovFrom').addEventListener('change', e => ovSet('from', e.target.value));
+$('ovTo').addEventListener('change', e => ovSet('to', e.target.value));
+$('ovRes').addEventListener('change', e => ovSet('res', e.target.value));
+document.addEventListener('click', e => { const b = e.target.closest('#ovSort button'); if (b) ovSet('sort', b.dataset.v); if (e.target.id === 'ovReset'){ OV = {drug: '', tour: '', from: '', to: '', res: '', sort: OV.sort}; LS.set('ch:ov', OV); fSite = ''; fHouse = ''; LS.set('ch:site', ''); LS.set('ch:house', ''); render(); } });
 
 rebuild();
 /* ПК: сохранённый журнал с диска и самый свежий файл из папки */
