@@ -279,6 +279,20 @@
 @media print{ .dg-bar{display:none} .dg-svg *{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
 .dg-pct,.dg-val{paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
 .dg-dot{stroke:#fff;stroke-width:2}
+.dg-tw{overflow-x:auto}
+.dg-tab{border-collapse:collapse;font-size:12.5px;width:100%}
+.dg-tab th,.dg-tab td{padding:5px 7px;border-top:1px solid var(--line);text-align:center;white-space:nowrap}
+.dg-tab thead th{background:var(--navy);color:#fff;font-size:12px}
+.dg-tab tbody th{text-align:left;font-weight:700}
+.dg-tab td b{display:block;font-size:13.5px}
+.dg-tab td span{display:block;font-size:11px;font-weight:700}
+.dg-tab td.dg-up{background:#fef2f2}.dg-tab td.dg-up span{color:#991b1b}
+.dg-tab td.dg-down{background:#f0fdf4}.dg-tab td.dg-down span{color:#166534}
+.dg-tab td.dg-na{color:#cbd5e1}
+.dg-tab thead th.dg-curc{background:#4338ca}
+.dg-tab tr.dg-tot th,.dg-tab tr.dg-tot td{border-top:2px solid var(--line);background-clip:padding-box}
+.dg-tab tr.dg-tot th{background:#f8fafc}
+@media print{ .dg-tab td,.dg-tab th{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
 </style>
 <meta name="theme-color" content="#1a1f2e">
 <link rel="manifest" href="manifest.webmanifest">
@@ -1729,6 +1743,21 @@ function dynBlock(){
   });
   const lab2 = ks.map((k, i) => `<text x="${X(i)}" y="${H2 - B + 18}" class="dg-ax${k === st.week ? ' dg-cur' : ''}" text-anchor="middle">нед. ${wNum(k)}</text>`).join('');
   const chart2 = `<svg viewBox="0 0 ${W} ${H2}" class="dg-svg">${hl.replace(`height="${ih}"`, `height="${ih2}"`)}${g2}${lines2}${lab2}</svg>`;
+  // таблица: объекты × недели — число NOK и изменение к прошлой неделе в %
+  const cellObj = (c, pc) => {
+    const v = nokOf(c);
+    if (v == null) return '<td class="dg-na">—</td>';
+    let ch = '', cls = '';
+    if (pc != null){ if (v > pc){ cls = 'dg-up'; ch = `▲${pc ? Math.round((v - pc) / pc * 100) + '%' : ' было 0'}`; } else if (v < pc){ cls = 'dg-down'; ch = `▼${Math.round((pc - v) / pc * 100)}%`; } else ch = '='; }
+    return `<td class="${cls}" title="NOK ${fmt(v)} из ${fmt(c.ok + c.nok)} результатов (${f1(rateOf(c))})"><b>${fmt(v)}</b>${ch ? `<span>${ch}</span>` : ''}</td>`;
+  };
+  const objRow = (nm, get, cls) => {
+    let pc = null;
+    return `<tr class="${cls || ''}"><th>${esc(nm)}</th>${ks.map(k => { const c = get(k), td = cellObj(c, pc); const v = nokOf(c); if (v != null) pc = v; return td; }).join('')}</tr>`;
+  };
+  const objTable = `<div class="dg-tw"><table class="dg-tab"><thead><tr><th>Объект</th>${ks.map(k => `<th${k === st.week ? ' class="dg-curc"' : ''}>нед. ${wNum(k)}</th>`).join('')}</tr></thead><tbody>
+    ${objs.map(nm => objRow(nm, k => (all[k].categories || {})[nm])).join('')}${objRow('Всего', k => all[k].overall, 'dg-tot')}</tbody></table></div>
+    <div class="oc-sub" style="margin-top:4px">В ячейке — число NOK за неделю; ниже — изменение к предыдущей неделе: <b class="oc-better">▼ меньше NOK (улучшение)</b>, <b class="oc-worse">▲ больше NOK (ухудшение)</b>, «=» — без изменений.</div>`;
   const legend2 = objs.map((nm, oi) => `<button class="dg-lg${DYN_HIDE[nm] ? ' off' : ''}" data-obj="${esc(nm)}"><i style="background:${PALETTE[oi % PALETTE.length]}"></i>${esc(nm)}</button>`).join('');
   const ranges = [[8, '8 недель'], [12, '12 недель'], [26, 'полгода'], [0, 'все']].map(([v, t]) => `<button class="dg-rg${DYN_N === v ? ' on' : ''}" data-n="${v}">${t}</button>`).join('');
   return `<div class="oc-panel"><h2>Динамика по неделям — ${esc(st.facility)}</h2>
@@ -1739,7 +1768,9 @@ function dynBlock(){
     ${chart1}
     <h3 class="dg-h">Число NOK по объектам</h3>
     <div class="dg-legend">${legend2}</div>
-    ${chart2}</div>`;
+    ${chart2}
+    <h3 class="dg-h">Улучшения и ухудшения по объектам — по неделям</h3>
+    ${objTable}</div>`;
 }
 box.addEventListener('click', e => {
   const r = e.target.closest('[data-n]'); if (r) { DYN_N = +r.dataset.n; try { localStorage.setItem('nokDynN', DYN_N); } catch (err) {} draw(); return; }
