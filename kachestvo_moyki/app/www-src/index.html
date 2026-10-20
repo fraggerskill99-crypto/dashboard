@@ -190,13 +190,19 @@
 
 
   // ---------- «⚙ Настройки» (только в приложении для ПК) ----------
-  if (isApp) {
+  // в предварительном просмотре — та же панель на примере (без выбора файлов)
+  const demo = !isApp && window.__APP_PREVIEW;
+  if (isApp || demo) {
     const $ = (id) => document.getElementById(id);
     const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
     const when = (ms) => (ms ? new Date(ms).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
     $('cfgBtn').hidden = false;
     let state = null;
     async function cfg(cmd, params) {
+      if (demo) {
+        if (cmd !== 'state') toast(cmd === 'refresh' ? 'В приложении: перечитает выбранные файлы и папки и докачает SharePoint.' : 'В приложении здесь откроется окно выбора файла или папки на компьютере.', 'ok');
+        state = window.__APP_PREVIEW; render(); return;
+      }
       const q = new URLSearchParams(params || {}).toString();
       state = await (await fetch('/cfg/' + cmd + (q ? '?' + q : ''))).json();
       render();
@@ -236,7 +242,7 @@
     });
     $('cfgRefresh').onclick = async () => {
       const b = $('cfgRefresh'); b.disabled = true; b.textContent = '⟳ Обновляю…';
-      try { await cfg('refresh'); toast('Обновлено: файлы и папки перечитаны.', 'ok'); } finally { b.disabled = false; b.textContent = '⟳ Обновить сейчас'; }
+      try { await cfg('refresh'); if (!demo) toast('Обновлено: файлы и папки перечитаны.', 'ok'); } finally { b.disabled = false; b.textContent = '⟳ Обновить сейчас'; }
     };
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('cfg').hidden) $('cfg').hidden = true; });
   }

@@ -25,8 +25,26 @@ const version = process.env.APP_VERSION || JSON.parse(fs.readFileSync(path.join(
 let html = fs.readFileSync(path.join(OUT, 'index.html'), 'utf8');
 const head = html.match(/<head>([\s\S]*?)<\/head>/i)[1].replace(/<meta charset[^>]*>\s*/i, '').replace(/<meta name="viewport"[^>]*>\s*/i, '');
 const body = html.match(/<body>([\s\S]*?)<\/body>/i)[1];
-const banner = `<div class="pv" role="note"><b>Предварительный просмотр · версия ${version}</b>
-  <span>Так выглядят вкладки в приложении. На ПК кнопок загрузки нет — акты, своды и фото приходят сами из папок OneDrive и SharePoint; здесь, в браузере, файлы можно загрузить кнопками. Фото/видео по неделям и в «Мойке и МБ» появляются, когда подключены папки с фото.</span></div>`;
+// пример для панели «⚙ Настройки» (в приложении там ваши файлы и папки)
+const demoState = {
+  files: {
+    akt: { title: 'Акт приёма мойки (выращивание)', chosen: { name: 'Акт приёма мойки 2026.xlsx', path: 'OneDrive…\\УКПФ\\Акт приёма мойки 2026.xlsx', mtime: Date.now() - 3600e3 } },
+    incub: { title: 'Акт Инкубатория', auto: { name: 'Акт Инкубатория 2026.xlsx', where: 'УКПФ (OneDrive)', mtime: Date.now() - 86400e3 } },
+    zpp: { title: 'Акт ЗПП', auto: { name: 'Акт ЗПП 2026.xlsx', where: 'УКПФ (OneDrive)', mtime: Date.now() - 86400e3 } },
+    schedule: { title: 'График ПР/Р' },
+    svod: { title: 'Свод МБ (NOK, Мойка и МБ)', auto: { name: 'Свод МБ.xlsx', where: 'СВОД МБ (OneDrive)', mtime: Date.now() - 7200e3 } },
+  },
+  folders: [
+    { name: 'УКПФ (OneDrive)', path: 'OneDrive…\\Служба Ветеринарной Санитарии и БиБ\\УКПФ', roleTitle: 'акты', ok: true },
+    { name: 'Несоответствия (OneDrive)', path: 'OneDrive…\\Рабочий стол\\Несоответствие еженедельно', roleTitle: 'фото/видео и презентации', ok: true },
+    { name: 'СВОД МБ (OneDrive)', path: 'OneDrive…\\Рабочий стол\\BI_Business-Local Labs - СВОД', roleTitle: 'Свод МБ', ok: true },
+  ],
+  sharepoint: [{ name: 'Папка УКПФ в Teams', link: 'https://aitas.sharepoint.com/:f:/s/msteams_6c8e7e/…', lastSync: null }],
+  lastRefresh: null,
+};
+const banner = `<script>window.__APP_PREVIEW = ${JSON.stringify(demoState)};</script>
+<div class="pv" role="note"><b>Предварительный просмотр · версия ${version}</b>
+  <span>Так выглядят вкладки в приложении. На ПК кнопок загрузки нет — акты, своды и фото приходят сами из папок OneDrive и SharePoint; здесь, в браузере, файлы можно загрузить кнопками. Фото/видео по неделям и в «Мойке и МБ» появляются, когда подключены папки с фото. «⚙ Настройки» внизу слева — на примере.</span></div>`;
 const style = `<style>
   /* полоса просмотра — над вкладками; страница светлая, как сами дашборды */
   :root { --pv-bg: #fff7e6; --pv-line: #f5d28a; --pv-fg: #6b4a00; color-scheme: light; }
