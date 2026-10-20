@@ -378,7 +378,7 @@ footer.foot img { height:36px; width:auto; display:block; }
           <button class="upload-btn" id="incubMediaUnpinBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px;background:#fff;color:var(--red);border:1px solid var(--red)">Отвязать</button>
           <span class="upload-status" id="incubMediaStatus" style="text-align:left;max-width:none">Папка с фото/видео Инкубатория не привязана.</span>
         </div>
-        <p class="note" style="margin:-4px 0 10px">В папке &mdash; подпапки по дням и залам, например <b>2026-07-15 / Зал вывода / фото.jpg</b> (можно и наоборот: <b>Зал вывода / 15.07.2026 / &hellip;</b>). Дату можно не выносить в папку, если она есть в имени файла (IMG_20260715_&hellip;). Зал &mdash; по словам «вывод», «перевод», «сортир» в пути, остальное попадёт в «Инкубатор: прочее». Презентации <b>.pptx</b> читаются как у выращивания: дата &mdash; из имени файла или заголовка слайда, зал &mdash; из подписи к фото («зал вывода, полки шкафа»), иначе из имени файла/папки.</p>
+        <p class="note" style="margin:-4px 0 10px">В папке &mdash; подпапки по дням и залам, например <b>2026-07-15 / Зал вывода / фото.jpg</b> (можно и наоборот: <b>Зал вывода / 15.07.2026 / &hellip;</b>). Дату можно не выносить в папку, если она есть в имени файла (IMG_20260715_&hellip;). Зал &mdash; по словам «вывод», «перевод», «сортир» в пути, остальное попадёт в «Инкубатор: прочее». Презентации <b>.pptx</b> читаются как у выращивания: дата &mdash; из имени файла или заголовка слайда, зал &mdash; из подписи к фото («зал вывода, полки шкафа»), иначе из имени файла/папки. <b>Если презентации Инкубатория лежат в общей папке выращивания</b> (кнопка на вкладке «Чек-лист по турам») &mdash; отдельно привязывать не нужно: слайды с залом или со словом «Инкубатор» попадут сюда сами.</p>
         <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
           <div style="width:260px;height:260px;position:relative;flex-shrink:0"><canvas id="chartIncDayPie"></canvas></div>
           <div style="flex:1;min-width:280px">
@@ -4769,7 +4769,8 @@ let DYNAMIC_MEDIA_INDEX = {};
 var INCUB_MEDIA_DIR = null;      // отдельная папка с фото/видео несоответствий Инкубатория
 var INCUB_MEDIA_INDEX = {};      // "дата|Инкубатор: зал …" -> [{caption, cat:null, files:[{kind, filename, handle}]}]
 // залы Инкубатория берут фото из своей папки, корпуса — из основной
-function mediaRootFor(corpus) { return isIncubKey(corpus) ? INCUB_MEDIA_DIR : MEDIA_DIR_HANDLE; }
+// слайды Инкубатория бывают и в общей папке с презентациями выращивания
+function mediaRootFor(corpus) { return isIncubKey(corpus) ? (INCUB_MEDIA_DIR || MEDIA_DIR_HANDLE) : MEDIA_DIR_HANDLE; }
 const DATE_DIR_RE = /^\d{4}-\d{2}-\d{2}$/;
 const VIDEO_EXT_RE = /\.(mp4|mov|avi|webm|m4v)$/i;
 const PHOTO_EXT_RE = /\.(jpe?g|png|webp|gif)$/i;
@@ -4951,7 +4952,17 @@ var MEDIA_THUMB_JOBS = {};   // "дата|корпус" -> Promise
 const THUMB_MAX = 1000;
 
 function mediaEntriesFor(key) {
-  if (isIncubKey(key.slice(key.indexOf('|') + 1))) return INCUB_MEDIA_INDEX[key] || null;
+  if (isIncubKey(key.slice(key.indexOf('|') + 1))) {
+    // своя папка Инкубатория + слайды Инкубатория из общей папки (одна и та же презентация — один раз)
+    const seen = new Set();
+    const all = (INCUB_MEDIA_INDEX[key] || []).concat((MEDIA_DIR_HANDLE && PPTX_INDEX[key]) || []).filter((e) => {
+      const f = e.files[0]; const id = f && f.pptx ? f.pptx + '|' + f.zip : null;
+      if (!id) return true;
+      if (seen.has(id)) return false;
+      seen.add(id); return true;
+    });
+    return all.length ? all : null;
+  }
   const fromPptx = (typeof PPTX_INDEX !== 'undefined' && PPTX_INDEX[key]) || [];
   const fromDir = mediaEntriesFromDir(key) || [];
   if (fromPptx.length || DYNAMIC_MEDIA_INDEX[key]) return fromPptx.concat(DYNAMIC_MEDIA_INDEX[key] ? fromDir : []);
@@ -5114,7 +5125,8 @@ function refreshCatDayThumbs() {
 var PPTX_INDEX = {};   // "дата|корпус" -> [{caption, cat, files:[{kind, filename, pptx, zip, poster}]}]
 var PPTX_FILES = {};   // путь в папке -> FileSystemFileHandle
 var PPTX_SKIPPED = 0;
-const PPTX_CACHE_KEY = 'pptxMediaIndex:v4';   // v4: подписи без корпуса, пушка/сандвич — перечитать все презентации
+const PPTX_CACHE_KEY = 'pptxMediaIndex:v5';   // v5: слайды Инкубатория (залы) из общей папки
+// v4: подписи без корпуса, пушка/сандвич — перечитать все презентации
 var PPTX_REPORT = [];
 const LAT2CYR = { A: 'А', B: 'В', C: 'С', E: 'Е', H: 'Н', K: 'К', M: 'М', O: 'О', P: 'Р', T: 'Т', X: 'Х' };
 const CP_RULES = [
@@ -5242,7 +5254,8 @@ async function parsePresentation(file, path, opt) {
     // каждой картинке — её подпись: текст с корпусом, лежащий на картинке или ближе всего под/над ней
     // подписи — тексты с корпусом или с номером точки «П-N» (подпись «П-1 .Остаток органики…» без корпуса
     // тоже подпись своего фото: раньше её пропускали, и фото уходило к соседней чужой подписи)
-    const capBoxes = tboxes.filter((q) => q.b && (findPlace(q.t) || CP_P_RE.test(q.t)) && !/качество\s+мойки/i.test(q.t));
+    // в общей папке подпись с залом Инкубатория («Зал вывода, полки») — тоже подпись своего фото
+    const capBoxes = tboxes.filter((q) => q.b && (findPlace(q.t) || CP_P_RE.test(q.t) || (!opt.find && findIncubHall(q.t))) && !/качество\s+мойки/i.test(q.t));
     items.forEach((it) => {
       if (!it.b || !capBoxes.length) return;
       let best = null, bestD = Infinity;
@@ -5289,7 +5302,9 @@ async function parsePresentation(file, path, opt) {
     if (!items.length) return;
     const slideCorpus = findPlace(all);
     items.forEach((it) => {
-      const corpus = (it.cap && findPlace(it.cap)) || it.capCorpus || slideCorpus || opt.fallback;
+      let corpus = (it.cap && findPlace(it.cap)) || (!opt.find && it.cap && findIncubHall(it.cap)) || it.capCorpus || slideCorpus || opt.fallback;
+      // общая папка: слайд без корпуса, но про Инкубаторий — в его залы (зал из подписи/слайда, иначе «прочее»)
+      if (!corpus && !opt.find) corpus = findIncubHall(all) || (/инкуб/i.test(all + ' ' + path) ? INCUB_OTHER.key : null);
       if (!curDate) { skipped++; noDate++; return; }
       if (!corpus) { skipped++; noCorpus++; return; }
       corpSeen[curDate] = corpSeen[curDate] || {}; corpSeen[curDate][corpus] = 1;
@@ -5298,7 +5313,7 @@ async function parsePresentation(file, path, opt) {
       if (it.video) files.push({ kind: 'video', filename: it.video.split('/').pop(), pptx: path, zip: it.video });
       const ph = it.photo || it.poster;
       if (ph) files.push({ kind: 'photo', filename: ph.split('/').pop(), pptx: path, zip: ph, poster: !!it.video });
-      out.push({ key: curDate + '|' + corpus, entry: { caption, cat: opt.noCat ? null : cpOfCaption(caption), files } });
+      out.push({ key: curDate + '|' + corpus, entry: { caption, cat: opt.noCat || isIncubKey(corpus) ? null : cpOfCaption(caption), files } });
     });
   });
   const days = Object.keys(corpSeen).sort().map((d) => fmtDate(d) + ': ' + Object.keys(corpSeen[d]).join(', '));
@@ -5362,7 +5377,7 @@ const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', g
 async function getMediaBlob(date, corpus, f) {
   if (f.handle) return f.handle.getFile();
   if (f.pptx) {
-    const zip = await pptxZip(f.pptx, isIncubKey(corpus));
+    const zip = await pptxZip(f.pptx, !!f.incubDir);
     const ab = await zip.file(f.zip).async('arraybuffer');
     return new Blob([ab], { type: MIME_BY_EXT[(f.zip.split('.').pop() || '').toLowerCase()] || '' });
   }
@@ -5820,7 +5835,7 @@ async function scanIncubPresentations(root, onProgress) {
           { find: findIncubHall, fallback: findIncubHall(path) || INCUB_OTHER.key, noCat: true }));
       }
       newCache[path] = res;
-      res.entries.forEach(({ key, entry }) => { (index[key] = index[key] || []).push(entry); items++; });
+      res.entries.forEach(({ key, entry }) => { entry.files.forEach((f) => { f.incubDir = true; }); (index[key] = index[key] || []).push(entry); items++; });
       INCUB_PPTX_REPORT.push({ path, n: res.entries.length, noDate: res.noDate || 0, days: res.days || [] });
     } catch (e) {
       console.warn('incub pptx', path, e);
