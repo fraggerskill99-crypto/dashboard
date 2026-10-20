@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-20",
   "episodes": [
     {
       "id": "w-2026-10-07-spain-valencia-nd",
@@ -1025,6 +1025,32 @@
       ],
       "addedBy": "claude",
       "keyword": "bird flu geese Reno Sparks October 2026"
+    },
+    {
+      "id": "w-2026-10-19-wisconsin-barron",
+      "scope": "world",
+      "topic": "hpai",
+      "date": "2026-10-19",
+      "status": "confirmed",
+      "place": "США, штат Висконсин, округ Баррон",
+      "country": "США",
+      "birds": null,
+      "title": "Висконсин: грипп птиц на коммерческой птицеферме в округе Баррон",
+      "summary": "19 октября ветеринарное ведомство Висконсина (DATCP) подтвердило высокопатогенный грипп птиц в коммерческом стаде в округе Баррон. Ферма на карантине, птица уничтожена и в продажу не попадёт.",
+      "sources": [
+        {
+          "name": "q106.com",
+          "url": "https://www.q106.com/2026/10/19/bird-flu-confirmed-in-commercial-poultry-flock-in-barron-county/",
+          "kind": "media"
+        },
+        {
+          "name": "wdio.com",
+          "url": "https://www.wdio.com/top-stories/highly-pathogenic-avian-influenza-found-in-barron-county/",
+          "kind": "media"
+        }
+      ],
+      "addedBy": "claude",
+      "keyword": "bird flu Barron County Wisconsin October 2026"
     }
   ]
 }
