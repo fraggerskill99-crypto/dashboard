@@ -41,6 +41,33 @@
     h[Symbol.asyncIterator] = h.entries;
     return h;
   }
+  // В приложении данные приходят сами (папки OneDrive/SharePoint) — ручные кнопки загрузки и привязки
+  // файлов/папок прячем, вместо них — строка «обновляется автоматически». Ввод баллов вручную остаётся.
+  const page = location.pathname.split('/').pop();
+  const HIDE = {
+    'moika.html': ['.upload-box label.upload-btn:has(#fileInput)', '#pinAktBtn', '#unpinAktBtn', '#pinAllBtn', '#autoAllowBtn', '#autoSync',
+      '#aktSourcesList button', '#incubHeaderBtn', '#zppHeaderBtn', '.tab-btn[data-tab="sources"]', '#cpPinBtn',
+      '#pinMediaBtn', '#unpinMediaBtn', '#incubMediaPinBtn', '#incubMediaUnpinBtn',
+      'label.upload-btn:has(#incubFileInput)', '#pinIncubBtn', '#unpinIncubBtn',
+      'label.upload-btn:has(#zppFileInput)', '#pinZppBtn', '#unpinZppBtn',
+      'label:has(#scheduleFileInput)', '#scheduleFileInput', '#pinSchedBtn', '#unpinSchedBtn'],
+    'mb.html': ['#dirLinkBtn', '#dirAllowBtn', '#dirCheckBtn', '#dirUnlinkBtn', '#dirBox + div'],
+    'nok.html': ['#uploadBtn', '#fileInput', '#nokPinBtn', '#nokAllowBtn', '#nokChooseBtn', '#nokCheckBtn', '#nokImportBtn'],
+  }[page];
+  if (HIDE) {
+    const st = document.createElement('style');
+    st.textContent = HIDE.join(',\n') + ' { display: none !important; }\n' +
+      '.app-auto { margin: 0 0 8px; padding: 7px 12px; border-radius: 8px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font: 600 12.5px/1.45 -apple-system, "Segoe UI", Arial, sans-serif; }';
+    document.documentElement.appendChild(st);
+    const note = '🔄 Данные обновляются автоматически — из папок OneDrive и SharePoint (меню «Файл → Папки на компьютере», «SharePoint»). Вручную загружать ничего не нужно.';
+    document.addEventListener('DOMContentLoaded', () => {
+      const at = page === 'moika.html' ? document.querySelector('.upload-box') : page === 'mb.html' ? document.getElementById('dirBox') : document.getElementById('nokBar');
+      if (!at) return;
+      const d = document.createElement('div'); d.className = 'app-auto'; d.textContent = note;
+      at.insertBefore(d, at.firstChild);
+    });
+  }
+
   window.APP_FS = {
     root: () => dirHandle('', 'Данные'),
     async hasData() { try { return (await list('')).length > 0; } catch (e) { return false; } },

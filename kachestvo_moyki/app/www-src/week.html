@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Фотофиксация по неделям — УКПФ</title>
+<style>
+  :root { --navy: #1F3864; --blue: #2E5395; --bg: #f4f6fa; --card: #fff; --line: #e2e8f0; --muted: #64748b; --text: #1e293b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 18px 24px 50px; }
+  h1 { font-size: 20px; color: var(--navy); margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; line-height: 1.5; }
+  .bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .bar button, .bar select { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 7px 12px; font-size: 13px; color: var(--navy); font-weight: 600; cursor: pointer; }
+  .bar button:disabled { opacity: .4; cursor: default; }
+  .wk { font-size: 16px; font-weight: 800; color: var(--navy); min-width: 250px; text-align: center; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 12px; font-size: 12.5px; cursor: pointer; color: #334155; }
+  .chip.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .chip b { font-weight: 800; }
+  .site { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .site h2 { font-size: 15px; color: var(--navy); margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; }
+  .site h2 span { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .corp { display: flex; gap: 14px; padding: 9px 0; border-top: 1px solid #f1f5f9; align-items: flex-start; }
+  .corp > b { flex: 0 0 110px; font-size: 13.5px; color: #0f172a; padding-top: 4px; }
+  .days { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .day { display: flex; gap: 10px; align-items: flex-start; }
+  .day > i { flex: 0 0 74px; font-style: normal; font-size: 12px; color: var(--muted); padding-top: 4px; }
+  .th { display: flex; gap: 6px; flex-wrap: wrap; }
+  .th button { position: relative; height: 84px; min-width: 60px; max-width: 150px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: #e2e8f0; cursor: zoom-in; padding: 0; }
+  .th img { height: 100%; width: auto; display: block; }
+  .th .pl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 26px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+  .th .wait { font-size: 12px; color: #94a3b8; padding-top: 4px; }
+  .empty { background: #fff; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 22px; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+  .box { position: fixed; inset: 0; background: rgba(15,23,42,.9); z-index: 10; display: flex; align-items: center; justify-content: center; padding: 2vh 2vw; }
+  .box[hidden] { display: none; }
+  .box .in { position: relative; background: #F4EFE2; border-radius: 12px; width: 100%; height: 100%; display: flex; flex-direction: column; padding: 14px 18px; }
+  .box .hd { display: flex; gap: 12px; align-items: center; font-size: 15px; color: #1c2333; }
+  .box .hd span { color: var(--muted); font-size: 13px; margin-left: auto; }
+  .box .hd button { border: none; background: #e2e8f0; border-radius: 50%; width: 32px; height: 32px; font-size: 20px; cursor: pointer; }
+  .box .st { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+  .box .st img, .box .st video { max-width: 100%; max-height: 100%; border-radius: 8px; background: #000; }
+  .box .nv { position: absolute; top: 50%; transform: translateY(-50%); border: none; background: rgba(255,255,255,.85); width: 46px; height: 46px; border-radius: 50%; font-size: 28px; cursor: pointer; }
+  .box .nv.p { left: 10px; } .box .nv.n { right: 10px; }
+  @media (max-width: 700px) { .wrap { padding: 12px; } .corp { flex-direction: column; gap: 4px; } .corp > b { flex: none; } .wk { min-width: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📷 Фотофиксация по неделям — по площадкам</h1>
+  <p class="sub">Все фото и видео фиксации мойки из папок (OneDrive, SharePoint, презентации несоответствий) — за выбранную неделю, по площадкам, корпусам и дням. Клик по фото — на весь экран, стрелками — дальше.</p>
+  <div class="bar">
+    <button id="prev" title="Неделя раньше">← неделя раньше</button>
+    <div class="wk" id="wk">—</div>
+    <button id="next" title="Неделя позже">неделя позже →</button>
+    <select id="wsel" title="Недели, за которые есть фото/видео"></select>
+    <button id="reload" title="Перечитать фото/видео">⟳ Обновить</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div id="list"></div>
+</div>
+<div class="box" id="box" hidden><div class="in"><div class="hd"><b id="boxT"></b><span id="boxN"></span><button type="button" id="boxX" title="Закрыть (Esc)">×</button></div><div class="st" id="boxS"></div><button type="button" class="nv p" id="boxP">‹</button><button type="button" class="nv n" id="boxNx">›</button></div></div>
+<script>
+// Вкладка приложения: фото/видео из вкладки «Качество мойки» (window.MOIKA_API) по неделям и площадкам.
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const SITE_ORDER = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'БП12', 'БП13', 'БП14', 'Инкубатор'];
+  const siteName = (s) => (s === 'Инкубатор' ? 'Инкубаторий' : /^БП\d+$/.test(s) ? 'Площадка ' + s.replace(/^БП/, 'БП-') : /^[А-ЯЁ]$/.test(s) ? 'Площадка ' + s : s);
+  const S = { weeks: [], wi: -1, site: 'all', items: [], list: [], i: 0, url: null, gen: 0 };
+
+  function api() {
+    try {
+      const f = window.parent !== window && window.parent.document.getElementById('f-moika');
+      return f && f.contentWindow && f.contentWindow.MOIKA_API ? f.contentWindow.MOIKA_API : null;
+    } catch (e) { return null; }
+  }
+  // ISO-неделя: ключ «2026-W29», понедельник и воскресенье
+  function isoWeek(iso) {
+    const d = new Date(iso + 'T12:00:00Z');
+    const day = (d.getUTCDay() + 6) % 7;
+    const thu = new Date(d); thu.setUTCDate(d.getUTCDate() - day + 3);
+    const y = thu.getUTCFullYear();
+    const jan4 = new Date(Date.UTC(y, 0, 4, 12));
+    const w = 1 + Math.round(((thu - jan4) / 86400000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7);
+    const mon = new Date(d); mon.setUTCDate(d.getUTCDate() - day);
+    const sun = new Date(mon); sun.setUTCDate(mon.getUTCDate() + 6);
+    return { key: y + '-W' + String(w).padStart(2, '0'), y, w, mon, sun };
+  }
+  const dm = (d) => String(d.getUTCDate()).padStart(2, '0') + '.' + String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dmy = (iso) => iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4);
+  const wLabel = (wk) => `Неделя ${wk.w} · ${dm(wk.mon)}–${dm(wk.sun)}.${wk.sun.getUTCFullYear()}`;
+
+  function load() {
+    const a = api();
+    S.items = a ? a.allMedia() : [];
+    const byWeek = {};
+    S.items.forEach((it) => { const wk = isoWeek(it.date); it.week = wk.key; (byWeek[wk.key] = byWeek[wk.key] || { wk, n: 0 }).n += it.count; });
+    const keep = S.weeks[S.wi] && S.weeks[S.wi].wk.key;
+    S.weeks = Object.values(byWeek).sort((x, y) => (x.wk.key < y.wk.key ? -1 : 1));
+    S.wi = keep ? S.weeks.findIndex((w) => w.wk.key === keep) : -1;
+    if (S.wi < 0) S.wi = S.weeks.length - 1;   // по умолчанию — последняя неделя с фото
+    $('wsel').innerHTML = S.weeks.slice().reverse().map((w) => `<option value="${w.wk.key}">${esc(wLabel(w.wk))} — ${w.n} фото/видео</option>`).join('');
+    render();
+  }
+  function render() {
+    const gen = ++S.gen;
+    const a = api(), w = S.weeks[S.wi];
+    $('prev').disabled = S.wi <= 0; $('next').disabled = S.wi < 0 || S.wi >= S.weeks.length - 1;
+    if (!w) {
+      $('wk').textContent = '—'; $('chips').innerHTML = '';
+      $('list').innerHTML = `<div class="empty">${a ? (a.ready()
+        ? 'В подключённых папках пока нет фото/видео фиксации. Они появятся сами, как только окажутся в папках OneDrive/SharePoint (папки по дням «ГГГГ-ММ-ДД\\Корпус» или презентации несоответствий).'
+        : typeof window.showDirectoryPicker === 'function' ? 'Папки с фото/видео ещё подключаются…' : 'На телефоне нет доступа к папкам с фото/видео — фотофиксация смотрится в приложении для ПК.')
+        : 'Вкладка работает внутри приложения «Качество мойки».'}</div>`;
+      return;
+    }
+    $('wk').textContent = wLabel(w.wk);
+    $('wsel').value = w.wk.key;
+    const items = S.items.filter((it) => it.week === w.wk.key);
+    const bySite = {};
+    items.forEach((it) => { (bySite[it.site] = bySite[it.site] || []).push(it); });
+    const sites = Object.keys(bySite).sort((x, y) => {
+      const ix = SITE_ORDER.indexOf(x), iy = SITE_ORDER.indexOf(y);
+      return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy) || x.localeCompare(y, 'ru');
+    });
+    if (S.site !== 'all' && !bySite[S.site]) S.site = 'all';
+    const cnt = (arr) => arr.reduce((n, it) => n + it.count, 0);
+    $('chips').innerHTML = `<button class="chip${S.site === 'all' ? ' on' : ''}" data-site="all">Все площадки · <b>${cnt(items)}</b></button>` +
+      sites.map((s) => `<button class="chip${S.site === s ? ' on' : ''}" data-site="${esc(s)}">${esc(siteName(s))} · <b>${cnt(bySite[s])}</b></button>`).join('');
+    const shown = S.site === 'all' ? sites : [S.site];
+    $('list').innerHTML = shown.map((s) => {
+      const byCorp = {};
+      bySite[s].forEach((it) => { (byCorp[it.corpus] = byCorp[it.corpus] || []).push(it); });
+      const corps = Object.keys(byCorp).sort((x, y) => x.localeCompare(y, 'ru', { numeric: true }));
+      return `<div class="site"><h2>${esc(siteName(s))}<span>${corps.length} корп. · ${cnt(bySite[s])} фото/видео</span></h2>` +
+        corps.map((c) => `<div class="corp"><b>${esc(c.replace(/^Инкубатор: /, ''))}</b><div class="days">` +
+          byCorp[c].sort((x, y) => (x.date < y.date ? -1 : 1)).map((it) =>
+            `<div class="day"><i>${dmy(it.date)}</i><div class="th" data-date="${it.date}" data-corpus="${esc(it.corpus)}"><span class="wait">📷 ${it.count} — загружаю…</span></div></div>`).join('') +
+          `</div></div>`).join('') + `</div>`;
+    }).join('');
+    // миниатюры — по очереди, чтобы не читать сразу десятки видео
+    (async () => {
+      for (const el of document.querySelectorAll('#list .th')) {
+        if (gen !== S.gen) return;
+        let th = [];
+        try { th = await a.thumbs(el.dataset.date, el.dataset.corpus); } catch (e) { /* файл недоступен */ }
+        if (gen !== S.gen) return;
+        el.innerHTML = th.length ? th.map((t) => `<button type="button" data-idx="${t.idx}" title="${esc(t.caption || '')}"><img src="${t.url}" alt="">${t.video ? '<span class="pl">▶</span>' : ''}</button>`).join('')
+          : '<span class="wait">📷 не удалось прочитать файлы</span>';
+      }
+    })();
+  }
+  async function show(i) {
+    const a = api(), n = S.list.length;
+    if (!a || !n) return;
+    S.i = (i + n) % n;
+    const it = S.list[S.i];
+    $('boxT').textContent = `${it.corpus.replace(/^Инкубатор: /, 'Инкубаторий, ')} — ${dmy(it.date)}`;
+    $('boxN').textContent = [n > 1 ? `${S.i + 1} / ${n}` : '', it.caption].filter(Boolean).join(' · ');
+    $('boxS').innerHTML = '<span style="color:#64748b">Загружаю…</span>';
+    try {
+      const m = await a.media(it.date, it.corpus, it.idx);
+      if (S.list[S.i] !== it) return;
+      if (S.url) URL.revokeObjectURL(S.url);
+      S.url = URL.createObjectURL(m.blob);
+      $('boxS').innerHTML = m.video ? `<video src="${S.url}" controls autoplay playsinline></video>` : `<img src="${S.url}" alt="">`;
+    } catch (e) { $('boxS').innerHTML = '<span style="color:#dc2626">Не удалось открыть файл: ' + esc(e.message) + '</span>'; }
+  }
+  function close() { $('box').hidden = true; $('boxS').innerHTML = ''; if (S.url) { URL.revokeObjectURL(S.url); S.url = null; } }
+
+  $('prev').onclick = () => { if (S.wi > 0) { S.wi--; render(); } };
+  $('next').onclick = () => { if (S.wi < S.weeks.length - 1) { S.wi++; render(); } };
+  $('wsel').onchange = (e) => { S.wi = S.weeks.findIndex((w) => w.wk.key === e.target.value); render(); };
+  $('reload').onclick = load;
+  $('chips').onclick = (e) => { const b = e.target.closest('[data-site]'); if (b) { S.site = b.dataset.site; render(); } };
+  $('list').onclick = (e) => {
+    const b = e.target.closest('.th button'); if (!b) return;
+    const all = [...document.querySelectorAll('#list .th button')];
+    S.list = all.map((x) => ({ date: x.parentNode.dataset.date, corpus: x.parentNode.dataset.corpus, idx: +x.dataset.idx, caption: x.title }));
+    $('box').hidden = false;
+    show(all.indexOf(b));
+  };
+  $('boxX').onclick = close;
+  $('boxP').onclick = () => show(S.i - 1);
+  $('boxNx').onclick = () => show(S.i + 1);
+  $('box').onclick = (e) => { if (e.target.id === 'box') close(); };
+  document.addEventListener('keydown', (e) => {
+    if ($('box').hidden) { if (e.key === 'ArrowLeft') $('prev').click(); else if (e.key === 'ArrowRight') $('next').click(); return; }
+    if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') show(S.i - 1); else if (e.key === 'ArrowRight') show(S.i + 1);
+  });
+  // приложение сообщает: вкладку открыли / в папках появились новые фото
+  window.addEventListener('message', (e) => { if (e.data === 'app:shown' || e.data === 'app:media') load(); });
+  load();
+})();
+</script>
+</body>
+</html>

@@ -473,6 +473,7 @@ function buildMenu() {
         { label: 'Качество мойки', accelerator: 'CmdOrCtrl+1', click: () => showTab('moika') },
         { label: 'NOK-дашборд', accelerator: 'CmdOrCtrl+2', click: () => showTab('nok') },
         { label: 'Мойка и МБ', accelerator: 'CmdOrCtrl+3', click: () => showTab('mb') },
+        { label: 'Фотофиксация по неделям', accelerator: 'CmdOrCtrl+4', click: () => showTab('week') },
         { type: 'separator' },
         { label: 'Крупнее', accelerator: 'CmdOrCtrl+=', click: () => zoomBy(0.1) },
         { label: 'Крупнее', accelerator: 'CmdOrCtrl+Plus', visible: false, click: () => zoomBy(0.1) },

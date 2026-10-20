@@ -6059,9 +6059,10 @@ async function applyActsFromFolder(root, onStatus) {
 window.MOIKA_API = {
   norm: (c) => normCorpusCode(String(c || '')).replace(/-/g, ''),
   ready: () => !!(MEDIA_DIR_HANDLE || INCUB_MEDIA_DIR),
+  // только то, что реально лежит в папках (вшитые ссылки без файлов не показываем)
   mediaDays(corpus) {
     const n = this.norm(corpus), out = {};
-    [MEDIA_MANIFEST, DYNAMIC_MEDIA_INDEX, (typeof PPTX_INDEX !== 'undefined' ? PPTX_INDEX : {})].forEach((ix) => {
+    [DYNAMIC_MEDIA_INDEX, (typeof PPTX_INDEX !== 'undefined' ? PPTX_INDEX : {})].forEach((ix) => {
       Object.keys(ix || {}).forEach((k) => {
         const i = k.indexOf('|'), date = k.slice(0, i), corp = k.slice(i + 1);
         if (this.norm(corp) !== n || out[k]) return;
@@ -6070,6 +6071,23 @@ window.MOIKA_API = {
       });
     });
     return Object.values(out).sort((a, b) => (a.date < b.date ? -1 : 1));
+  },
+  // все фото/видео из папок: дата, корпус, площадка — для вкладки «Фотофиксация по неделям»
+  allMedia() {
+    const out = {};
+    [DYNAMIC_MEDIA_INDEX, (typeof PPTX_INDEX !== 'undefined' ? PPTX_INDEX : {}), INCUB_MEDIA_INDEX].forEach((ix) => {
+      Object.keys(ix || {}).forEach((k) => {
+        if (out[k]) return;
+        const es = mediaEntriesFor(k) || [];
+        if (!es.length) return;
+        const i = k.indexOf('|'), corpus = k.slice(i + 1);
+        let site = corpus;
+        if (isIncubKey(corpus)) site = 'Инкубатор';
+        else { try { site = zoneAndUchastok(normalizeCorpus(corpus))[0] || corpus; } catch (e) { /* корпус в непривычном виде */ } }
+        out[k] = { date: k.slice(0, i), corpus, site, count: es.length, video: es.filter((e) => e.files.some((f) => f.kind === 'video')).length };
+      });
+    });
+    return Object.values(out);
   },
   async thumbs(date, corpus) { return (await loadThumbsFor(date, corpus)) || []; },
   entries(date, corpus) { return (mediaEntriesFor(mediaKey(date, corpus)) || []).map((e) => ({ caption: e.caption || '', video: e.files.some((f) => f.kind === 'video') })); },

@@ -28,6 +28,7 @@
   <button data-tab="moika" class="on" title="Ctrl+1">🧽 Качество мойки</button>
   <button data-tab="nok" title="Ctrl+2">🧫 NOK-дашборд</button>
   <button data-tab="mb" title="Ctrl+3">🔬 Мойка и МБ</button>
+  <button data-tab="week" title="Ctrl+4">📷 Фотофиксация по неделям</button>
   <span class="sp"></span>
   <span class="hint" id="dataHint"></span>
   <span class="hint" title="Номер версии — по нему видно, что открыта свежая сборка">версия {{VERSION}}</span>
@@ -36,6 +37,7 @@
   <iframe id="f-moika" src="moika.html" title="Качество мойки"></iframe>
   <iframe id="f-nok" data-src="nok.html" title="NOK-дашборд" hidden></iframe>
   <iframe id="f-mb" data-src="mb.html" title="Мойка и МБ" hidden></iframe>
+  <iframe id="f-week" data-src="week.html" title="Фотофиксация по неделям" hidden></iframe>
 </main>
 <div id="toast" hidden></div>
 <script>
@@ -45,13 +47,14 @@
   const TAB_KEY = 'appActiveTab';
   const isApp = location.protocol === 'app:';
   const frame = (t) => document.getElementById('f-' + t);
+  const TABS = ['moika', 'nok', 'mb', 'week'];
   let current = 'moika';
 
   function show(t) {
     if (!frame(t)) t = 'moika';
     current = t;
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
-    ['moika', 'nok', 'mb'].forEach((k) => { frame(k).hidden = k !== t; });
+    TABS.forEach((k) => { frame(k).hidden = k !== t; });
     const f = frame(t);
     if (!f.getAttribute('src') && f.dataset.src) f.setAttribute('src', f.dataset.src);   // загружаем вкладку при первом открытии
     else try { f.contentWindow.postMessage('app:shown', '*'); } catch (e) {}
@@ -59,7 +62,7 @@
   }
   document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) show(b.dataset.tab); });
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && /^[1-3]$/.test(e.key)) { e.preventDefault(); show(['moika', 'nok', 'mb'][+e.key - 1]); }
+    if ((e.ctrlKey || e.metaKey) && /^[1-4]$/.test(e.key)) { e.preventDefault(); show(TABS[+e.key - 1]); }
   });
 
   const toastEl = document.getElementById('toast');
@@ -95,6 +98,8 @@
       if (mb.getAttribute('src') && await loaded(mb)) {
         try { const x = mb.contentWindow; if (x.__mbAttachDir) x.__mbAttachDir(x.APP_FS.root()); x.postMessage('app:media', '*'); } catch (e) { console.warn('mb', e); }
       }
+      const wk = frame('week');
+      if (wk.getAttribute('src')) try { wk.contentWindow.postMessage('app:media', '*'); } catch (e) {}
       const nok = frame('nok');
       if (nok.getAttribute('src')) try { nok.contentWindow.__appDataChanged && nok.contentWindow.__appDataChanged(); } catch (e) {}
     })().finally(() => { attachBusy = null; });
