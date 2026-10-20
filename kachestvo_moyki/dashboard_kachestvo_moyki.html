@@ -4961,6 +4961,7 @@ function mediaEntriesFor(key) {
       if (seen.has(id)) return false;
       seen.add(id); return true;
     });
+    all.forEach((e) => { e.incKey = key; });   // по нему entryCat ищет точку акта Инкубатория
     return all.length ? all : null;
   }
   const fromPptx = (typeof PPTX_INDEX !== 'undefined' && PPTX_INDEX[key]) || [];
@@ -5079,8 +5080,7 @@ function paintCatDayThumbs() {
   document.querySelectorAll('#catDayPieBreakdown .cp-chip, #incDayPieBreakdown .cp-chip').forEach((ch) => {
     const corpus = ch.dataset.cpCorpus;
     const es = mediaEntriesFor(mediaKey(ch.dataset.cpDate, corpus)) || [];
-    // у Инкубатория фото подписаны залом, а не точкой — значок у всех плашек зала
-    ch.classList.toggle('has-media', !!mediaRootFor(corpus) && (isIncubKey(corpus) ? es.length > 0 : es.some((e) => entryCat(e) === ch.dataset.cpCat)));
+    ch.classList.toggle('has-media', !!mediaRootFor(corpus) && es.some((e) => entryCat(e) === ch.dataset.cpCat));
   });
   document.querySelectorAll('#catDayPieBreakdown .cp-thumbs-slot, #incDayPieBreakdown .cp-thumbs-slot').forEach((slot) => {
     const date = slot.dataset.date, corpus = slot.dataset.corpus, key = mediaKey(date, corpus);
@@ -5156,7 +5156,37 @@ function cpOfCaption(text) {
   for (const [cat, re] of CP_RULES) if (re.test(t)) return cat;
   return null;
 }
-function entryCat(e) { if (e.cat === undefined) e.cat = cpOfCaption(e.caption); return e.cat; }
+function entryCat(e) {
+  if (e.incKey) return incubCatOf(e);
+  if (e.cat === undefined) e.cat = cpOfCaption(e.caption);
+  return e.cat;
+}
+// Фото Инкубатория → точка акта того же дня и зала («Объект: Элемент») по словам подписи.
+// Совпадение по элементу весит больше, чем по объекту и примечанию; ничья — фото без точки.
+const incWords = (t) => String(t || '').toLowerCase().replace(/ё/g, 'е').match(/[а-я]{4,}/g) || [];
+// одно слово в разных падежах: «шкафы»/«шкафа», «выводные»/«выводного»
+function incSameWord(a, b) {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  return i >= 4 && i >= Math.min(a.length, b.length) - 2;
+}
+function incubCatOf(e) {
+  const [date, hall] = e.incKey.split('|');
+  const cap = incWords(e.caption + ' ' + e.files.map((f) => f.filename).join(' '));
+  if (!cap.length) return null;
+  const score = {};
+  ((INCUB_FILE_NC && INCUB_FILE_NC[date]) || []).forEach((it) => {
+    if (incubHallOf(it.hall).key !== hall) return;
+    const block = it.block.replace(/\s*·\s*\d+\s*$/, '');
+    const k = 'inc:' + [block, it.elem].filter(Boolean).join(': ');
+    const hit = (t, w) => new Set(incWords(t)).forEach((x) => { if (cap.some((c) => incSameWord(c, x))) score[k] = (score[k] || 0) + w; });
+    score[k] = score[k] || 0;
+    hit(it.elem, 3); hit(block, 2); hit(it.note, 1);
+  });
+  const ks = Object.keys(score).filter((k) => score[k] > 0).sort((a, b) => score[b] - score[a]);
+  if (!ks.length || (ks[1] && score[ks[1]] === score[ks[0]])) return null;
+  return ks[0];
+}
 function normCorpusCode(x) { return x.toUpperCase().replace(/[ABCEHKMOPTX]/g, (c) => LAT2CYR[c]).replace(/[\s_]+/g, '').replace(/[–—−]/g, '-'); }
 let _KNOWN_CORP = null;
 function knownCorpora() {
@@ -5456,7 +5486,7 @@ async function openCpViewer(date, corpus, opt) {
     const m = entries.filter((x) => entryCat(x.e) === String(opt.cat));
     const u = entries.filter((x) => !entryCat(x.e));
     if (m.length || u.length) list = m.concat(u);
-    else if (entries.length) note = 'по этой точке фото нет — показаны другие фото корпуса';
+    else if (entries.length) note = 'по этой точке фото нет — показаны другие фото ' + (isIncubKey(corpus) ? 'зала' : 'корпуса');
   }
   Object.assign(CPV, { list, date, corpus, cat: opt.cat || null, note, catCount: opt.cat ? entries.filter((x) => entryCat(x.e) === String(opt.cat)).length : 0 });
   el.hidden = false;
