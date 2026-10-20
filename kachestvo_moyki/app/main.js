@@ -133,7 +133,8 @@ function watchData() {
 }
 
 // ---------- папки SharePoint/Teams по ссылкам ----------
-const DEFAULT_SP_LINK = 'https://aitas.sharepoint.com/:f:/s/msteams_6c8e7e/IgBxx0E9LMr9QpHMqCGzYBKbAXsCANKq5GX98Fp4JyBAJvI?e=xV9eIL';
+// KM_SP_LINK — только для проверки на имитации SharePoint
+const DEFAULT_SP_LINK = process.env.KM_SP_LINK || 'https://aitas.sharepoint.com/:f:/s/msteams_6c8e7e/IgBxx0E9LMr9QpHMqCGzYBKbAXsCANKq5GX98Fp4JyBAJvI?e=xV9eIL';
 const SP_SYNC_EVERY = 30 * 60 * 1000;
 const spFile = () => path.join(app.getPath('userData'), 'sharepoint.json');
 function spConfig() {
@@ -146,6 +147,7 @@ function spConfig() {
 function saveSpConfig(c) { try { fs.writeFileSync(spFile(), JSON.stringify(c, null, 2)); } catch (e) { /* не критично */ } }
 const spName = (l) => decodeURIComponent((l.folderPath || '').split('/').pop() || '') || 'Папка';
 let spBusy = false;
+let spLoginDeclined = false;   // окно входа закрыли — до перезапуска сами его не открываем
 const mb = (n) => (n / 1048576).toFixed(n > 104857600 ? 0 : 1) + ' МБ';
 
 function askSpLink(current) {
@@ -183,16 +185,29 @@ async function syncOne(l, interactive) {
   });
   try { return await run(); } catch (e) {
     if (!(e instanceof sp.AuthError)) throw e;
-    if (!interactive) throw new Error('нужно войти заново — меню SharePoint → «Обновить из SharePoint» (F5)');
-    toast('SharePoint: нужен вход — войдите в открывшемся окне.');
-    Object.assign(l, await sp.resolveLink(l.link, win));
+    // вход истёк — открываем вход Microsoft сами (если учётная запись запомнена, окно даже не появится)
+    if (!interactive && spLoginDeclined) throw new Error('нужно войти — меню SharePoint → «Обновить из SharePoint» (F5)');
+    toast('SharePoint: нужен вход в рабочую учётную запись Microsoft — войдите в открывшемся окне.');
+    try { Object.assign(l, await sp.resolveLink(l.link, win)); } catch (err) {
+      if (/закрыто/.test(err.message)) spLoginDeclined = true;
+      throw err;
+    }
     return run();
   }
 }
 
 async function syncSharePoint({ interactive, askLink } = {}) {
   if (spBusy) { if (interactive) toast('SharePoint: синхронизация уже идёт…'); return; }
+  if (interactive) spLoginDeclined = false;
   const cfg = spConfig();
+  // первый запуск: папка УКПФ подключается сама — остаётся только войти в рабочую учётную запись
+  if (!cfg.links.length && !cfg.autoAdded && !askLink) {
+    cfg.links.push({ link: DEFAULT_SP_LINK });
+    cfg.autoAdded = true;
+    saveSpConfig(cfg);
+    interactive = true;
+    toast('SharePoint: подключаю папку УКПФ. Войдите рабочей учётной записью Microsoft — дальше данные будут подтягиваться сами.');
+  }
   if (askLink || !cfg.links.length) {
     if (!interactive) return;
     const link = await askSpLink(cfg.links.length ? '' : DEFAULT_SP_LINK);
@@ -209,7 +224,10 @@ async function syncSharePoint({ interactive, askLink } = {}) {
         const r = await syncOne(l, interactive);
         files += r.downloaded; bytes += r.bytes;
         l.lastSync = new Date().toISOString();
-      } catch (e) { errors.push(`«${spName(l)}»: ${e && e.message ? e.message : e}`); }
+      } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        errors.push(`«${spName(l)}»: ${/окно входа закрыто/.test(msg) ? 'вход не выполнен — F5, чтобы войти' : msg}`);
+      }
       saveSpConfig(cfg);
     }
   } finally {
