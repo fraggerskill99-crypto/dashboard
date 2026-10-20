@@ -49,10 +49,51 @@ const exportsDir = () => path.join(app.getPath('documents'), 'Качество �
 const dataDir = () => path.join(exportsDir(), 'Данные');
 const spDir = () => path.join(dataDir(), 'SharePoint');
 
+// ---------- папки на компьютере (в т.ч. OneDrive) — видны в «Данных» как подпапки ----------
+// Папка УКПФ отдела в OneDrive подключается сама, если она есть на этом компьютере.
+const UKPF_ONEDRIVE_REL = path.join('Рабочий стол', 'Департамент Ветеринарии - Отчетность Департамента Ветеринарии', 'Служба Ветеринарной Санитарии и БиБ', 'УКПФ');
+const foldersFile = () => path.join(app.getPath('userData'), 'folders.json');
+function foldersConfig() {
+  let c = {};
+  try { c = JSON.parse(fs.readFileSync(foldersFile(), 'utf8')); } catch (e) { /* ещё нет */ }
+  if (!Array.isArray(c.mounts)) c.mounts = [];
+  return c;
+}
+function saveFolders(c) { try { fs.writeFileSync(foldersFile(), JSON.stringify(c, null, 2)); } catch (e) { /* не критично */ } }
+function findUkpfOneDrive() {
+  const home = app.getPath('home');
+  const bases = [process.env.OneDriveCommercial, process.env.OneDrive].filter(Boolean);
+  try { fs.readdirSync(home).filter((n) => /^OneDrive/i.test(n)).forEach((n) => bases.push(path.join(home, n))); } catch (e) { /* нет домашней папки */ }
+  for (const b of bases) {
+    for (const rel of [UKPF_ONEDRIVE_REL, UKPF_ONEDRIVE_REL.replace('Рабочий стол', 'Desktop')]) {
+      const abs = path.join(b, rel);
+      try { if (fs.statSync(abs).isDirectory()) return abs; } catch (e) { /* нет такой */ }
+    }
+  }
+  return null;
+}
+function autoMountUkpf() {
+  const c = foldersConfig();
+  if (c.ukpfDone) return;
+  const abs = findUkpfOneDrive();
+  if (!abs) return;
+  if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name: 'УКПФ (OneDrive)', path: abs });
+  c.ukpfDone = true;
+  saveFolders(c);
+}
+const mounts = () => foldersConfig().mounts.filter((m) => { try { return fs.statSync(m.path).isDirectory(); } catch (e) { return false; } });
+
 // ---------- адрес app://app/ : страницы приложения и папка «Данные» ----------
 function inside(root, rel) {
   const abs = path.resolve(root, rel);
   return abs === root || abs.startsWith(root + path.sep) ? abs : null;
+}
+// путь внутри «Данных»: первая папка может быть подключённой папкой компьютера
+function dataPath(rel) {
+  const segs = rel.split('/').filter(Boolean);
+  const m = segs.length && mounts().find((x) => x.name === segs[0]);
+  if (m) return inside(path.resolve(m.path), segs.slice(1).join('/'));
+  return inside(dataDir(), segs.join('/'));
 }
 const SKIP_RE = /^~\$|\.part$|^desktop\.ini$|^thumbs\.db$|^\./i;
 function listDir(abs) {
@@ -75,6 +116,20 @@ function latestSvod() {
       found.push({ name: d.name, path: rel ? rel + '/' + d.name : d.name, mtime: Math.round(st.mtimeMs), size: st.size });
     }
   })(dataDir(), '', 0);
+  mounts().forEach((m) => walkRoot(m.path, m.name));
+  function walkRoot(abs, rel) {
+    (function walk(a, r, depth) {
+      let items = [];
+      try { items = fs.readdirSync(a, { withFileTypes: true }); } catch (e) { return; }
+      for (const d of items) {
+        if (SKIP_RE.test(d.name)) continue;
+        if (d.isDirectory()) { if (depth < 6) walk(path.join(a, d.name), r + '/' + d.name, depth + 1); continue; }
+        if (!/\.xlsx$/i.test(d.name)) continue;
+        const st = fs.statSync(path.join(a, d.name));
+        found.push({ name: d.name, path: r + '/' + d.name, mtime: Math.round(st.mtimeMs), size: st.size });
+      }
+    })(abs, rel, 0);
+  }
   const newest = (a) => a.sort((x, y) => y.mtime - x.mtime)[0] || null;
   return newest(found.filter((f) => /свод/i.test(f.name))) || newest(found.filter((f) => /мб|микроб|nok/i.test(f.name)));
 }
@@ -94,12 +149,18 @@ async function handleApp(req) {
       return json({ ok: true });
     }
     if (p === '/data-list' || p.startsWith('/data-list/')) {
-      const abs = inside(dataDir(), p.slice('/data-list/'.length));
-      if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isDirectory()) return json([], abs ? 200 : 403);
-      return json(listDir(abs));
+      const rel = p.slice('/data-list/'.length);
+      const abs = dataPath(rel);
+      let items = abs && fs.existsSync(abs) && fs.statSync(abs).isDirectory() ? listDir(abs) : [];
+      // в корне «Данных» — ещё и подключённые папки компьютера
+      if (!rel.split('/').filter(Boolean).length) {
+        items = items.filter((it) => !mounts().some((m) => m.name === it.name))
+          .concat(mounts().map((m) => ({ name: m.name, kind: 'directory', size: 0, mtime: Math.round(fs.statSync(m.path).mtimeMs) })));
+      }
+      return json(items, abs ? 200 : 403);
     }
     if (p.startsWith('/data/')) {
-      const abs = inside(dataDir(), p.slice('/data/'.length));
+      const abs = dataPath(p.slice('/data/'.length));
       if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) return new Response('нет файла', { status: 404 });
       return net.fetch(pathToFileURL(abs).toString());
     }
@@ -121,15 +182,48 @@ function dataChanged() { shellJs('window.APP && APP.dataChanged()'); }
 
 // новые файлы, положенные в «Данные» руками, — тоже подхватываются (через 4 с после последнего изменения)
 let watchTimer = null;
+const watchers = {};
 function watchData() {
-  try {
-    fs.mkdirSync(dataDir(), { recursive: true });
-    fs.watch(dataDir(), { recursive: true }, (ev, name) => {
-      if (spBusy || (name && /\.part$/i.test(name))) return;
-      clearTimeout(watchTimer);
-      watchTimer = setTimeout(dataChanged, 4000);
-    });
-  } catch (e) { console.warn('watch', e); }
+  fs.mkdirSync(dataDir(), { recursive: true });
+  const roots = [dataDir()].concat(mounts().map((m) => m.path));
+  Object.keys(watchers).forEach((r) => { if (!roots.includes(r)) { watchers[r].close(); delete watchers[r]; } });
+  roots.forEach((r) => {
+    if (watchers[r]) return;
+    try {
+      watchers[r] = fs.watch(r, { recursive: true }, (ev, name) => {
+        if (spBusy || (name && /\.part$|~\$/i.test(name))) return;
+        clearTimeout(watchTimer);
+        watchTimer = setTimeout(dataChanged, 4000);
+      });
+    } catch (e) { console.warn('watch', r, e); }
+  });
+}
+
+async function manageFolders() {
+  const c = foldersConfig();
+  const shown = c.mounts.slice(0, 5);
+  const r = await dialog.showMessageBox(win, {
+    type: 'info', title: 'Папки на компьютере', message: 'Папки на компьютере, из которых берутся данные',
+    detail: (c.mounts.length ? c.mounts.map((m, i) => `${i + 1}. ${m.name}\n${m.path}`).join('\n\n') : 'Пока ни одной.') +
+      '\n\nИз них, как и из «Данных», берутся акты (приёмка мойки, Инкубаторий, ЗПП, график ПР/Р — по имени файла), Свод МБ, фото/видео и презентации. Изменения подхватываются сами.',
+    buttons: ['Добавить папку…'].concat(shown.map((m) => 'Убрать «' + m.name + '»'), ['Закрыть']), cancelId: shown.length + 1, defaultId: 0, noLink: true,
+  });
+  if (r.response === 0) {
+    const pick = await dialog.showOpenDialog(win, { title: 'Папка с актами, сводами, фото/видео', properties: ['openDirectory'] });
+    if (pick.canceled || !pick.filePaths[0]) return;
+    const abs = pick.filePaths[0];
+    let name = path.basename(abs) || 'Папка';
+    while (c.mounts.some((m) => m.name === name) || name === 'SharePoint') name += ' 2';
+    if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name, path: abs });
+    saveFolders(c);
+  } else if (r.response <= shown.length) {
+    c.mounts.splice(r.response - 1, 1);
+    c.ukpfDone = true;
+    saveFolders(c);
+  } else return;
+  watchData();
+  dataChanged();
+  toast('Папки на компьютере обновлены — вкладки перечитывают данные.', 'ok');
 }
 
 // ---------- папки SharePoint/Teams по ссылкам ----------
@@ -280,6 +374,7 @@ function start() {
     item.setSaveDialogOptions({ title: 'Сохранить файл', defaultPath: path.join(exportsDir(), item.getFilename()) });
   });
 
+  autoMountUkpf();
   Menu.setApplicationMenu(buildMenu());
   createWindow();
   watchData();
@@ -340,6 +435,7 @@ function buildMenu() {
             shell.openPath(dataDir());
           },
         },
+        { label: 'Папки на компьютере…', click: manageFolders },
         {
           label: 'Открыть папку с выгрузками', click: () => {
             fs.mkdirSync(exportsDir(), { recursive: true });

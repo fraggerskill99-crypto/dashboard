@@ -6040,8 +6040,10 @@ async function applyActsFromFolder(root, onStatus) {
     const sig = it.file.size + ':' + it.file.lastModified;
     if (seen[it.path] === sig) continue;
     onStatus && onStatus('Читаю акт из папки: ' + it.path);
-    try { await apply[it.kind](await it.file.arrayBuffer(), it.file.name); seen[it.path] = sig; n++; }
+    // не акт (другая таблица с похожим именем) — запоминаем и больше не пробуем
+    try { await apply[it.kind](await it.file.arrayBuffer(), it.file.name); n++; }
     catch (e) { console.warn('act apply', it.path, e); }
+    seen[it.path] = sig;
   }
   try { localStorage.setItem(FOLDER_ACTS_KEY, JSON.stringify(seen)); } catch (e) {}
   if (n) {
