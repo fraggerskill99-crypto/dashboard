@@ -6000,9 +6000,10 @@ async function setupIncubMediaPinning() {
 // Excel-файлы в папке и подпапках разбираются по имени: «инкуб» — акт Инкубатория,
 // «зпп» — акт ЗПП, «график/ПР-Р» — график санразрыва, «акт/мойк/приём» — акт приёма мойки.
 // Свод/журнал МБ здесь пропускается — его читает вкладка «Мойка и МБ».
-// Файл перечитывается, только если он изменился (имя, размер, время).
+// Файл перечитывается, только если он изменился (имя, размер, время). Список прочитанных —
+// только на время работы: данные актов не сохраняются, после перезапуска акты читаются заново.
 // ============================================================
-const FOLDER_ACTS_KEY = 'folderActsSeen:v1';
+const FOLDER_ACTS_SEEN = {};
 function folderActKind(name) {
   const n = name.toLowerCase().replace(/ё/g, 'е');
   if (/свод|журнал|микроб|(^|[^а-я])мб([^а-я]|$)|nok/.test(n)) return null;
@@ -6022,8 +6023,7 @@ async function collectFolderActs(dir, prefix, depth, out) {
   return out;
 }
 async function applyActsFromFolder(root, onStatus) {
-  let seen = {};
-  try { seen = JSON.parse(localStorage.getItem(FOLDER_ACTS_KEY) || '{}') || {}; } catch (e) {}
+  const seen = FOLDER_ACTS_SEEN;
   let list = [];
   try { list = await collectFolderActs(root, '', 0, []); } catch (e) { console.warn('acts list', e); return 0; }
   const files = [];
@@ -6045,7 +6045,6 @@ async function applyActsFromFolder(root, onStatus) {
     catch (e) { console.warn('act apply', it.path, e); }
     seen[it.path] = sig;
   }
-  try { localStorage.setItem(FOLDER_ACTS_KEY, JSON.stringify(seen)); } catch (e) {}
   if (n) {
     try { if (typeof renderAll === 'function') renderAll(); } catch (e) {}
     try { if (typeof renderKPIs === 'function') renderKPIs(); } catch (e) {}

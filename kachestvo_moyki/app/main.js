@@ -50,8 +50,13 @@ const dataDir = () => path.join(exportsDir(), 'Данные');
 const spDir = () => path.join(dataDir(), 'SharePoint');
 
 // ---------- папки на компьютере (в т.ч. OneDrive) — видны в «Данных» как подпапки ----------
-// Папка УКПФ отдела в OneDrive подключается сама, если она есть на этом компьютере.
-const UKPF_ONEDRIVE_REL = path.join('Рабочий стол', 'Департамент Ветеринарии - Отчетность Департамента Ветеринарии', 'Служба Ветеринарной Санитарии и БиБ', 'УКПФ');
+// Папки отдела в OneDrive подключаются сами, если они есть на этом компьютере.
+const ONEDRIVE_AUTO = [
+  // акты выращивания, Инкубатория, ЗПП, Свод МБ
+  { name: 'УКПФ (OneDrive)', rel: path.join('Рабочий стол', 'Департамент Ветеринарии - Отчетность Департамента Ветеринарии', 'Служба Ветеринарной Санитарии и БиБ', 'УКПФ') },
+  // еженедельные несоответствия: фото/видео и презентации выращивания
+  { name: 'Несоответствия (OneDrive)', rel: path.join('Рабочий стол', 'Несоответствие еженедельно') },
+];
 const foldersFile = () => path.join(app.getPath('userData'), 'folders.json');
 function foldersConfig() {
   let c = {};
@@ -60,26 +65,31 @@ function foldersConfig() {
   return c;
 }
 function saveFolders(c) { try { fs.writeFileSync(foldersFile(), JSON.stringify(c, null, 2)); } catch (e) { /* не критично */ } }
-function findUkpfOneDrive() {
+function findOneDrive(relPath) {
   const home = app.getPath('home');
   const bases = [process.env.OneDriveCommercial, process.env.OneDrive].filter(Boolean);
   try { fs.readdirSync(home).filter((n) => /^OneDrive/i.test(n)).forEach((n) => bases.push(path.join(home, n))); } catch (e) { /* нет домашней папки */ }
   for (const b of bases) {
-    for (const rel of [UKPF_ONEDRIVE_REL, UKPF_ONEDRIVE_REL.replace('Рабочий стол', 'Desktop')]) {
+    for (const rel of [relPath, relPath.replace('Рабочий стол', 'Desktop')]) {
       const abs = path.join(b, rel);
       try { if (fs.statSync(abs).isDirectory()) return abs; } catch (e) { /* нет такой */ }
     }
   }
   return null;
 }
-function autoMountUkpf() {
+function autoMountOneDrive() {
   const c = foldersConfig();
-  if (c.ukpfDone) return;
-  const abs = findUkpfOneDrive();
-  if (!abs) return;
-  if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name: 'УКПФ (OneDrive)', path: abs });
-  c.ukpfDone = true;
-  saveFolders(c);
+  if (!Array.isArray(c.autoDone)) c.autoDone = c.ukpfDone ? ['УКПФ (OneDrive)'] : [];
+  let changed = false;
+  for (const f of ONEDRIVE_AUTO) {
+    if (c.autoDone.includes(f.name)) continue;   // уже подключали (или убрали вручную) — не трогаем
+    const abs = findOneDrive(f.rel);
+    if (!abs) continue;
+    if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name: f.name, path: abs });
+    c.autoDone.push(f.name);
+    changed = true;
+  }
+  if (changed) saveFolders(c);
 }
 const mounts = () => foldersConfig().mounts.filter((m) => { try { return fs.statSync(m.path).isDirectory(); } catch (e) { return false; } });
 
@@ -218,7 +228,6 @@ async function manageFolders() {
     saveFolders(c);
   } else if (r.response <= shown.length) {
     c.mounts.splice(r.response - 1, 1);
-    c.ukpfDone = true;
     saveFolders(c);
   } else return;
   watchData();
@@ -374,7 +383,7 @@ function start() {
     item.setSaveDialogOptions({ title: 'Сохранить файл', defaultPath: path.join(exportsDir(), item.getFilename()) });
   });
 
-  autoMountUkpf();
+  autoMountOneDrive();
   Menu.setApplicationMenu(buildMenu());
   createWindow();
   watchData();
