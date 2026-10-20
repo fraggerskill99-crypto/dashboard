@@ -2247,21 +2247,24 @@ const dirIsAkt = n => /акт|мойк/i.test(n) && !dirIsMb(n);
 async function dirPick(handle){
   const files = [];
   // свод и акт ищем и в подпапках (папка SharePoint обычно разложена по папкам)
-  async function walk(dir, depth){
+  // файлы в папке со словом «Свод» (например «BI_Business-Local Labs - СВОД») — это Свод, как бы ни назывались
+  async function walk(dir, depth, inSvod){
     for await (const h of dir.values()){
-      if (h.kind === 'directory'){ if (depth < 5 && !h.name.startsWith('.')) await walk(h, depth + 1); continue; }
+      if (h.kind === 'directory'){ if (depth < 5 && !h.name.startsWith('.')) await walk(h, depth + 1, inSvod || /(^|[^а-яё])свод(?![а-яё])/i.test(h.name)); continue; }
       if (h.kind !== 'file' || h.name.startsWith('~$') || !/\.(xlsx|csv)$/i.test(h.name)) continue;
-      files.push(await h.getFile());
+      const f = await h.getFile();
+      if (inSvod) f._svod = true;
+      files.push(f);
     }
   }
-  await walk(handle, 0);
+  await walk(handle, 0, false);
   const newest = arr => arr.slice().sort((a, b) => b.lastModified - a.lastModified)[0] || null;
-  const cand = files.filter(f => !dirIsAkt(f.name));
+  const cand = files.filter(f => f._svod || !dirIsAkt(f.name));
   // акт приёма мойки (не Инкубатория и не ЗПП) — для баллов мойки и «балла перед обнаружением»
-  const akt = newest(files.filter(f => dirIsAkt(f.name) && /\.xlsx$/i.test(f.name) && !/инкуб|зпп|график/i.test(f.name)));
+  const akt = newest(files.filter(f => !f._svod && dirIsAkt(f.name) && /\.xlsx$/i.test(f.name) && !/инкуб|зпп|график/i.test(f.name)));
   // в приложении папка большая (OneDrive отдела) — случайную свежую таблицу за свод не берём
   const loose = location.protocol === 'app:' ? null : newest(cand);
-  return {mb: newest(cand.filter(f => dirIsMb(f.name))) || loose, akt, count: files.length};
+  return {mb: newest(cand.filter(f => f._svod)) || newest(cand.filter(f => dirIsMb(f.name))) || loose, akt, count: files.length};
 }
 function dirTime(){ const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 function dirShowButtons(linked){

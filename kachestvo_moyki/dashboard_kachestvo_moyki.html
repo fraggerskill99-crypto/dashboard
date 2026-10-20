@@ -6015,7 +6015,8 @@ function folderActKind(name) {
 }
 async function collectFolderActs(dir, prefix, depth, out) {
   for await (const [name, h] of dir.entries()) {
-    if (h.kind === 'directory') { if (depth < 6 && !name.startsWith('.')) await collectFolderActs(h, prefix + name + '/', depth + 1, out); continue; }
+    // папка Свода МБ — не акты, пропускаем
+    if (h.kind === 'directory') { if (depth < 6 && !name.startsWith('.') && !/(^|[^а-яё])свод(?![а-яё])/i.test(name)) await collectFolderActs(h, prefix + name + '/', depth + 1, out); continue; }
     if (name.startsWith('~$') || !/\.(xlsx|xlsm)$/i.test(name)) continue;
     const kind = folderActKind(name);
     if (kind) out.push({ kind, path: prefix + name, handle: h });

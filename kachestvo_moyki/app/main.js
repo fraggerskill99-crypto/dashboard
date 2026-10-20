@@ -56,6 +56,8 @@ const ONEDRIVE_AUTO = [
   { name: 'УКПФ (OneDrive)', rel: path.join('Рабочий стол', 'Департамент Ветеринарии - Отчетность Департамента Ветеринарии', 'Служба Ветеринарной Санитарии и БиБ', 'УКПФ') },
   // еженедельные несоответствия: фото/видео и презентации выращивания
   { name: 'Несоответствия (OneDrive)', rel: path.join('Рабочий стол', 'Несоответствие еженедельно') },
+  // Свод микробиологии (Local Labs) — для NOK-дашборда и «Мойки и МБ»: любой .xlsx в ней — Свод
+  { name: 'СВОД МБ (OneDrive)', rel: path.join('Рабочий стол', 'BI_Business-Local Labs - СВОД'), svod: true },
 ];
 const foldersFile = () => path.join(app.getPath('userData'), 'folders.json');
 function foldersConfig() {
@@ -108,7 +110,7 @@ function autoMountOneDrive() {
     if (c.autoDone.includes(f.name)) continue;   // уже подключали (или убрали вручную) — не трогаем
     const abs = findOneDrive(f.rel);
     if (!abs) continue;
-    if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name: f.name, path: abs });
+    if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name: f.name, path: abs, svod: !!f.svod });
     c.autoDone.push(f.name);
     changed = true;
   }
@@ -123,7 +125,7 @@ async function askMissingOneDrive() {
     if (c.autoDone.includes(f.name) || c.asked.includes(f.name)) continue;
     c.asked.push(f.name);
     saveFolders(c);
-    const what = f.name.startsWith('УКПФ') ? 'акты выращивания, Инкубатория, ЗПП и Свод МБ' : 'фото/видео и презентации еженедельных несоответствий';
+    const what = f.svod ? 'Свод микробиологии для NOK-дашборда и «Мойки и МБ»' : f.name.startsWith('УКПФ') ? 'акты выращивания, Инкубатория, ЗПП и Свод МБ' : 'фото/видео и презентации еженедельных несоответствий';
     const r = await dialog.showMessageBox(win, {
       type: 'question', title: 'Папка не найдена', noLink: true, buttons: ['Выбрать папку…', 'Позже'], defaultId: 0, cancelId: 1,
       message: `Не нашёл папку «${f.rel.split(path.sep).pop()}» в OneDrive`,
@@ -133,7 +135,7 @@ async function askMissingOneDrive() {
     const pick = await dialog.showOpenDialog(win, { title: f.name, defaultPath: oneDriveBases()[0], properties: ['openDirectory'] });
     if (pick.canceled || !pick.filePaths[0]) continue;
     const cc = foldersConfig();
-    if (!cc.mounts.some((m) => m.path === pick.filePaths[0])) cc.mounts.push({ name: f.name, path: pick.filePaths[0] });
+    if (!cc.mounts.some((m) => m.path === pick.filePaths[0])) cc.mounts.push({ name: f.name, path: pick.filePaths[0], svod: !!f.svod });
     cc.autoDone = (cc.autoDone || []).concat(f.name);
     saveFolders(cc);
     watchData();
@@ -190,6 +192,10 @@ function latestSvod() {
     })(abs, rel, 0);
   }
   const newest = (a) => a.sort((x, y) => y.mtime - x.mtime)[0] || null;
+  // папка Свода (BI_Business-Local Labs - СВОД): самый свежий .xlsx в ней — и есть Свод
+  const svodDirs = mounts().filter((m) => m.svod || /(^|[^а-яё])свод(?![а-яё])/i.test(m.name)).map((m) => m.name + '/');
+  const inSvod = newest(found.filter((f) => svodDirs.some((d) => f.path.startsWith(d))));
+  if (inSvod) return inSvod;
   // «свод» — отдельным словом («Свод МБ», «Свод_2026»), а не «Сводная таблица»
   return newest(found.filter((f) => /(^|[^а-яё])свод(?![а-яё])/i.test(f.name))) || newest(found.filter((f) => /(^|[^а-яё])мб(?![а-яё])|микроб|nok/i.test(f.name)));
 }
