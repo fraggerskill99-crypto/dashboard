@@ -30,6 +30,8 @@ jobs:
           java-version: 21
 
       - name: Android-оболочка (Capacitor)
+        env:
+          APP_VERSION: 1.2.${{ github.run_number }}
         run: |
           # вкладки (Качество мойки, NOK, Мойка и МБ) + перехват «скачать» → окно «Поделиться»
           node kachestvo_moyki/app/build-www.js --android --out shell/www
@@ -52,11 +54,16 @@ jobs:
             cp ../kachestvo_moyki/app/android/icons/$dir.png $RES/mipmap-$dir/ic_launcher.png
             cp ../kachestvo_moyki/app/android/icons/$dir.png $RES/mipmap-$dir/ic_launcher_round.png
           done
+          # номер версии растёт с каждой сборкой — иначе Android не считает APK обновлением
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.2.${{ github.run_number }}\"/" android/app/build.gradle
+          grep -E 'versionCode|versionName' android/app/build.gradle
 
       - name: Сборка APK
         working-directory: shell/android
         run: |
           chmod +x gradlew
+          # постоянный ключ подписи: новая сборка ставится поверх установленной, данные остаются
+          mkdir -p ~/.android && cp "$GITHUB_WORKSPACE/kachestvo_moyki/app/android/debug.keystore" ~/.android/debug.keystore
           ./gradlew assembleDebug --no-daemon -q
           cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/kachestvo-moyki.apk"
           # отдельные файлы дашбордов — открыть в Chrome/Edge без установки
@@ -92,7 +99,9 @@ jobs:
       - run: npm ci
 
       - name: Сборка установщика и переносной версии
-        run: npm run dist
+        run: |
+          npm pkg set version=1.2.${{ github.run_number }}
+          npm run dist
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
