@@ -20,6 +20,30 @@
   iframe[hidden] { display: none; }
   #toast { position: fixed; right: 18px; bottom: 18px; z-index: 10; max-width: 460px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #fff; background: var(--navy); box-shadow: 0 6px 24px rgba(0,0,0,.18); cursor: pointer; }
   #toast[hidden] { display: none; }
+  /* неприметная кнопка настроек — левый нижний угол */
+  #cfgBtn { position: fixed; left: max(10px, env(safe-area-inset-left, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); z-index: 9; border: 1px solid var(--line); background: rgba(255,255,255,.75); color: var(--muted); font-size: 11.5px; padding: 4px 9px; border-radius: 7px; cursor: pointer; opacity: .55; }
+  #cfgBtn:hover, #cfgBtn:focus-visible { opacity: 1; color: var(--navy); }
+  #cfg { position: fixed; inset: 0; z-index: 20; background: rgba(15,23,42,.45); display: flex; align-items: flex-end; justify-content: flex-start; padding: 16px; }
+  #cfg[hidden] { display: none; }
+  .cfg-in { width: min(720px, 100%); max-height: calc(100% - 20px); overflow: auto; background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); padding: 16px 18px; font-size: 13px; color: #1e293b; }
+  .cfg-hd { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--navy); }
+  .cfg-hd button { margin-left: auto; border: none; background: #f1f5f9; border-radius: 50%; width: 30px; height: 30px; font-size: 18px; cursor: pointer; }
+  .cfg-note { color: var(--muted); margin: 6px 0 12px; line-height: 1.5; }
+  .cfg-sec { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
+  .cfg-row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
+  .cfg-row .lbl { flex: 0 0 210px; font-weight: 600; }
+  .cfg-row .val { flex: 1; min-width: 180px; color: #334155; line-height: 1.4; word-break: break-word; }
+  .cfg-row .val small { display: block; color: var(--muted); }
+  .cfg-row .val .auto { color: var(--muted); }
+  .cfg-row .val .bad { color: #b91c1c; }
+  .cfg-row button, .cfg-add button { border: 1px solid var(--line); background: #f8fafc; border-radius: 7px; padding: 5px 10px; font-size: 12px; cursor: pointer; color: var(--navy); font-weight: 600; }
+  .cfg-row button.x { color: #b91c1c; }
+  .cfg-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .cfg-ft { position: sticky; bottom: -16px; display: flex; align-items: center; gap: 10px; margin: 16px -18px -16px; padding: 12px 18px 16px; border-top: 1px solid var(--line); background: #fff; }
+  .cfg-ft span { color: var(--muted); font-size: 12px; flex: 1; }
+  .cfg-main { border: none; background: var(--navy); color: #fff; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+  .cfg-main:disabled { opacity: .6; cursor: default; }
+  @media (max-width: 600px) { .cfg-row .lbl { flex: 1 1 100%; } }
   @media (max-width: 600px) { nav button { padding: 8px 10px 9px; font-size: 12.5px; } nav .hint { display: none; } }
 </style>
 </head>
@@ -40,6 +64,15 @@
   <iframe id="f-week" data-src="week.html" title="Фотофиксация по неделям" hidden></iframe>
 </main>
 <div id="toast" hidden></div>
+<button type="button" id="cfgBtn" hidden title="Откуда брать акты, Свод, фото и презентации">⚙ Настройки</button>
+<div id="cfg" hidden>
+  <div class="cfg-in" role="dialog" aria-labelledby="cfgT">
+    <div class="cfg-hd"><b id="cfgT">Настройки — откуда брать данные</b><button type="button" id="cfgX" title="Закрыть (Esc)">×</button></div>
+    <p class="cfg-note">Выберите нужные файлы и папки. Что не выбрано — ищется само (папки OneDrive). Изменённые файлы подхватываются сами; «Обновить сейчас» — перечитать всё сразу.</p>
+    <div id="cfgBody"></div>
+    <div class="cfg-ft"><span id="cfgSt"></span><button type="button" id="cfgRefresh" class="cfg-main">⟳ Обновить сейчас</button></div>
+  </div>
+</div>
 <script>
 // Оболочка: три дашборда во вкладках. Все на одном адресе, поэтому вкладка «Мойка и МБ»
 // берёт фото/видео и баллы мойки из вкладки «Качество мойки» (window.MOIKA_API).
@@ -82,42 +115,131 @@
     if (!f.getAttribute('src')) return res(false);
     f.addEventListener('load', () => setTimeout(() => res(true), 1500), { once: true });
   });
-  let attachBusy = null;
-  async function attachData() {
+  let attachBusy = null, attachAgain = false;
+  const applied = {};   // выбранные в «Настройках» файлы: что уже прочитано (путь|время|размер)
+  async function srcFileIn(win, f) {
+    const r = await fetch('/data/__src/' + f.kind + '/' + encodeURIComponent(f.name));
+    if (!r.ok) throw new Error('файл недоступен: ' + f.path);
+    return new win.File([await r.arrayBuffer()], f.name, { lastModified: f.mtime });
+  }
+  async function attachData(force) {
     if (!isApp) return;
-    if (attachBusy) return attachBusy;
+    if (attachBusy) { attachAgain = attachAgain || !!force; return attachBusy; }
     attachBusy = (async () => {
       const m = frame('moika');
       if (!(await loaded(m))) return;
       const w = m.contentWindow;
       if (!w.APP_FS) return;
-      // каждой вкладке — только свои папки: акты — из папки актов, фото — из папок с фото, Свод — из папки Свода
+      if (force) Object.keys(applied).forEach((k) => { delete applied[k]; });
+      // каждой вкладке — только свои папки; файлы, выбранные в «Настройках», важнее автопоиска
       const roles = await w.APP_FS.roles();
+      const st = await (await fetch('/cfg/state')).json();
+      const chosen = {};
+      Object.entries(st.files).forEach(([k, v]) => { if (v.chosen) chosen[k] = Object.assign({ kind: k }, v.chosen); });
       const all = roles.acts.concat(roles.media, roles.svod);
-      document.getElementById('dataHint').textContent = all.length ? '📁 ' + all.join(' · ') : '';
-      if (!all.length) return;
+      document.getElementById('dataHint').textContent = all.length || Object.keys(chosen).length ? '📁 ' + all.concat(Object.values(chosen).map((f) => f.name)).join(' · ') : '';
       w.__APP_ACTS_SEPARATE = true;   // акты не ищем в папках с фото
       if (roles.media.length) {
         const media = w.APP_FS.group(roles.media, 'Фото/видео');
         try { if (w.__useMediaHandle) await w.__useMediaHandle(media, false); } catch (e) { console.warn('moika media', e); }
         try { if (w.useIncubMediaHandle) await w.useIncubMediaHandle(media, false); } catch (e) { console.warn('moika incub', e); }
       }
-      if (roles.acts.length) {
-        try { if (w.applyActsFromFolder) await w.applyActsFromFolder(w.APP_FS.group(roles.acts, 'Акты')); } catch (e) { console.warn('moika acts', e); }
+      // акты: выбранные файлы — напрямую; остальные виды — автопоиском в папке актов
+      const APPLY = { akt: 'applyAktBuffer', incub: 'applyIncubBuffer', zpp: 'applyZppBuffer', schedule: 'applyScheduleBuffer' };
+      for (const k of Object.keys(APPLY)) {
+        const f = chosen[k]; if (!f) continue;
+        const sig = f.path + '|' + f.mtime + '|' + f.size;
+        if (applied['m:' + k] === sig) continue;
+        try {
+          const file = await srcFileIn(w, f); await w[APPLY[k]](await file.arrayBuffer(), f.name); applied['m:' + k] = sig;
+          if (k === 'akt' && w.__keepOnlyAkt) w.__keepOnlyAkt(f.name);   // акт выращивания — только выбранный
+        }
+        catch (e) { console.warn('moika', k, e); toast('Не удалось прочитать «' + f.name + '»: ' + e.message, 'err'); }
       }
+      if (roles.acts.length && w.applyActsFromFolder) {
+        try { await w.applyActsFromFolder(w.APP_FS.group(roles.acts, 'Акты'), null, { skip: Object.keys(chosen), force }); } catch (e) { console.warn('moika acts', e); }
+      }
+      // Мойка и МБ: выбранные Свод/акт — напрямую, остальное — из папок
       const mb = frame('mb');
       if (mb.getAttribute('src') && await loaded(mb)) {
-        try { const x = mb.contentWindow; if (x.__mbAttachDir) x.__mbAttachDir(x.APP_FS.group(roles.svod.concat(roles.acts), 'Свод и акты'), roles.svod); x.postMessage('app:media', '*'); } catch (e) { console.warn('mb', e); }
+        const x = mb.contentWindow;
+        try {
+          const dirs = (chosen.svod ? [] : roles.svod).concat(chosen.akt ? [] : roles.acts);
+          if (x.__mbAttachDir) x.__mbAttachDir(dirs.length ? x.APP_FS.group(dirs, 'Свод и акты') : null, chosen.svod ? [] : roles.svod);
+          for (const [k, fn] of [['svod', 'processMBFile'], ['akt', 'processAktFile']]) {
+            const f = chosen[k]; if (!f) continue;
+            const sig = f.path + '|' + f.mtime + '|' + f.size;
+            if (applied['mb:' + k] === sig) continue;
+            await x[fn](await srcFileIn(x, f)); applied['mb:' + k] = sig;
+          }
+          x.postMessage('app:media', '*');
+        } catch (e) { console.warn('mb', e); }
       }
       const wk = frame('week');
       if (wk.getAttribute('src')) try { wk.contentWindow.postMessage('app:media', '*'); } catch (e) {}
       const nok = frame('nok');
       if (nok.getAttribute('src')) try { nok.contentWindow.__appDataChanged && nok.contentWindow.__appDataChanged(); } catch (e) {}
-    })().finally(() => { attachBusy = null; });
+    })().finally(() => {
+      attachBusy = null;
+      if (attachAgain) { const f = attachAgain; attachAgain = false; attachData(f === true); }
+    });
     return attachBusy;
   }
   // вкладка «Мойка и МБ» открылась впервые — тоже даём ей папку
   frame('mb').addEventListener('load', () => { if (isApp) setTimeout(attachData, 1500); });
+
+
+  // ---------- «⚙ Настройки» (только в приложении для ПК) ----------
+  if (isApp) {
+    const $ = (id) => document.getElementById(id);
+    const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    const when = (ms) => (ms ? new Date(ms).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
+    $('cfgBtn').hidden = false;
+    let state = null;
+    async function cfg(cmd, params) {
+      const q = new URLSearchParams(params || {}).toString();
+      state = await (await fetch('/cfg/' + cmd + (q ? '?' + q : ''))).json();
+      render();
+    }
+    function render() {
+      if (!state) return;
+      const fileRow = (k) => {
+        const f = state.files[k];
+        const val = f.chosen ? `<b>${esc(f.chosen.name)}</b><small>${esc(f.chosen.path)} · изменён ${when(f.chosen.mtime)}</small>`
+          : f.chosenMissing ? `<span class="bad">Выбранный файл не найден: ${esc(f.chosenPath)}</span>`
+          : f.auto ? `<span class="auto">Сам: <b>${esc(f.auto.name)}</b> (${esc(f.auto.where)}, ${when(f.auto.mtime)})</span>`
+          : '<span class="auto">Не найден — выберите файл</span>';
+        return `<div class="cfg-row"><span class="lbl">${esc(f.title)}</span><span class="val">${val}</span>
+          <button type="button" data-cmd="pick-file" data-kind="${k}">Выбрать файл…</button>
+          ${f.chosen || f.chosenMissing ? `<button type="button" class="x" data-cmd="clear-file" data-kind="${k}" title="Снова искать самому">✕</button>` : ''}</div>`;
+      };
+      $('cfgBody').innerHTML =
+        '<div class="cfg-sec">Акты</div>' + ['akt', 'incub', 'zpp', 'schedule'].map(fileRow).join('') +
+        '<div class="cfg-sec">Свод микробиологии</div>' + fileRow('svod') +
+        '<div class="cfg-sec">Папки</div>' +
+        (state.folders.length ? state.folders.map((m) => `<div class="cfg-row"><span class="lbl">${esc(m.roleTitle)}</span><span class="val"><b>${esc(m.name)}</b><small${m.ok ? '' : ' class="bad"'}>${esc(m.path)}${m.ok ? '' : ' — не найдена'}</small></span>
+          <button type="button" class="x" data-cmd="remove-folder" data-name="${esc(m.name)}" title="Не брать из этой папки">✕</button></div>`).join('') : '<div class="cfg-row"><span class="val auto">Папок пока нет.</span></div>') +
+        `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="media">+ Папка с фото/видео и презентациями</button>
+          <button type="button" data-cmd="add-folder" data-role="acts">+ Папка с актами</button>
+          <button type="button" data-cmd="add-folder" data-role="svod">+ Папка со Сводом</button></div>` +
+        '<div class="cfg-sec">SharePoint</div>' +
+        (state.sharepoint.length ? state.sharepoint.map((l) => `<div class="cfg-row"><span class="lbl">${esc(l.name)}</span><span class="val"><small>${esc(l.link)}</small>${l.lastSync ? 'обновлено ' + when(Date.parse(l.lastSync)) : '<span class="auto">ещё не скачивалась</span>'}</span></div>`).join('') : '') +
+        '<div class="cfg-add"><button type="button" data-cmd="sharepoint">+ Подключить папку SharePoint по ссылке</button></div>';
+      $('cfgSt').textContent = state.lastRefresh ? 'Обновлено в ' + new Date(state.lastRefresh).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
+    }
+    $('cfgBtn').onclick = () => { $('cfg').hidden = false; cfg('state'); };
+    $('cfgX').onclick = () => { $('cfg').hidden = true; };
+    $('cfg').addEventListener('click', (e) => {
+      if (e.target.id === 'cfg') { $('cfg').hidden = true; return; }
+      const b = e.target.closest('button[data-cmd]'); if (!b) return;
+      cfg(b.dataset.cmd, Object.assign({}, b.dataset.kind ? { kind: b.dataset.kind } : {}, b.dataset.role ? { role: b.dataset.role } : {}, b.dataset.name ? { name: b.dataset.name } : {}));
+    });
+    $('cfgRefresh').onclick = async () => {
+      const b = $('cfgRefresh'); b.disabled = true; b.textContent = '⟳ Обновляю…';
+      try { await cfg('refresh'); toast('Обновлено: файлы и папки перечитаны.', 'ok'); } finally { b.disabled = false; b.textContent = '⟳ Обновить сейчас'; }
+    };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('cfg').hidden) $('cfg').hidden = true; });
+  }
 
   window.APP = { show, toast, dataChanged: attachData, active: () => current, frame };
 

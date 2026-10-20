@@ -6024,8 +6024,11 @@ async function collectFolderActs(dir, prefix, depth, out) {
   }
   return out;
 }
-async function applyActsFromFolder(root, onStatus) {
+// opts.skip — виды актов, выбранные в «Настройках» приложения (их здесь не ищем); opts.force — перечитать всё
+async function applyActsFromFolder(root, onStatus, opts) {
+  opts = opts || {};
   const seen = FOLDER_ACTS_SEEN;
+  if (opts.force) Object.keys(seen).forEach((k) => { delete seen[k]; });
   let list = [];
   try { list = await collectFolderActs(root, '', 0, []); } catch (e) { console.warn('acts list', e); return 0; }
   const files = [];
@@ -6034,7 +6037,7 @@ async function applyActsFromFolder(root, onStatus) {
   // по одному файлу каждого вида — как три закреплённых акта в веб-дашборде: из самой папки
   // (подпапки — обычно архив, берутся, только если в папке такого акта нет), самый свежий
   const pick = [];
-  ['akt', 'incub', 'zpp', 'schedule'].forEach((k) => {
+  ['akt', 'incub', 'zpp', 'schedule'].filter((k) => !(opts.skip || []).includes(k)).forEach((k) => {
     const of = files.filter((f) => f.kind === k);
     if (!of.length) return;
     const top = Math.min(...of.map((f) => f.depth));
@@ -6046,7 +6049,10 @@ async function applyActsFromFolder(root, onStatus) {
     if (seen[it.path] === sig) continue;
     onStatus && onStatus('Читаю акт из папки: ' + it.path);
     // не акт (другая таблица с похожим именем) — запоминаем и больше не пробуем
-    try { await apply[it.kind](await it.file.arrayBuffer(), it.file.name); n++; }
+    try {
+      await apply[it.kind](await it.file.arrayBuffer(), it.file.name); n++;
+      if (it.kind === 'akt' && window.__APP_ACTS_SEPARATE) window.__keepOnlyAkt(it.file.name);
+    }
     catch (e) { console.warn('act apply', it.path, e); }
     seen[it.path] = sig;
   }
@@ -6056,6 +6062,15 @@ async function applyActsFromFolder(root, onStatus) {
   }
   return n;
 }
+
+// В приложении акт приёма мойки — один файл (выбранный в «Настройках» или найденный в папке актов):
+// остальные ранее прочитанные акты убираем, чтобы данные не смешивались.
+window.__keepOnlyAkt = (name) => {
+  if (!AKT_SOURCES.some((s) => s.name === name)) return;
+  AKT_SOURCES = AKT_SOURCES.filter((s) => s.name === name);
+  rebuildFromAktSources();
+  try { if (typeof renderAll === 'function') renderAll(); } catch (e) {}
+};
 
 // ============================================================
 // ДЛЯ ВКЛАДКИ «МОЙКА И МБ»: фото/видео и баллы мойки по корпусу.

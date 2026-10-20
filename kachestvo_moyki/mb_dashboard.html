@@ -2314,7 +2314,7 @@ async function aktPoll(){
     if (k !== AKT_SEEN.v){ AKT_SEEN.v = k; await processAktFile(f); }
   } catch (e) {}
 }
-window.__mbAttachDir = (h, svodNames) => { DIR.handle = h; DIR.seen = {}; DIR.svodNames = svodNames || []; dirShowButtons(true); dirCheck(true); };
+window.__mbAttachDir = (h, svodNames) => { DIR.handle = h || null; DIR.seen = {}; DIR.svodNames = svodNames || []; dirShowButtons(!!h); if (h) dirCheck(true); };
 (async function initDirLink(){
   const box = document.getElementById('dirBox');
   if (typeof window.showDirectoryPicker !== 'function'){

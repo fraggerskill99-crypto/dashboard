@@ -159,8 +159,28 @@ function inside(root, rel) {
   return abs === root || abs.startsWith(root + path.sep) ? abs : null;
 }
 // путь внутри «Данных»: первая папка может быть подключённой папкой компьютера
+// ---------- файлы, выбранные в «Настройках» (важнее автопоиска) ----------
+const SRC_KINDS = { akt: 'Акт приёма мойки (выращивание)', incub: 'Акт Инкубатория', zpp: 'Акт ЗПП', schedule: 'График ПР/Р', svod: 'Свод МБ (NOK, Мойка и МБ)' };
+const sourcesFile = () => path.join(app.getPath('userData'), 'sources.json');
+function sourcesConfig() {
+  let c = {};
+  try { c = JSON.parse(fs.readFileSync(sourcesFile(), 'utf8')); } catch (e) { /* ещё нет */ }
+  if (!c.files || typeof c.files !== 'object') c.files = {};
+  return c;
+}
+function saveSources(c) { try { fs.writeFileSync(sourcesFile(), JSON.stringify(c, null, 2)); } catch (e) { /* не критично */ } }
+function fileInfo(abs) {
+  try { const st = fs.statSync(abs); return st.isFile() ? { path: abs, name: path.basename(abs), mtime: Math.round(st.mtimeMs), size: st.size } : null; } catch (e) { return null; }
+}
+// выбранный файл вида kind — для вкладок он лежит по адресу «__src/<kind>/<имя файла>»
+function srcFile(kind) { const p = sourcesConfig().files[kind]; return p ? fileInfo(p) : null; }
+
 function dataPath(rel) {
   const segs = rel.split('/').filter(Boolean);
+  if (segs[0] === '__src' && SRC_KINDS[segs[1]]) {
+    const f = srcFile(segs[1]);
+    return f && segs[2] === f.name && segs.length === 3 ? f.path : null;
+  }
   const m = segs.length && mounts().find((x) => x.name === segs[0]);
   if (m) return inside(path.resolve(m.path), segs.slice(1).join('/'));
   return inside(dataDir(), segs.join('/'));
@@ -183,6 +203,8 @@ function xlsxIn(abs, rel) {
 }
 // Свод для NOK-дашборда — как в веб-дашборде: самый свежий .xlsx в самой папке Свода (подпапки — архив, не берём)
 function latestSvod() {
+  const pick = srcFile('svod');
+  if (pick) return { name: pick.name, path: '__src/svod/' + pick.name, mtime: pick.mtime, size: pick.size };
   const found = [];
   mounts().filter((m) => roleOf(m) === 'svod').forEach((m) => found.push(...xlsxIn(m.path, m.name)));
   return found.sort((x, y) => y.mtime - x.mtime)[0] || null;
@@ -201,6 +223,7 @@ async function handleApp(req) {
   const p = decodeURIComponent(u.pathname);
   try {
     if (p === '/data-roles') return json(rolesInfo());
+    if (p.startsWith('/cfg/')) return json(await handleCfg(p.slice(5), u.searchParams));
     if (p === '/data-info') {
       fs.mkdirSync(dataDir(), { recursive: true });
       return json({ dir: dataDir(), latest: latestSvod() });
@@ -244,6 +267,92 @@ function dataChanged() { shellJs('window.APP && APP.dataChanged()'); }
 
 // новые файлы, положенные в «Данные» руками, — тоже подхватываются (через 4 с после последнего изменения)
 let watchTimer = null;
+
+// ---------- «⚙ Настройки» внизу окна: что откуда брать + «Обновить сейчас» ----------
+function autoActs() {
+  const out = {};
+  mounts().filter((m) => roleOf(m) === 'acts').forEach((m) => {
+    const top = xlsxIn(m.path, m.name);
+    [['akt', 'акт приёма мойки (выращивание)'], ['incub', 'акт Инкубатория'], ['zpp', 'акт ЗПП'], ['schedule', 'график ПР/Р']].forEach(([k, label]) => {
+      const f = top.filter((x) => actKind(x.name) === label).sort((a, b) => b.mtime - a.mtime)[0];
+      if (f && !out[k]) out[k] = f;
+    });
+  });
+  return out;
+}
+function sourcesState() {
+  const sc = sourcesConfig(), auto = autoActs();
+  const files = {};
+  Object.keys(SRC_KINDS).forEach((k) => {
+    const chosen = sc.files[k] ? fileInfo(sc.files[k]) : null;
+    const a = k === 'svod' ? (() => { const f = sc.files.svod ? null : latestSvod(); return f; })() : auto[k] || null;
+    files[k] = { title: SRC_KINDS[k], chosen, chosenMissing: !!sc.files[k] && !chosen, chosenPath: sc.files[k] || null, auto: a ? { name: a.name, where: a.path.split('/')[0], mtime: a.mtime } : null };
+  });
+  return {
+    files,
+    folders: foldersConfig().mounts.map((m) => ({ name: m.name, path: m.path, role: roleOf(m), roleTitle: ROLE_TITLE[roleOf(m)], ok: fs.existsSync(m.path) })),
+    sharepoint: spConfig().links.map((l) => ({ name: spName(l), link: l.link, lastSync: l.lastSync || null })),
+    lastRefresh,
+  };
+}
+let lastRefresh = null;
+async function handleCfg(cmd, q) {
+  const kind = q.get('kind');
+  if (cmd === 'state') return sourcesState();
+  if (cmd === 'pick-file' && SRC_KINDS[kind]) {
+    const r = await dialog.showOpenDialog(win, { title: SRC_KINDS[kind], properties: ['openFile'], defaultPath: oneDriveBases()[0],
+      filters: [{ name: 'Excel', extensions: kind === 'svod' ? ['xlsx', 'csv'] : ['xlsx', 'xlsm'] }] });
+    if (!r.canceled && r.filePaths[0]) {
+      const c = sourcesConfig(); c.files[kind] = r.filePaths[0]; saveSources(c);
+      watchSources(); shellJs('window.APP && APP.dataChanged(true)');
+    }
+    return sourcesState();
+  }
+  if (cmd === 'clear-file' && SRC_KINDS[kind]) {
+    const c = sourcesConfig(); delete c.files[kind]; saveSources(c);
+    shellJs('window.APP && APP.dataChanged(true)');   // снова искать самому — перечитать всё
+    return sourcesState();
+  }
+  if (cmd === 'add-folder') {
+    const role = ['acts', 'media', 'svod'].includes(q.get('role')) ? q.get('role') : 'media';
+    const r = await dialog.showOpenDialog(win, { title: 'Папка: ' + ROLE_TITLE[role], properties: ['openDirectory'], defaultPath: oneDriveBases()[0] });
+    if (!r.canceled && r.filePaths[0]) {
+      const c = foldersConfig(), abs = r.filePaths[0];
+      let name = path.basename(abs) || 'Папка';
+      while (c.mounts.some((m) => m.name === name) || name === 'SharePoint' || name === '__src') name += ' 2';
+      if (role === 'svod') { const sc = sourcesConfig(); delete sc.files.svod; saveSources(sc); }   // папка Свода вместо файла
+      if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name, path: abs, role });
+      saveFolders(c); watchData(); dataChanged();
+    }
+    return sourcesState();
+  }
+  if (cmd === 'remove-folder') {
+    const c = foldersConfig();
+    c.mounts = c.mounts.filter((m) => m.name !== q.get('name'));
+    saveFolders(c); watchData(); dataChanged();
+    return sourcesState();
+  }
+  if (cmd === 'sharepoint') { syncSharePoint({ interactive: true, askLink: true }); return sourcesState(); }
+  if (cmd === 'refresh') {
+    // «Обновить сейчас»: докачать SharePoint, затем перечитать всё во вкладках (даже если файлы не менялись)
+    if (spConfig().links.length) await syncSharePoint({ interactive: true });
+    lastRefresh = new Date().toISOString();
+    await shellJs('window.APP && APP.dataChanged(true)');
+    return sourcesState();
+  }
+  return { error: 'неизвестная команда' };
+}
+// выбранные файлы тоже подхватываются сами, когда их пересохранили
+const srcWatch = {};
+function watchSources() {
+  const want = Object.values(sourcesConfig().files).filter(Boolean);
+  Object.keys(srcWatch).forEach((f) => { if (!want.includes(f)) { fs.unwatchFile(f); delete srcWatch[f]; } });
+  want.forEach((f) => {
+    if (srcWatch[f]) return;
+    srcWatch[f] = true;
+    fs.watchFile(f, { interval: 5000 }, (cur, prev) => { if (cur.mtimeMs !== prev.mtimeMs || cur.size !== prev.size) { clearTimeout(watchTimer); watchTimer = setTimeout(dataChanged, 3000); } });
+  });
+}
 const watchers = {};
 function watchData() {
   fs.mkdirSync(dataDir(), { recursive: true });
@@ -527,6 +636,7 @@ function start() {
   Menu.setApplicationMenu(buildMenu());
   createWindow();
   watchData();
+  watchSources();
 }
 
 function createWindow() {
