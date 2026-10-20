@@ -378,7 +378,7 @@ footer.foot img { height:36px; width:auto; display:block; }
           <button class="upload-btn" id="incubMediaUnpinBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px;background:#fff;color:var(--red);border:1px solid var(--red)">Отвязать</button>
           <span class="upload-status" id="incubMediaStatus" style="text-align:left;max-width:none">Папка с фото/видео Инкубатория не привязана.</span>
         </div>
-        <p class="note" style="margin:-4px 0 10px">В папке &mdash; подпапки по дням и залам, например <b>2026-07-15 / Зал вывода / фото.jpg</b> (можно и наоборот: <b>Зал вывода / 15.07.2026 / &hellip;</b>). Дату можно не выносить в папку, если она есть в имени файла (IMG_20260715_&hellip;). Зал &mdash; по словам «вывод», «перевод», «сортир» в пути, остальное попадёт в «Инкубатор: прочее».</p>
+        <p class="note" style="margin:-4px 0 10px">В папке &mdash; подпапки по дням и залам, например <b>2026-07-15 / Зал вывода / фото.jpg</b> (можно и наоборот: <b>Зал вывода / 15.07.2026 / &hellip;</b>). Дату можно не выносить в папку, если она есть в имени файла (IMG_20260715_&hellip;). Зал &mdash; по словам «вывод», «перевод», «сортир» в пути, остальное попадёт в «Инкубатор: прочее». Презентации <b>.pptx</b> читаются как у выращивания: дата &mdash; из имени файла или заголовка слайда, зал &mdash; из подписи к фото («зал вывода, полки шкафа»), иначе из имени файла/папки.</p>
         <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
           <div style="width:260px;height:260px;position:relative;flex-shrink:0"><canvas id="chartIncDayPie"></canvas></div>
           <div style="flex:1;min-width:280px">
@@ -5204,7 +5204,11 @@ function relsMap(xml, base) {
   return map;
 }
 const IMG_EXT_RE = /\.(png|jpe?g|gif|bmp|webp|tiff?)$/i;
-async function parsePresentation(file, path) {
+// opt.find — чем искать место в подписи (по умолчанию корпус), opt.fallback — место, если не нашлось,
+// opt.noCat — не угадывать контрольную точку Ф-БиС-07 (у Инкубатория свои элементы)
+async function parsePresentation(file, path, opt) {
+  opt = opt || {};
+  const findPlace = opt.find || findCorpus;
   const yearHint = new Date(file.lastModified || Date.now()).getFullYear();
   const zip = await JSZip.loadAsync(file);
   const read = (p) => (zip.file(p) ? zip.file(p).async('string') : Promise.resolve(null));
@@ -5238,7 +5242,7 @@ async function parsePresentation(file, path) {
     // каждой картинке — её подпись: текст с корпусом, лежащий на картинке или ближе всего под/над ней
     // подписи — тексты с корпусом или с номером точки «П-N» (подпись «П-1 .Остаток органики…» без корпуса
     // тоже подпись своего фото: раньше её пропускали, и фото уходило к соседней чужой подписи)
-    const capBoxes = tboxes.filter((q) => q.b && (findCorpus(q.t) || CP_P_RE.test(q.t)) && !/качество\s+мойки/i.test(q.t));
+    const capBoxes = tboxes.filter((q) => q.b && (findPlace(q.t) || CP_P_RE.test(q.t)) && !/качество\s+мойки/i.test(q.t));
     items.forEach((it) => {
       if (!it.b || !capBoxes.length) return;
       let best = null, bestD = Infinity;
@@ -5254,14 +5258,14 @@ async function parsePresentation(file, path) {
     // подпись без корпуса — корпус берём у соседней подписи с корпусом в том же ряду
     // (фото на слайде идут сеткой: соседи по ряду — тот же корпус, ряд выше — уже другой)
     items.forEach((it) => {
-      if (!it.cap || findCorpus(it.cap) || !it.capB) return;
+      if (!it.cap || findPlace(it.cap) || !it.capB) return;
       const o = it.capB;
       let best = null, bestD = Infinity;
-      tboxes.filter((q) => q.b && findCorpus(q.t)).forEach((q) => {
+      tboxes.filter((q) => q.b && findPlace(q.t)).forEach((q) => {
         const d = Math.abs(q.b.x + q.b.w / 2 - (o.x + o.w / 2)) + 3 * Math.abs(q.b.y + q.b.h / 2 - (o.y + o.h / 2));
         if (d < bestD) { bestD = d; best = q; }
       });
-      if (best) it.capCorpus = findCorpus(best.t);
+      if (best) it.capCorpus = findPlace(best.t);
     });
     slides.push({ texts, items });
   }
@@ -5277,24 +5281,24 @@ async function parsePresentation(file, path) {
   slides.forEach((sl) => {
     const all = sl.texts.join(' · ');
     // «06.10 Качество мойки» без года — только в заголовке (первый текст без корпуса), чтобы «1.5 м» в подписи не стало датой
-    const d = dateFromText(all, yearHint) || (sl.texts[0] && !findCorpus(sl.texts[0]) ? dateFromText(sl.texts[0], yearHint, true) : null);
+    const d = dateFromText(all, yearHint) || (sl.texts[0] && !findPlace(sl.texts[0]) ? dateFromText(sl.texts[0], yearHint, true) : null);
     if (d) curDate = d;
     // если на слайде у фото есть свои подписи — картинки без подписи (логотип, уголок) не берём
     const anyCap = sl.items.some((it) => it.cap);
     const items = sl.items.filter((it) => (it.video || !isDecor(it)) && (!anyCap || it.cap || it.video));
     if (!items.length) return;
-    const slideCorpus = findCorpus(all);
+    const slideCorpus = findPlace(all);
     items.forEach((it) => {
-      const corpus = (it.cap && findCorpus(it.cap)) || it.capCorpus || slideCorpus;
+      const corpus = (it.cap && findPlace(it.cap)) || it.capCorpus || slideCorpus || opt.fallback;
       if (!curDate) { skipped++; noDate++; return; }
       if (!corpus) { skipped++; noCorpus++; return; }
       corpSeen[curDate] = corpSeen[curDate] || {}; corpSeen[curDate][corpus] = 1;
-      const caption = (it.cap || sl.texts.find((t) => findCorpus(t) === corpus) || all).slice(0, 300);
+      const caption = (it.cap || sl.texts.find((t) => findPlace(t) === corpus) || all).slice(0, 300);
       const files = [];
       if (it.video) files.push({ kind: 'video', filename: it.video.split('/').pop(), pptx: path, zip: it.video });
       const ph = it.photo || it.poster;
       if (ph) files.push({ kind: 'photo', filename: ph.split('/').pop(), pptx: path, zip: ph, poster: !!it.video });
-      out.push({ key: curDate + '|' + corpus, entry: { caption, cat: cpOfCaption(caption), files } });
+      out.push({ key: curDate + '|' + corpus, entry: { caption, cat: opt.noCat ? null : cpOfCaption(caption), files } });
     });
   });
   const days = Object.keys(corpSeen).sort().map((d) => fmtDate(d) + ': ' + Object.keys(corpSeen[d]).join(', '));
@@ -5343,12 +5347,14 @@ async function scanPresentations(root, onProgress) {
 }
 // открытые презентации держим в памяти (последние две) — чтобы не перечитывать на каждое фото
 const _ZIP_CACHE = [];
-async function pptxZip(path) {
-  const hit = _ZIP_CACHE.find((z) => z.path === path);
+var INCUB_PPTX_FILES = {};   // путь в папке Инкубатория -> FileSystemFileHandle
+async function pptxZip(path, incub) {
+  const ck = (incub ? 'i:' : '') + path;
+  const hit = _ZIP_CACHE.find((z) => z.path === ck);
   if (hit) return hit.zip;
-  const h = PPTX_FILES[path]; if (!h) throw new Error('нет файла ' + path);
+  const h = (incub ? INCUB_PPTX_FILES : PPTX_FILES)[path]; if (!h) throw new Error('нет файла ' + path);
   const zip = await JSZip.loadAsync(await h.getFile());
-  _ZIP_CACHE.unshift({ path, zip }); if (_ZIP_CACHE.length > 2) _ZIP_CACHE.pop();
+  _ZIP_CACHE.unshift({ path: ck, zip }); if (_ZIP_CACHE.length > 2) _ZIP_CACHE.pop();
   return zip;
 }
 const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp', webp: 'image/webp', tif: 'image/tiff', tiff: 'image/tiff',
@@ -5356,7 +5362,7 @@ const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', g
 async function getMediaBlob(date, corpus, f) {
   if (f.handle) return f.handle.getFile();
   if (f.pptx) {
-    const zip = await pptxZip(f.pptx);
+    const zip = await pptxZip(f.pptx, isIncubKey(corpus));
     const ab = await zip.file(f.zip).async('arraybuffer');
     return new Blob([ab], { type: MIME_BY_EXT[(f.zip.split('.').pop() || '').toLowerCase()] || '' });
   }
@@ -5752,7 +5758,7 @@ function incubMediaDate(s) {
   }
   return null;
 }
-async function scanIncubMediaFolder(root) {
+async function scanIncubMediaFolder(root, onProgress) {
   const groups = {};   // одинаковое имя в одной папке (clip.mp4 + clip.jpg) — одна карточка
   let nFiles = 0, noDate = 0;
   async function walk(dir, segs) {
@@ -5778,7 +5784,74 @@ async function scanIncubMediaFolder(root) {
   const index = {};
   Object.values(groups).sort((a, b) => a.sort.localeCompare(b.sort, 'ru', { numeric: true }))
     .forEach((g) => { (index[g.key] = index[g.key] || []).push(g.entry); });
-  return { index, nFiles, noDate, keys: Object.keys(index).length };
+  const pr = await scanIncubPresentations(root, onProgress);
+  Object.keys(pr.index).forEach((k) => { index[k] = pr.index[k].concat(index[k] || []); });
+  return { index, nFiles, noDate, keys: Object.keys(index).length, pptx: pr };
+}
+// Презентации Инкубатория — тот же разбор, что у выращивания, но место на слайде — зал
+// («зал вывода», «выводной зал», «сортировка»…); не нашёлся — зал из пути к файлу, иначе «прочее».
+const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v1';
+var INCUB_PPTX_REPORT = [];
+function findIncubHall(text) {
+  const h = INCUB_HALLS.find((x) => x.re.test(String(text || '')));
+  return h ? h.key : null;
+}
+async function scanIncubPresentations(root, onProgress) {
+  INCUB_PPTX_FILES = {}; INCUB_PPTX_REPORT = [];
+  const index = {};
+  let cache = {};
+  try { cache = JSON.parse(localStorage.getItem(INCUB_PPTX_CACHE_KEY) || '{}') || {}; } catch (e) {}
+  const newCache = {};
+  let list = [];
+  try { list = await collectPptx(root, '', 0, []); } catch (e) { console.warn('incub pptx list', e); }
+  list.sort((a, b) => a.path.localeCompare(b.path, 'ru'));
+  let items = 0;
+  for (let i = 0; i < list.length; i++) {
+    const { path, handle } = list[i];
+    if (list[i].old) { INCUB_PPTX_REPORT.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
+    INCUB_PPTX_FILES[path] = handle;
+    try {
+      const f = await handle.getFile();
+      const sig = f.size + ':' + f.lastModified;
+      let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
+      if (!res) {
+        onProgress && onProgress(i + 1, list.length, path);
+        res = Object.assign({ sig }, await parsePresentation(f, path,
+          { find: findIncubHall, fallback: findIncubHall(path) || INCUB_OTHER.key, noCat: true }));
+      }
+      newCache[path] = res;
+      res.entries.forEach(({ key, entry }) => { (index[key] = index[key] || []).push(entry); items++; });
+      INCUB_PPTX_REPORT.push({ path, n: res.entries.length, noDate: res.noDate || 0, days: res.days || [] });
+    } catch (e) {
+      console.warn('incub pptx', path, e);
+      INCUB_PPTX_REPORT.push({ path, err: /NotFound|NotReadable/i.test(e.name || '') ? 'файл не открылся (если он в OneDrive — «Всегда хранить на этом устройстве»)' : 'не удалось прочитать: ' + e.message });
+    }
+  }
+  try { localStorage.setItem(INCUB_PPTX_CACHE_KEY, JSON.stringify(newCache)); } catch (e) {}
+  renderIncubPptxReport();
+  return { index, files: list.length, items };
+}
+function renderIncubPptxReport() {
+  let el = document.getElementById('incubPptxReport');
+  const bar = document.getElementById('incubMediaStatus');
+  if (!bar) return;
+  if (!el) { el = document.createElement('details'); el.id = 'incubPptxReport'; el.style.cssText = 'margin:0 0 10px;font-size:12.5px;color:#334155'; bar.parentNode.after(el); }
+  if (!INCUB_PPTX_REPORT.length) { el.innerHTML = '<summary style="cursor:pointer">Презентаций .pptx в папке Инкубатория нет</summary>'; return; }
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const bad = INCUB_PPTX_REPORT.filter((r) => r.err || !r.n || r.noDate).length;
+  el.innerHTML = `<summary style="cursor:pointer;font-weight:600">Презентации Инкубатория: ${INCUB_PPTX_REPORT.length} файлов${bad ? ` · <span style="color:var(--red)">с замечаниями: ${bad}</span>` : ' · все прочитаны'}</summary>
+    <div style="max-height:260px;overflow:auto;margin-top:6px;border:1px solid var(--border);border-radius:8px;background:#fff">` +
+    INCUB_PPTX_REPORT.map((r) => {
+      let st;
+      if (r.err) st = `<span style="color:var(--red)">${esc(r.err)}</span>`;
+      else {
+        const parts = [`фото/видео: <b>${r.n}</b>`];
+        if (r.noDate) parts.push(`<span style="color:var(--red)">без даты: ${r.noDate}</span> — дата не найдена ни в имени файла, ни в заголовке слайда`);
+        if (!r.n && !r.noDate) parts.push('<span style="color:var(--amber)">на слайдах не найдено фото/видео</span>');
+        st = parts.join(' · ') + (r.days && r.days.length ? `<div style="color:var(--gray)">${esc(r.days.join(' | ').replace(/Инкубатор: /g, ''))}</div>` : '');
+      }
+      return `<div style="padding:6px 10px;border-bottom:1px solid var(--border)"><b>${esc(r.path)}</b><br>${st}</div>`;
+    }).join('') + '</div>';
 }
 function setIncubMediaStatus(t, cls) {
   const el = document.getElementById('incubMediaStatus');
@@ -5806,12 +5879,14 @@ async function useIncubMediaHandle(handle, ask) {
     btn.innerHTML = '&#128279; Обновить папку (' + handle.name + ')';
     unpinBtn.style.display = 'inline-flex';
     setIncubMediaStatus('Сканирую папку «' + handle.name + '»…');
-    const r = await scanIncubMediaFolder(handle);
+    const r = await scanIncubMediaFolder(handle, (i, n, name) => setIncubMediaStatus('Читаю презентации: ' + i + ' из ' + n + ' — ' + name));
     if (INCUB_MEDIA_DIR !== handle) return false;
     INCUB_MEDIA_INDEX = r.index;
     dropIncubThumbs();
-    setIncubMediaStatus('Папка «' + handle.name + '»: фото/видео ' + r.nFiles + ' по ' + r.keys + ' зало-дням'
-      + (r.noDate ? ' (без даты в пути и имени пропущено: ' + r.noDate + ')' : '') + '. Нажмите на плашку зала — фото откроется на весь экран.', r.nFiles ? 'ok' : 'err');
+    const total = r.nFiles + r.pptx.items;
+    setIncubMediaStatus('Папка «' + handle.name + '»: презентаций ' + r.pptx.files + ' (фото/видео в них ' + r.pptx.items + '), отдельных фото/видео ' + r.nFiles
+      + ' — всего по ' + r.keys + ' зало-дням'
+      + (r.noDate ? ' (файлов без даты в пути и имени пропущено: ' + r.noDate + ')' : '') + '. Нажмите на плашку зала — фото откроется на весь экран.', total ? 'ok' : 'err');
     refreshCatDayThumbs();
     return true;
   } catch (err) {
@@ -5850,6 +5925,8 @@ async function setupIncubMediaPinning() {
     btn.innerHTML = '&#128279; Привязать папку с фото/видео Инкубатория';
     unpinBtn.style.display = 'none';
     setIncubMediaStatus('Папка с фото/видео Инкубатория не привязана.');
+    INCUB_PPTX_FILES = {};
+    const rep = document.getElementById('incubPptxReport'); if (rep) rep.remove();
     refreshCatDayThumbs();
   });
   document.addEventListener('click', (ev) => { if (ev.target.closest('[data-pin-incub-media]')) pinIncubMediaFolder(); });
