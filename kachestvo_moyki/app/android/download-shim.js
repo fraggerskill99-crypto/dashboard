@@ -2,7 +2,9 @@
 // (PNG, PowerPoint, Excel, отчёты) ничего не делают. Перехватываем их и отдаём
 // файл в окно «Поделиться» — оттуда «Сохранить», WhatsApp, Telegram, почта.
 (function () {
+  // во вкладках (iframe) Capacitor есть только у главной страницы
   var C = window.Capacitor;
+  try { if (!C && window.parent !== window) C = window.parent.Capacitor; } catch (e) { /* другой адрес */ }
   if (!C || !C.isNativePlatform || !C.isNativePlatform()) return;
   var P = C.Plugins || {};
   if (!P.Filesystem || !P.Share) return;

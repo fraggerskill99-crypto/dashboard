@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Качество мойки — УКПФ</title>
+<style>
+  :root { --navy: #1F3864; --blue: #2E5395; --bar: #ffffff; --line: #e2e8f0; --muted: #64748b; --bg: #f4f6fa; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  nav { flex: 0 0 auto; display: flex; gap: 4px; align-items: flex-end; padding: 6px 10px 0; background: var(--bar); border-bottom: 1px solid var(--line); overflow-x: auto; }
+  nav button { border: 1px solid transparent; border-bottom: none; background: none; padding: 8px 16px 9px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; border-radius: 9px 9px 0 0; white-space: nowrap; }
+  nav button:hover { color: var(--navy); background: #f1f5f9; }
+  nav button.on { color: var(--navy); background: var(--bg); border-color: var(--line); position: relative; top: 1px; }
+  nav .sp { flex: 1; }
+  nav .hint { font-size: 11.5px; color: var(--muted); padding: 0 6px 9px; white-space: nowrap; }
+  main { flex: 1; min-height: 0; position: relative; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--bg); }
+  iframe[hidden] { display: none; }
+  #toast { position: fixed; right: 18px; bottom: 18px; z-index: 10; max-width: 460px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #fff; background: var(--navy); box-shadow: 0 6px 24px rgba(0,0,0,.18); cursor: pointer; }
+  #toast[hidden] { display: none; }
+  @media (max-width: 600px) { nav button { padding: 8px 10px 9px; font-size: 12.5px; } nav .hint { display: none; } }
+</style>
+</head>
+<body>
+<nav id="tabs">
+  <button data-tab="moika" class="on" title="Ctrl+1">🧽 Качество мойки</button>
+  <button data-tab="nok" title="Ctrl+2">🧫 NOK-дашборд</button>
+  <button data-tab="mb" title="Ctrl+3">🔬 Мойка и МБ</button>
+  <span class="sp"></span>
+  <span class="hint" id="dataHint"></span>
+</nav>
+<main>
+  <iframe id="f-moika" src="moika.html" title="Качество мойки"></iframe>
+  <iframe id="f-nok" data-src="nok.html" title="NOK-дашборд" hidden></iframe>
+  <iframe id="f-mb" data-src="mb.html" title="Мойка и МБ" hidden></iframe>
+</main>
+<div id="toast" hidden></div>
+<script>
+// Оболочка: три дашборда во вкладках. Все на одном адресе, поэтому вкладка «Мойка и МБ»
+// берёт фото/видео и баллы мойки из вкладки «Качество мойки» (window.MOIKA_API).
+(function () {
+  const TAB_KEY = 'appActiveTab';
+  const isApp = location.protocol === 'app:';
+  const frame = (t) => document.getElementById('f-' + t);
+  let current = 'moika';
+
+  function show(t) {
+    if (!frame(t)) t = 'moika';
+    current = t;
+    document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+    ['moika', 'nok', 'mb'].forEach((k) => { frame(k).hidden = k !== t; });
+    const f = frame(t);
+    if (!f.getAttribute('src') && f.dataset.src) f.setAttribute('src', f.dataset.src);   // загружаем вкладку при первом открытии
+    else try { f.contentWindow.postMessage('app:shown', '*'); } catch (e) {}
+    try { localStorage.setItem(TAB_KEY, t); } catch (e) {}
+  }
+  document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) show(b.dataset.tab); });
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && /^[1-3]$/.test(e.key)) { e.preventDefault(); show(['moika', 'nok', 'mb'][+e.key - 1]); }
+  });
+
+  const toastEl = document.getElementById('toast');
+  let toastTimer = null;
+  function toast(text, kind) {
+    toastEl.textContent = text;
+    toastEl.style.background = kind === 'err' ? '#b91c1c' : kind === 'ok' ? '#15803d' : '#1F3864';
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    if (kind) toastTimer = setTimeout(() => { toastEl.hidden = true; }, kind === 'err' ? 20000 : 9000);
+  }
+  toastEl.addEventListener('click', () => { toastEl.hidden = true; });
+
+  // Папка «Данные» приложения (туда скачивается SharePoint) → во все вкладки
+  const loaded = (f) => new Promise((res) => {
+    if (f.getAttribute('src') && f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentWindow.APP_FS) return res(true);
+    if (!f.getAttribute('src')) return res(false);
+    f.addEventListener('load', () => setTimeout(() => res(true), 1500), { once: true });
+  });
+  let attachBusy = null;
+  async function attachData() {
+    if (!isApp) return;
+    if (attachBusy) return attachBusy;
+    attachBusy = (async () => {
+      const m = frame('moika');
+      if (!(await loaded(m))) return;
+      const w = m.contentWindow;
+      if (!w.APP_FS || !(await w.APP_FS.hasData())) { document.getElementById('dataHint').textContent = ''; return; }
+      document.getElementById('dataHint').textContent = '📁 Данные: Документы\\Качество мойки\\Данные';
+      try { if (w.__useMediaHandle) await w.__useMediaHandle(w.APP_FS.root(), false); } catch (e) { console.warn('moika media', e); }
+      try { if (w.useIncubMediaHandle) await w.useIncubMediaHandle(w.APP_FS.root(), false); } catch (e) { console.warn('moika incub', e); }
+      const mb = frame('mb');
+      if (mb.getAttribute('src') && await loaded(mb)) {
+        try { const x = mb.contentWindow; if (x.__mbAttachDir) x.__mbAttachDir(x.APP_FS.root()); x.postMessage('app:media', '*'); } catch (e) { console.warn('mb', e); }
+      }
+      const nok = frame('nok');
+      if (nok.getAttribute('src')) try { nok.contentWindow.__appDataChanged && nok.contentWindow.__appDataChanged(); } catch (e) {}
+    })().finally(() => { attachBusy = null; });
+    return attachBusy;
+  }
+  // вкладка «Мойка и МБ» открылась впервые — тоже даём ей папку
+  frame('mb').addEventListener('load', () => { if (isApp) setTimeout(attachData, 1500); });
+
+  window.APP = { show, toast, dataChanged: attachData, active: () => current, frame };
+
+  let start = 'moika';
+  try { start = localStorage.getItem(TAB_KEY) || 'moika'; } catch (e) {}
+  show(start);
+  if (isApp) frame('moika').addEventListener('load', () => setTimeout(attachData, 2500), { once: true });
+})();
+</script>
+</body>
+</html>

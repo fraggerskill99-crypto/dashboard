@@ -4777,16 +4777,25 @@ const PHOTO_EXT_RE = /\.(jpe?g|png|webp|gif)$/i;
 
 async function scanMediaFolder(dirHandle) {
   const index = {};
+  // папки «ГГГГ-ММ-ДД/Корпус» — в корне или глубже (папка SharePoint обычно вложенная)
+  async function findDateDirs(dir, depth, out) {
+    for await (const [name, h] of dir.entries()) {
+      if (h.kind !== 'directory' || name.startsWith('.')) continue;
+      if (DATE_DIR_RE.test(name)) out.push([name, h]);
+      else if (depth < 4) await findDateDirs(h, depth + 1, out);
+    }
+    return out;
+  }
   try {
-    for await (const [dateName, dateHandle] of dirHandle.entries()) {
-      if (dateHandle.kind !== 'directory' || !DATE_DIR_RE.test(dateName)) continue;
+    for (const [dateName, dateHandle] of await findDateDirs(dirHandle, 0, [])) {
       for await (const [corpusName, corpusHandle] of dateHandle.entries()) {
         if (corpusHandle.kind !== 'directory') continue;
         const files = [];
+        // дескриптор файла — чтобы открыть его, где бы ни лежала папка с датой
         for await (const [fileName, fileHandle] of corpusHandle.entries()) {
           if (fileHandle.kind !== 'file') continue;
-          if (VIDEO_EXT_RE.test(fileName)) files.push({ kind: 'video', filename: fileName });
-          else if (PHOTO_EXT_RE.test(fileName)) files.push({ kind: 'photo', filename: fileName });
+          if (VIDEO_EXT_RE.test(fileName)) files.push({ kind: 'video', filename: fileName, handle: fileHandle });
+          else if (PHOTO_EXT_RE.test(fileName)) files.push({ kind: 'photo', filename: fileName, handle: fileHandle });
         }
         if (!files.length) continue;
         // pair files that share a base name (e.g. clip.mp4 + clip.jpg) into one card
@@ -4800,7 +4809,8 @@ async function scanMediaFolder(dirHandle) {
         });
         const entries = Object.values(byBase).map((fl) => ({ caption: '', files: fl }));
         loose.forEach((f) => entries.push({ caption: '', files: [f] }));
-        index[dateName + '|' + corpusName] = entries;
+        const key = dateName + '|' + corpusName;
+        index[key] = (index[key] || []).concat(entries);
       }
     }
   } catch (err) {
@@ -4846,6 +4856,7 @@ async function setupMediaPinning() {
       setPinnedUI(handle.name);
       statusEl.textContent = 'Папка привязана, сканирую содержимое\u2026';
       DYNAMIC_MEDIA_INDEX = await scanMediaFolder(handle);
+      await applyActsFromFolder(handle, (t) => { statusEl.textContent = t; });
       setCpStatus('Читаю презентации в папке «' + handle.name + '»…');
       const pr = await scanPresentations(handle, (i, n, name) => { const t = 'Читаю презентации: ' + i + ' из ' + n + ' \u2014 ' + name; statusEl.textContent = t; setCpStatus(t); });
       const nFound = new Set(Object.keys(DYNAMIC_MEDIA_INDEX).concat(Object.keys(PPTX_INDEX))).size;
@@ -5815,6 +5826,8 @@ async function scanIncubMediaFolder(root, onProgress) {
       const date = segs.map(incubMediaDate).filter(Boolean).pop() || incubMediaDate(name);
       if (!date) { noDate++; continue; }
       const hallSeg = segs.concat(name).find((x) => INCUB_HALLS.some((hh) => hh.re.test(x)));
+      // без зала в пути — только если это папка Инкубатория (в общей папке «Данные» лежат и фото корпусов)
+      if (!hallSeg && !/инкуб/i.test([root.name].concat(segs, name).join('/'))) continue;
       const base = name.replace(/\.[^.]+$/, '');
       const capParts = segs.filter((x) => x !== hallSeg && !incubMediaDate(x));
       if (/[а-яё]{3,}/i.test(base) && base !== hallSeg) capParts.push(base);
@@ -5835,7 +5848,7 @@ async function scanIncubMediaFolder(root, onProgress) {
 }
 // Презентации Инкубатория — тот же разбор, что у выращивания, но место на слайде — зал
 // («зал вывода», «выводной зал», «сортировка»…); не нашёлся — зал из пути к файлу, иначе «прочее».
-const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v1';
+const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v2';   // v2: без зала — только из папки Инкубатория
 var INCUB_PPTX_REPORT = [];
 function findIncubHall(text) {
   const h = INCUB_HALLS.find((x) => x.re.test(String(text || '')));
@@ -5861,8 +5874,9 @@ async function scanIncubPresentations(root, onProgress) {
       let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
       if (!res) {
         onProgress && onProgress(i + 1, list.length, path);
-        res = Object.assign({ sig }, await parsePresentation(f, path,
-          { find: findIncubHall, fallback: findIncubHall(path) || INCUB_OTHER.key, noCat: true }));
+        // слайд без зала — в «прочее», только если презентация из папки Инкубатория
+        const fallback = findIncubHall(path) || (/инкуб/i.test(root.name + '/' + path) ? INCUB_OTHER.key : undefined);
+        res = Object.assign({ sig }, await parsePresentation(f, path, { find: findIncubHall, fallback, noCat: true }));
       }
       newCache[path] = res;
       res.entries.forEach(({ key, entry }) => { entry.files.forEach((f) => { f.incubDir = true; }); (index[key] = index[key] || []).push(entry); items++; });
@@ -5980,6 +5994,96 @@ async function setupIncubMediaPinning() {
     if (saved) await useIncubMediaHandle(saved, false);
   } catch (e) { console.warn('incubMedia', e); }
 }
+
+// ============================================================
+// АКТЫ ИЗ ПРИВЯЗАННОЙ ПАПКИ (в т.ч. скачанной из SharePoint)
+// Excel-файлы в папке и подпапках разбираются по имени: «инкуб» — акт Инкубатория,
+// «зпп» — акт ЗПП, «график/ПР-Р» — график санразрыва, «акт/мойк/приём» — акт приёма мойки.
+// Свод/журнал МБ здесь пропускается — его читает вкладка «Мойка и МБ».
+// Файл перечитывается, только если он изменился (имя, размер, время).
+// ============================================================
+const FOLDER_ACTS_KEY = 'folderActsSeen:v1';
+function folderActKind(name) {
+  const n = name.toLowerCase().replace(/ё/g, 'е');
+  if (/свод|журнал|микроб|(^|[^а-я])мб([^а-я]|$)|nok/.test(n)) return null;
+  if (/инкуб/.test(n)) return 'incub';
+  if (/зпп/.test(n)) return 'zpp';
+  if (/график|пр[\s._-]*р|санразрыв/.test(n)) return 'schedule';
+  if (/акт|мойк|при[её]м/.test(n)) return 'akt';
+  return null;
+}
+async function collectFolderActs(dir, prefix, depth, out) {
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === 'directory') { if (depth < 6 && !name.startsWith('.')) await collectFolderActs(h, prefix + name + '/', depth + 1, out); continue; }
+    if (name.startsWith('~$') || !/\.(xlsx|xlsm)$/i.test(name)) continue;
+    const kind = folderActKind(name);
+    if (kind) out.push({ kind, path: prefix + name, handle: h });
+  }
+  return out;
+}
+async function applyActsFromFolder(root, onStatus) {
+  let seen = {};
+  try { seen = JSON.parse(localStorage.getItem(FOLDER_ACTS_KEY) || '{}') || {}; } catch (e) {}
+  let list = [];
+  try { list = await collectFolderActs(root, '', 0, []); } catch (e) { console.warn('acts list', e); return 0; }
+  const files = [];
+  for (const it of list) { try { it.file = await it.handle.getFile(); files.push(it); } catch (e) { console.warn('act', it.path, e); } }
+  const apply = { akt: applyAktBuffer, incub: applyIncubBuffer, zpp: applyZppBuffer, schedule: applyScheduleBuffer };
+  // приёмка мойки — все файлы (сливаются), остальное — только самый свежий файл
+  const pick = files.filter((f) => f.kind === 'akt').sort((a, b) => a.file.lastModified - b.file.lastModified);
+  ['incub', 'zpp', 'schedule'].forEach((k) => {
+    const fresh = files.filter((f) => f.kind === k).sort((a, b) => b.file.lastModified - a.file.lastModified)[0];
+    if (fresh) pick.push(fresh);
+  });
+  let n = 0;
+  for (const it of pick) {
+    const sig = it.file.size + ':' + it.file.lastModified;
+    if (seen[it.path] === sig) continue;
+    onStatus && onStatus('Читаю акт из папки: ' + it.path);
+    try { await apply[it.kind](await it.file.arrayBuffer(), it.file.name); seen[it.path] = sig; n++; }
+    catch (e) { console.warn('act apply', it.path, e); }
+  }
+  try { localStorage.setItem(FOLDER_ACTS_KEY, JSON.stringify(seen)); } catch (e) {}
+  if (n) {
+    try { if (typeof renderAll === 'function') renderAll(); } catch (e) {}
+    try { if (typeof renderKPIs === 'function') renderKPIs(); } catch (e) {}
+  }
+  return n;
+}
+
+// ============================================================
+// ДЛЯ ВКЛАДКИ «МОЙКА И МБ»: фото/видео и баллы мойки по корпусу.
+// Корпус сравнивается без дефисов и пробелов: «А-1» = «А1», «БП-13-7» = «БП13-7».
+// ============================================================
+window.MOIKA_API = {
+  norm: (c) => normCorpusCode(String(c || '')).replace(/-/g, ''),
+  ready: () => !!(MEDIA_DIR_HANDLE || INCUB_MEDIA_DIR),
+  mediaDays(corpus) {
+    const n = this.norm(corpus), out = {};
+    [MEDIA_MANIFEST, DYNAMIC_MEDIA_INDEX, (typeof PPTX_INDEX !== 'undefined' ? PPTX_INDEX : {})].forEach((ix) => {
+      Object.keys(ix || {}).forEach((k) => {
+        const i = k.indexOf('|'), date = k.slice(0, i), corp = k.slice(i + 1);
+        if (this.norm(corp) !== n || out[k]) return;
+        const es = mediaEntriesFor(k) || [];
+        if (es.length) out[k] = { date, corpus: corp, count: es.length };
+      });
+    });
+    return Object.values(out).sort((a, b) => (a.date < b.date ? -1 : 1));
+  },
+  async thumbs(date, corpus) { return (await loadThumbsFor(date, corpus)) || []; },
+  entries(date, corpus) { return (mediaEntriesFor(mediaKey(date, corpus)) || []).map((e) => ({ caption: e.caption || '', video: e.files.some((f) => f.kind === 'video') })); },
+  async media(date, corpus, idx) {
+    const e = (mediaEntriesFor(mediaKey(date, corpus)) || [])[idx];
+    if (!e) return null;
+    const f = e.files.find((x) => x.kind === 'video') || e.files.find((x) => x.kind === 'photo');
+    return { blob: await getMediaBlob(date, corpus, f), video: f.kind === 'video', caption: e.caption || '' };
+  },
+  washes(corpus) {
+    const n = this.norm(corpus);
+    return RECORDS_FULL.filter((r) => this.norm(r.corpus) === n && r.score != null)
+      .map((r) => ({ date: r.date, score: r.score, note: r.note || '' }));
+  },
+};
 
 setupAktMultiPinning();
 setupMediaPinning();

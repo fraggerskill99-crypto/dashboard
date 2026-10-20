@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Папка SharePoint</title>
+<style>
+  body { margin: 0; padding: 20px 22px; font: 14px -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #1e293b; background: #f4f6fa; }
+  h1 { font-size: 16px; color: #1F3864; margin: 0 0 6px; }
+  p { margin: 0 0 12px; color: #64748b; font-size: 12.5px; line-height: 1.5; }
+  textarea { width: 100%; box-sizing: border-box; height: 74px; font: 12.5px Consolas, monospace; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; resize: none; }
+  .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  button { border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ok { background: #1F3864; color: #fff; } .ok:hover { background: #2E5395; }
+  .no { background: #fff; color: #1F3864; border: 1px solid #cbd5e1; }
+  .err { color: #dc2626; font-size: 12px; min-height: 16px; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <h1>Папка с фото/видео и презентациями в SharePoint / Teams</h1>
+  <p>Вставьте ссылку на папку (в Teams/SharePoint: «Копировать ссылку»). При первом подключении откроется окно входа Microsoft — войдите рабочей учётной записью. Папка скачается в «Документы\Качество мойки\SharePoint» и будет обновляться сама.</p>
+  <textarea id="link" spellcheck="false"></textarea>
+  <div class="err" id="err"></div>
+  <div class="row"><button class="no" id="cancel">Отмена</button><button class="ok" id="ok">Подключить</button></div>
+<script>
+  // окно без доступа к Node — ответ передаём заголовком окна, его читает main.js
+  const ta = document.getElementById('link');
+  ta.value = decodeURIComponent(location.hash.slice(1));
+  ta.focus(); ta.select();
+  document.getElementById('cancel').onclick = () => { document.title = 'SP-CANCEL'; };
+  document.getElementById('ok').onclick = () => {
+    const v = ta.value.trim();
+    if (!/^https:\/\/[^\/]+\.sharepoint\.com\//i.test(v)) { document.getElementById('err').textContent = 'Нужна ссылка вида https://….sharepoint.com/…'; return; }
+    document.title = 'SP-LINK:' + v;
+  };
+  ta.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('ok').click(); } });
+</script>
+</body>
+</html>

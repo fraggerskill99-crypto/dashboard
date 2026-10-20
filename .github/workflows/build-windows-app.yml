@@ -1,4 +1,4 @@
-name: Приложение «Качество мойки» — Android и Windows
+name: Приложение «Качество мойки» (+ NOK, Мойка и МБ) — Android и Windows
 
 on:
   push:
@@ -31,14 +31,9 @@ jobs:
 
       - name: Android-оболочка (Capacitor)
         run: |
-          mkdir -p shell/www && cd shell
-          # дашборд + перехват «скачать» → окно «Поделиться» (в WebView скачивание не работает)
-          python3 - <<'PY'
-          src = open('../kachestvo_moyki/dashboard_kachestvo_moyki.html', encoding='utf-8').read()
-          shim = open('../kachestvo_moyki/app/android/download-shim.js', encoding='utf-8').read()
-          assert '</head>' in src
-          open('www/index.html', 'w', encoding='utf-8').write(src.replace('</head>', '<script>\n' + shim + '\n</script>\n</head>', 1))
-          PY
+          # вкладки (Качество мойки, NOK, Мойка и МБ) + перехват «скачать» → окно «Поделиться»
+          node kachestvo_moyki/app/build-www.js --android --out shell/www
+          cd shell
           npm init -y >/dev/null
           npm install --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/filesystem@7 @capacitor/share@7
           cat > capacitor.config.json <<'JSON'
@@ -64,7 +59,11 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon -q
           cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/kachestvo-moyki.apk"
-          cp "$GITHUB_WORKSPACE/kachestvo_moyki/dashboard_kachestvo_moyki.html" "$GITHUB_WORKSPACE/kachestvo_moyki.html"
+          # отдельные файлы дашбордов — открыть в Chrome/Edge без установки
+          node "$GITHUB_WORKSPACE/kachestvo_moyki/app/build-www.js" --out "$GITHUB_WORKSPACE/web"
+          cp "$GITHUB_WORKSPACE/web/moika.html" "$GITHUB_WORKSPACE/kachestvo_moyki.html"
+          cp "$GITHUB_WORKSPACE/web/nok.html" "$GITHUB_WORKSPACE/nok_dashboard.html"
+          cp "$GITHUB_WORKSPACE/web/mb.html" "$GITHUB_WORKSPACE/moyka_i_mb.html"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -72,6 +71,8 @@ jobs:
           path: |
             kachestvo-moyki.apk
             kachestvo_moyki.html
+            nok_dashboard.html
+            moyka_i_mb.html
           if-no-files-found: error
 
   windows:
@@ -122,6 +123,6 @@ jobs:
             gh release delete "$t" --cleanup-tag -y || true
           done
           gh release delete kachestvo-moyki-app --cleanup-tag -y || true
-          gh release create kachestvo-moyki-app kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe kachestvo_moyki.html \
-            --target "$GITHUB_SHA" --title "Качество мойки — УКПФ (Выращивание и Инкубаторий)" \
-            --notes "Телефон Android: kachestvo-moyki.apk — скачать, открыть, разрешить установку из этого источника. Компьютер Windows: kachestvo-moyki-setup.exe — установщик с ярлыком на рабочем столе; kachestvo-moyki-portable.exe — запуск без установки. Любой компьютер с Chrome/Edge: kachestvo_moyki.html — открыть двойным щелчком. На телефоне акты загружаются кнопками, привязка папок с фото/видео работает только на ПК. Сборка ${GITHUB_SHA::7}."
+          gh release create kachestvo-moyki-app kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe kachestvo_moyki.html nok_dashboard.html moyka_i_mb.html \
+            --target "$GITHUB_SHA" --title "Качество мойки, NOK и Мойка-МБ — УКПФ" \
+            --notes "Телефон Android: kachestvo-moyki.apk — скачать, открыть, разрешить установку из этого источника. Компьютер Windows: kachestvo-moyki-setup.exe — установщик с ярлыком на рабочем столе; kachestvo-moyki-portable.exe — запуск без установки. В приложении три вкладки: Качество мойки, NOK-дашборд, Мойка и МБ (обнаружения МБ по корпусу вместе с фото/видео мойки в динамике). На ПК: меню SharePoint → «Подключить папку по ссылке» — фото/видео, презентации, акты и Свод МБ скачиваются сами в «Документы\\Качество мойки\\Данные». Без установки (Chrome/Edge): kachestvo_moyki.html, nok_dashboard.html, moyka_i_mb.html. На телефоне файлы загружаются кнопками, папок с фото/видео нет. Сборка ${GITHUB_SHA::7}."

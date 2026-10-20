@@ -37,6 +37,26 @@ body{background:#f1f5f9;font-family:"Segoe UI",Arial,sans-serif;font-size:13px;c
 .kpi-val{font-size:24px;font-weight:900;color:var(--c);line-height:1}
 .kpi-sub{font-size:9px;color:#94a3b8;margin-top:4px}
 .body{padding:0 28px 32px;display:flex;flex-direction:column;gap:14px}
+.mbph-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start}
+.mbph-date{flex:0 0 86px;font-weight:700;color:#0f172a;font-size:12px}
+.mbph-date small{display:block;font-weight:500;color:#94a3b8;font-size:10.5px}
+.mbph-body{flex:1;min-width:0;font-size:12.5px;color:#334155;line-height:1.55}
+.mbph-tag{display:inline-block;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700;margin-right:6px}
+.mbph-wash{background:#e0f2fe;color:#075985}.mbph-nok{background:#fee2e2;color:#991b1b}.mbph-ph{background:#f1f5f9;color:#475569}
+.mbph-row.pre{background:#fff7ed;border-radius:8px;padding-left:8px;padding-right:8px}
+.mbph-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mbph-thumbs button{position:relative;height:70px;min-width:52px;max-width:124px;border-radius:7px;overflow:hidden;border:1px solid #e2e8f0;background:#e2e8f0;cursor:zoom-in;padding:0}
+.mbph-thumbs img{height:100%;width:auto;display:block}
+.mbph-thumbs .pl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.mbph-box{position:fixed;inset:0;background:rgba(15,23,42,.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:2vh 2vw}
+.mbph-box[hidden]{display:none}
+.mbph-in{position:relative;background:#F4EFE2;border-radius:12px;width:100%;height:100%;display:flex;flex-direction:column;padding:14px 18px}
+.mbph-hd{display:flex;gap:12px;align-items:center;font-size:15px;color:#1c2333}.mbph-hd span{color:#64748b;font-size:13px;margin-left:auto}
+.mbph-hd button{border:none;background:#e2e8f0;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer}
+.mbph-st{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;margin-top:10px}
+.mbph-st img,.mbph-st video{max-width:100%;max-height:100%;border-radius:8px;background:#000}
+.mbph-nv{position:absolute;top:50%;transform:translateY(-50%);border:none;background:rgba(255,255,255,.85);width:44px;height:44px;border-radius:50%;font-size:26px;cursor:pointer}
+.mbph-nv.p{left:10px}.mbph-nv.n{right:10px}
 .sec-hdr{display:flex;align-items:center;gap:10px;margin:6px 0 2px}
 .sec-hdr::after{content:"";flex:1;height:1px;background:#e2e8f0}
 .sec-hdr span{font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap}
@@ -283,6 +303,21 @@ body{background:#f1f5f9;font-family:"Segoe UI",Arial,sans-serif;font-size:13px;c
   <div style="position:relative;height:200px"><canvas id="clDyn"></canvas></div>
   <div class="clw-where" id="clWhere"></div>
 </div>
+
+<div class="sec-hdr"><span>📷 Обнаружения МБ и фотофиксация мойки по корпусу — в динамике</span></div>
+<div class="card" id="mbph">
+  <div class="card-t"><em>📷</em> Корпус с обнаружениями МБ: баллы моек, обнаружения и фото/видео мойки по датам</div>
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:12px;flex-wrap:wrap;color:#475569">
+    <span>Корпус:</span>
+    <select id="mbphSel" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid #e2e8f0;min-width:200px"></select>
+    <label style="display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" id="mbphOnlyNear" checked> только мойки рядом с обнаружениями и дни с фото</label>
+    <button id="mbphRefresh" style="font-size:12px;cursor:pointer;padding:4px 10px;border-radius:6px;border:1px solid #94a3b8;background:#f8fafc">⟳ Обновить фото</button>
+    <span id="mbphSrc" style="color:#64748b"></span>
+  </div>
+  <div style="position:relative;height:240px;margin-bottom:12px"><canvas id="mbphChart"></canvas></div>
+  <div id="mbphLine"></div>
+</div>
+<div id="mbphBox" class="mbph-box" hidden><div class="mbph-in"><div class="mbph-hd"><b id="mbphBoxT"></b><span id="mbphBoxN"></span><button type="button" id="mbphBoxX" title="Закрыть (Esc)">×</button></div><div class="mbph-st" id="mbphBoxS"></div><button type="button" class="mbph-nv p" id="mbphBoxP">‹</button><button type="button" class="mbph-nv n" id="mbphBoxNx">›</button></div></div>
 
 <div class="sec-hdr"><span>📍 Точки отбора — динамика по неделям</span></div>
 <div class="card">
@@ -1613,6 +1648,7 @@ async function processAktFile(file){
       if (!korpRaw || !(date instanceof Date)) return;
       records.push({ compact: normalizeAktKorp(korpRaw), date, score });
     });
+    if (!records.length) throw new Error(`в «${file.name}» на листе «${sheetName}» нет строк «корпус + дата + балл» (дата должна быть датой Excel)`);
     MB_AKT_RECORDS = records; // точные даты моек — для «балл мойки перед обнаружением»
     if (MB_NOK_ROWS && MB_NOK_ROWS.length) mbRebuildFromJournal(null);
     const newWashData = buildWashDataFromRecords(records);
@@ -2209,13 +2245,20 @@ const dirIsMb = n => /свод|журнал|мб|микроб/i.test(n) || /\.cs
 const dirIsAkt = n => /акт|мойк/i.test(n) && !dirIsMb(n);
 async function dirPick(handle){
   const files = [];
-  for await (const h of handle.values()){
-    if (h.kind !== 'file' || h.name.startsWith('~$') || !/\.(xlsx|csv)$/i.test(h.name)) continue;
-    files.push(await h.getFile());
+  // свод и акт ищем и в подпапках (папка SharePoint обычно разложена по папкам)
+  async function walk(dir, depth){
+    for await (const h of dir.values()){
+      if (h.kind === 'directory'){ if (depth < 5 && !h.name.startsWith('.')) await walk(h, depth + 1); continue; }
+      if (h.kind !== 'file' || h.name.startsWith('~$') || !/\.(xlsx|csv)$/i.test(h.name)) continue;
+      files.push(await h.getFile());
+    }
   }
+  await walk(handle, 0);
   const newest = arr => arr.slice().sort((a, b) => b.lastModified - a.lastModified)[0] || null;
   const cand = files.filter(f => !dirIsAkt(f.name));
-  return {mb: newest(cand.filter(f => dirIsMb(f.name))) || newest(cand), count: files.length};
+  // акт приёма мойки (не Инкубатория и не ЗПП) — для баллов мойки и «балла перед обнаружением»
+  const akt = newest(files.filter(f => dirIsAkt(f.name) && /\.xlsx$/i.test(f.name) && !/инкуб|зпп|график/i.test(f.name)));
+  return {mb: newest(cand.filter(f => dirIsMb(f.name))) || newest(cand), akt, count: files.length};
 }
 function dirTime(){ const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 function dirShowButtons(linked){
@@ -2236,12 +2279,13 @@ async function dirCheck(manual){
   allow.style.display = 'none';
   DIR.busy = true;
   try {
-    const {mb, count} = await dirPick(DIR.handle);
+    const {mb, akt, count} = await dirPick(DIR.handle);
     const key = f => f ? `${f.name}|${f.size}|${f.lastModified}` : null;
     const done = [];
     if (mb && key(mb) !== DIR.seen.mb){ st.innerHTML = `⏳ Читаю журнал МБ «${mb.name}» — большой файл, займёт несколько секунд…`; await new Promise(r => setTimeout(r, 50)); await processMBFile(mb); DIR.seen.mb = key(mb); done.push('журнал МБ'); }
+    if (akt && key(akt) !== DIR.seen.akt){ await processAktFile(akt); DIR.seen.akt = key(akt); done.push('акт мойки'); }
     const fd = f => f ? `<b>${f.name}</b> <span style="color:#64748b">(${new Date(f.lastModified).toLocaleString('ru-RU', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})</span>` : '<span style="color:#dc2626">не найден</span>';
-    st.innerHTML = `📁 <b>${DIR.handle.name}</b> · ⟳ автообновление включено · проверено в ${dirTime()}${done.length ? ` · <b style="color:#16a34a">обновлено: ${done.join(', ')}</b>` : ''}<br>Свод МБ: ${fd(mb)}` +
+    st.innerHTML = `📁 <b>${DIR.handle.name}</b> · ⟳ автообновление включено · проверено в ${dirTime()}${done.length ? ` · <b style="color:#16a34a">обновлено: ${done.join(', ')}</b>` : ''}<br>Свод МБ: ${fd(mb)}${akt ? ' · Акт мойки: ' + fd(akt) : ''}` +
       (!mb ? '<br><span style="color:#dc2626">В папке нет файла Свода (.xlsx/.csv)</span>' : '');
   } catch (e){
     st.innerHTML = `<span style="color:#dc2626">Папка недоступна: ${e.message}</span>`;
@@ -2260,6 +2304,7 @@ async function aktPoll(){
     if (k !== AKT_SEEN.v){ AKT_SEEN.v = k; await processAktFile(f); }
   } catch (e) {}
 }
+window.__mbAttachDir = (h) => { DIR.handle = h; DIR.seen = {}; dirShowButtons(true); dirCheck(true); };
 (async function initDirLink(){
   const box = document.getElementById('dirBox');
   if (typeof window.showDirectoryPicker !== 'function'){
@@ -2286,6 +2331,156 @@ async function aktPoll(){
   document.addEventListener('visibilitychange', () => { if (!document.hidden){ dirCheck(false); aktPoll(); } });
 })();
 
+</script>
+<script>
+// ===================== МБ + ФОТО/ВИДЕО МОЙКИ ПО КОРПУСУ — В ДИНАМИКЕ =====================
+// Фото/видео и баллы мойки берутся из вкладки «Качество мойки» приложения (тот же сайт),
+// обнаружения — из EVENTS (обновляются из журнала МБ). Без приложения — только баллы и обнаружения.
+const MBPH = {chart: null, korp: null, list: [], i: 0, url: null};
+function mbphApi(){
+  try {
+    const f = window.parent !== window && window.parent.document.getElementById('f-moika');
+    const w = f && f.contentWindow;
+    return w && w.MOIKA_API ? w.MOIKA_API : null;
+  } catch (e) { return null; }
+}
+const mbphDT = s => { const m = String(s || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], 12) : null; };
+const mbphISO = t => new Date(t).toISOString().slice(0, 10);
+const mbphFmt = t => { const d = new Date(t); return String(d.getUTCDate()).padStart(2, '0') + '.' + String(d.getUTCMonth() + 1).padStart(2, '0') + '.' + d.getUTCFullYear(); };
+const mbphEsc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+function mbphCorps(){
+  const c = {};
+  EVENTS.forEach(e => { c[e.korp] = (c[e.korp] || 0) + 1; });
+  return Object.keys(c).sort((a, b) => c[b] - c[a] || a.localeCompare(b, 'ru')).map(k => ({k, n: c[k]}));
+}
+function mbphFill(){
+  const sel = document.getElementById('mbphSel');
+  const corps = mbphCorps();
+  const keep = MBPH.korp && corps.some(x => x.k === MBPH.korp) ? MBPH.korp : (corps[0] && corps[0].k);
+  sel.innerHTML = corps.map(x => `<option value="${mbphEsc(x.k)}">${mbphEsc(x.k)} · обнаружений: ${x.n}</option>`).join('');
+  if (keep) sel.value = keep;
+  MBPH.korp = keep || null;
+}
+// события корпуса по датам: мойки (балл), обнаружения, дни с фото
+function mbphTimeline(korp){
+  const api = mbphApi(), day = {};
+  const at = t => (day[t] = day[t] || {t, washes: [], noks: [], media: null});
+  if (api){
+    api.washes(korp).forEach(w => at(Date.parse(w.date + 'T12:00:00Z')).washes.push({score: w.score, note: w.note}));
+    api.mediaDays(korp).forEach(m => { at(Date.parse(m.date + 'T12:00:00Z')).media = m; });
+  }
+  if (!api || !Object.values(day).some(d => d.washes.length)){
+    (mbWashHistory()[korp] || []).forEach(w => { const t = Date.UTC(new Date(w.t).getUTCFullYear(), new Date(w.t).getUTCMonth(), new Date(w.t).getUTCDate(), 12); at(t).washes.push({score: w.score, note: ''}); });
+  }
+  const seen = {};
+  EVENTS.filter(e => e.korp === korp).forEach(e => {
+    const t = mbphDT(e.nok_date); if (t == null) return;
+    const k = e.nok_date + '|' + e.pathogen; if (seen[k]) { seen[k].n++; return; }
+    const pts = EVENT_TOCHKA[`${e.korp}|${e.nok_date}|${e.pathogen}`] || [];
+    seen[k] = {pathogen: e.pathogen, subgroup: e.subgroup, points: pts, n: 1};
+    at(t).noks.push(seen[k]);
+  });
+  const days = Object.values(day).sort((a, b) => a.t - b.t);
+  // мойка, после которой было обнаружение (последняя мойка до даты обнаружения)
+  days.forEach((d, i) => { if (!d.noks.length) return; for (let j = i; j >= 0; j--) if (days[j].washes.length && days[j].t <= d.t) { days[j].pre = true; break; } });
+  return days;
+}
+function mbphRender(){
+  if (!document.getElementById('mbph')) return;
+  mbphFill();
+  const korp = MBPH.korp, api = mbphApi();
+  const src = document.getElementById('mbphSrc');
+  src.innerHTML = !api ? 'Фото/видео подтягиваются из вкладки «Качество мойки» в приложении.'
+    : api.ready() ? 'Фото/видео — из папки вкладки «Качество мойки».'
+    : typeof window.showDirectoryPicker !== 'function' ? 'На телефоне фото/видео не подтягиваются (нет доступа к папкам) — только баллы и обнаружения. Фото — в приложении для ПК.'
+    : '<span style="color:#b45309">Во вкладке «Качество мойки» не привязана папка с фото/видео — показываются только баллы и обнаружения.</span>';
+  const line = document.getElementById('mbphLine');
+  if (!korp){ line.innerHTML = '<p style="color:#64748b;font-size:12.5px">Обнаружений МБ нет — показывать нечего.</p>'; return; }
+  const days = mbphTimeline(korp);
+  const noks = days.filter(d => d.noks.length);
+  const first = noks.length ? noks[0].t - 45 * 86400000 : -Infinity;
+  const onlyNear = document.getElementById('mbphOnlyNear').checked;
+  const near = d => d.noks.length || d.media || d.pre || noks.some(n => Math.abs(n.t - d.t) <= 30 * 86400000);
+  const shown = days.filter(d => d.t >= first && (!onlyNear || near(d)));
+  // график: баллы мойки линией, обнаружения — красные отметки сверху, дни с фото — 📷 снизу
+  const washPts = days.filter(d => d.washes.length && d.t >= first).map(d => ({x: d.t, y: Math.min(...d.washes.map(w => +w.score))}));
+  const nokPts = noks.map(d => ({x: d.t, y: 10.6, label: d.noks.map(n => n.pathogen + (n.n > 1 ? ' ×' + n.n : '')).join(', ')}));
+  const phPts = days.filter(d => d.media && d.t >= first).map(d => ({x: d.t, y: 0.4, label: d.media.count + ' фото/видео'}));
+  if (MBPH.chart) MBPH.chart.destroy();
+  MBPH.chart = new Chart(document.getElementById('mbphChart'), {
+    type: 'scatter',
+    data: {datasets: [
+      {label: 'Балл мойки', data: washPts, showLine: true, borderColor: '#2563eb', backgroundColor: '#2563eb', pointRadius: 4, tension: 0},
+      {label: 'Обнаружение МБ', data: nokPts, pointStyle: 'triangle', pointRadius: 9, borderColor: '#dc2626', backgroundColor: '#dc2626'},
+      {label: 'Фото/видео мойки', data: phPts, pointStyle: 'rectRounded', pointRadius: 7, borderColor: '#0f766e', backgroundColor: '#14b8a6'},
+      {label: 'Норма 8', data: washPts.length ? [{x: washPts[0].x, y: 8}, {x: Math.max(washPts[washPts.length - 1].x, nokPts.length ? nokPts[nokPts.length - 1].x : 0), y: 8}] : [],
+        showLine: true, borderDash: [4, 4], borderColor: 'rgba(120,120,120,.5)', pointRadius: 0},
+    ]},
+    options: {responsive: true, maintainAspectRatio: false, animation: false,
+      scales: {x: {type: 'linear', ticks: {callback: v => mbphFmt(v).slice(0, 5) + '.' + mbphFmt(v).slice(8), maxRotation: 0, autoSkip: true, maxTicksLimit: 12}},
+               y: {min: 0, max: 11, ticks: {stepSize: 2}}},
+      plugins: {legend: {position: 'bottom', labels: {boxWidth: 10, font: {size: 11}}},
+        tooltip: {callbacks: {label: c => mbphFmt(c.raw.x) + ' — ' + (c.raw.label || ('балл ' + c.raw.y))}}},
+      onClick: (e, els) => { if (!els.length) return; const x = els[0].element.$context.raw.x; const row = document.querySelector(`.mbph-row[data-t="${x}"]`); if (row) row.scrollIntoView({behavior: 'smooth', block: 'center'}); }}
+  });
+  if (!shown.length){ line.innerHTML = '<p style="color:#64748b;font-size:12.5px">Нет данных по этому корпусу.</p>'; return; }
+  line.innerHTML = shown.map(d => {
+    const parts = [];
+    d.washes.forEach(w => parts.push(`<div><span class="mbph-tag mbph-wash">🧽 Мойка · балл ${mbphEsc(w.score)}</span>${d.pre ? '<b style="color:#c2410c">мойка перед обнаружением</b> ' : ''}${w.note ? mbphEsc(w.note) : ''}</div>`));
+    d.noks.forEach(n => parts.push(`<div><span class="mbph-tag mbph-nok">🔬 NOK · ${mbphEsc(n.pathogen)}${n.n > 1 ? ' ×' + n.n : ''}</span>${mbphEsc(n.subgroup || '')}${n.points.length ? ' · точки: ' + mbphEsc(n.points.join(', ')) : ''}</div>`));
+    if (d.media && !d.washes.length) parts.push(`<div><span class="mbph-tag mbph-ph">📷 Фотофиксация</span></div>`);
+    if (d.media) parts.push(`<div class="mbph-thumbs" data-date="${mbphISO(d.t)}" data-corpus="${mbphEsc(d.media.corpus)}"><span style="color:#94a3b8;font-size:11.5px">📷 ${d.media.count} фото/видео — загружаю…</span></div>`);
+    return `<div class="mbph-row${d.pre ? ' pre' : ''}" data-t="${d.t}"><div class="mbph-date">${mbphFmt(d.t)}<small>${d.noks.length ? 'обнаружение' : d.washes.length ? 'мойка' : 'фото'}</small></div><div class="mbph-body">${parts.join('')}</div></div>`;
+  }).join('');
+  if (api) line.querySelectorAll('.mbph-thumbs').forEach(async el => {
+    const date = el.dataset.date, corpus = el.dataset.corpus;
+    let th = [];
+    try { th = await api.thumbs(date, corpus); } catch (e) {}
+    if (MBPH.korp !== korp) return;
+    const es = api.entries(date, corpus);
+    el.innerHTML = th.length ? th.map(t => `<button type="button" data-idx="${t.idx}" title="${mbphEsc(t.caption || '')}"><img src="${t.url}" alt="">${t.video ? '<span class="pl">▶</span>' : ''}</button>`).join('')
+      : `<span style="color:#94a3b8;font-size:11.5px">📷 ${es.length} фото/видео — ${api.ready() ? 'не удалось прочитать' : 'откройте доступ к папке во вкладке «Качество мойки»'}</span>`;
+  });
+}
+async function mbphShow(i){
+  const api = mbphApi(); const n = MBPH.list.length; if (!api || !n) return;
+  MBPH.i = (i + n) % n;
+  const it = MBPH.list[MBPH.i], st = document.getElementById('mbphBoxS');
+  document.getElementById('mbphBoxT').textContent = `${MBPH.korp} — ${mbphFmt(Date.parse(it.date + 'T12:00:00Z'))}`;
+  document.getElementById('mbphBoxN').textContent = [n > 1 ? `${MBPH.i + 1} / ${n}` : '', it.caption || ''].filter(Boolean).join(' · ');
+  st.innerHTML = '<span style="color:#64748b">Загружаю…</span>';
+  try {
+    const m = await api.media(it.date, it.corpus, it.idx);
+    if (MBPH.list[MBPH.i] !== it) return;
+    if (MBPH.url) URL.revokeObjectURL(MBPH.url);
+    MBPH.url = URL.createObjectURL(m.blob);
+    st.innerHTML = m.video ? `<video src="${MBPH.url}" controls autoplay playsinline></video>` : `<img src="${MBPH.url}" alt="">`;
+  } catch (e) { st.innerHTML = '<span style="color:#dc2626">Не удалось открыть файл: ' + mbphEsc(e.message) + '</span>'; }
+}
+function mbphClose(){ document.getElementById('mbphBox').hidden = true; document.getElementById('mbphBoxS').innerHTML = ''; if (MBPH.url){ URL.revokeObjectURL(MBPH.url); MBPH.url = null; } }
+document.getElementById('mbphSel').addEventListener('change', e => { MBPH.korp = e.target.value; mbphRender(); });
+document.getElementById('mbphOnlyNear').addEventListener('change', mbphRender);
+document.getElementById('mbphRefresh').addEventListener('click', mbphRender);
+document.getElementById('mbphLine').addEventListener('click', e => {
+  const b = e.target.closest('.mbph-thumbs button'); if (!b) return;
+  const all = [...document.querySelectorAll('#mbphLine .mbph-thumbs button')];
+  MBPH.list = all.map(x => ({date: x.parentNode.dataset.date, corpus: x.parentNode.dataset.corpus, idx: +x.dataset.idx, caption: x.title}));
+  document.getElementById('mbphBox').hidden = false;
+  mbphShow(all.indexOf(b));
+});
+document.getElementById('mbphBoxX').addEventListener('click', mbphClose);
+document.getElementById('mbphBoxP').addEventListener('click', () => mbphShow(MBPH.i - 1));
+document.getElementById('mbphBoxNx').addEventListener('click', () => mbphShow(MBPH.i + 1));
+document.getElementById('mbphBox').addEventListener('click', e => { if (e.target.id === 'mbphBox') mbphClose(); });
+document.addEventListener('keydown', e => {
+  if (document.getElementById('mbphBox').hidden) return;
+  if (e.key === 'Escape') mbphClose(); else if (e.key === 'ArrowLeft') mbphShow(MBPH.i - 1); else if (e.key === 'ArrowRight') mbphShow(MBPH.i + 1);
+});
+// обновить при открытии вкладки (приложение присылает «app:shown») и после нового журнала МБ
+window.addEventListener('message', e => { if (e.data === 'app:shown' || e.data === 'app:media') mbphRender(); });
+const _mbphRefresh = mbRefreshNokViews;
+mbRefreshNokViews = function(){ const r = _mbphRefresh.apply(this, arguments); try { mbphRender(); } catch (e) { console.warn(e); } return r; };
+mbphRender();
 </script>
 </body>
 </html>
