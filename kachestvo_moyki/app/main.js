@@ -51,14 +51,23 @@ const spDir = () => path.join(dataDir(), 'SharePoint');
 
 // ---------- папки на компьютере (в т.ч. OneDrive) — видны в «Данных» как подпапки ----------
 // Папки отдела в OneDrive подключаются сами, если они есть на этом компьютере.
+// У каждой папки — своя роль, как их дал отдел:
+//   acts  — акты (выращивание, Инкубаторий, ЗПП): только отсюда, самый свежий файл каждого вида;
+//   media — фото/видео и презентации несоответствий: только отсюда (и из скачанных папок SharePoint);
+//   svod  — Свод МБ для NOK-дашборда и «Мойки и МБ»: самый свежий .xlsx в самой папке (не в подпапках).
 const ONEDRIVE_AUTO = [
-  // акты выращивания, Инкубатория, ЗПП, Свод МБ
-  { name: 'УКПФ (OneDrive)', rel: path.join('Рабочий стол', 'Департамент Ветеринарии - Отчетность Департамента Ветеринарии', 'Служба Ветеринарной Санитарии и БиБ', 'УКПФ') },
-  // еженедельные несоответствия: фото/видео и презентации выращивания
-  { name: 'Несоответствия (OneDrive)', rel: path.join('Рабочий стол', 'Несоответствие еженедельно') },
-  // Свод микробиологии (Local Labs) — для NOK-дашборда и «Мойки и МБ»: любой .xlsx в ней — Свод
-  { name: 'СВОД МБ (OneDrive)', rel: path.join('Рабочий стол', 'BI_Business-Local Labs - СВОД'), svod: true },
+  { name: 'УКПФ (OneDrive)', role: 'acts', rel: path.join('Рабочий стол', 'Департамент Ветеринарии - Отчетность Департамента Ветеринарии', 'Служба Ветеринарной Санитарии и БиБ', 'УКПФ') },
+  { name: 'Несоответствия (OneDrive)', role: 'media', rel: path.join('Рабочий стол', 'Несоответствие еженедельно') },
+  { name: 'СВОД МБ (OneDrive)', role: 'svod', rel: path.join('Рабочий стол', 'BI_Business-Local Labs - СВОД') },
 ];
+const ROLE_TITLE = { acts: 'акты', media: 'фото/видео и презентации', svod: 'Свод МБ' };
+// роль папки: из настроек; у подключённых раньше — по имени
+function roleOf(m) {
+  if (m.role) return m.role;
+  if (m.svod || /(^|[^а-яё])свод(?![а-яё])/i.test(m.name)) return 'svod';
+  if (/^УКПФ/i.test(m.name)) return 'acts';
+  return 'media';
+}
 const foldersFile = () => path.join(app.getPath('userData'), 'folders.json');
 function foldersConfig() {
   let c = {};
@@ -110,7 +119,7 @@ function autoMountOneDrive() {
     if (c.autoDone.includes(f.name)) continue;   // уже подключали (или убрали вручную) — не трогаем
     const abs = findOneDrive(f.rel);
     if (!abs) continue;
-    if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name: f.name, path: abs, svod: !!f.svod });
+    if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name: f.name, path: abs, role: f.role });
     c.autoDone.push(f.name);
     changed = true;
   }
@@ -125,7 +134,7 @@ async function askMissingOneDrive() {
     if (c.autoDone.includes(f.name) || c.asked.includes(f.name)) continue;
     c.asked.push(f.name);
     saveFolders(c);
-    const what = f.svod ? 'Свод микробиологии для NOK-дашборда и «Мойки и МБ»' : f.name.startsWith('УКПФ') ? 'акты выращивания, Инкубатория, ЗПП и Свод МБ' : 'фото/видео и презентации еженедельных несоответствий';
+    const what = { acts: 'акты выращивания, Инкубатория и ЗПП', media: 'фото/видео и презентации еженедельных несоответствий', svod: 'Свод микробиологии для NOK-дашборда и «Мойки и МБ»' }[f.role];
     const r = await dialog.showMessageBox(win, {
       type: 'question', title: 'Папка не найдена', noLink: true, buttons: ['Выбрать папку…', 'Позже'], defaultId: 0, cancelId: 1,
       message: `Не нашёл папку «${f.rel.split(path.sep).pop()}» в OneDrive`,
@@ -135,7 +144,7 @@ async function askMissingOneDrive() {
     const pick = await dialog.showOpenDialog(win, { title: f.name, defaultPath: oneDriveBases()[0], properties: ['openDirectory'] });
     if (pick.canceled || !pick.filePaths[0]) continue;
     const cc = foldersConfig();
-    if (!cc.mounts.some((m) => m.path === pick.filePaths[0])) cc.mounts.push({ name: f.name, path: pick.filePaths[0], svod: !!f.svod });
+    if (!cc.mounts.some((m) => m.path === pick.filePaths[0])) cc.mounts.push({ name: f.name, path: pick.filePaths[0], role: f.role });
     cc.autoDone = (cc.autoDone || []).concat(f.name);
     saveFolders(cc);
     watchData();
@@ -164,40 +173,26 @@ function listDir(abs) {
   });
 }
 // «Свод» для NOK-дашборда: самый свежий .xlsx со словом «свод», иначе «МБ/микроб/NOK»
+function xlsxIn(abs, rel) {
+  let items = [];
+  try { items = fs.readdirSync(abs, { withFileTypes: true }); } catch (e) { return []; }
+  return items.filter((d) => d.isFile() && !SKIP_RE.test(d.name) && /\.xlsx$/i.test(d.name)).map((d) => {
+    const st = fs.statSync(path.join(abs, d.name));
+    return { name: d.name, path: rel + '/' + d.name, mtime: Math.round(st.mtimeMs), size: st.size };
+  });
+}
+// Свод для NOK-дашборда — как в веб-дашборде: самый свежий .xlsx в самой папке Свода (подпапки — архив, не берём)
 function latestSvod() {
   const found = [];
-  (function walk(abs, rel, depth) {
-    let items = [];
-    try { items = fs.readdirSync(abs, { withFileTypes: true }); } catch (e) { return; }
-    for (const d of items) {
-      if (SKIP_RE.test(d.name)) continue;
-      if (d.isDirectory()) { if (depth < 6) walk(path.join(abs, d.name), rel ? rel + '/' + d.name : d.name, depth + 1); continue; }
-      if (!/\.xlsx$/i.test(d.name)) continue;
-      const st = fs.statSync(path.join(abs, d.name));
-      found.push({ name: d.name, path: rel ? rel + '/' + d.name : d.name, mtime: Math.round(st.mtimeMs), size: st.size });
-    }
-  })(dataDir(), '', 0);
-  mounts().forEach((m) => walkRoot(m.path, m.name));
-  function walkRoot(abs, rel) {
-    (function walk(a, r, depth) {
-      let items = [];
-      try { items = fs.readdirSync(a, { withFileTypes: true }); } catch (e) { return; }
-      for (const d of items) {
-        if (SKIP_RE.test(d.name)) continue;
-        if (d.isDirectory()) { if (depth < 6) walk(path.join(a, d.name), r + '/' + d.name, depth + 1); continue; }
-        if (!/\.xlsx$/i.test(d.name)) continue;
-        const st = fs.statSync(path.join(a, d.name));
-        found.push({ name: d.name, path: r + '/' + d.name, mtime: Math.round(st.mtimeMs), size: st.size });
-      }
-    })(abs, rel, 0);
-  }
-  const newest = (a) => a.sort((x, y) => y.mtime - x.mtime)[0] || null;
-  // папка Свода (BI_Business-Local Labs - СВОД): самый свежий .xlsx в ней — и есть Свод
-  const svodDirs = mounts().filter((m) => m.svod || /(^|[^а-яё])свод(?![а-яё])/i.test(m.name)).map((m) => m.name + '/');
-  const inSvod = newest(found.filter((f) => svodDirs.some((d) => f.path.startsWith(d))));
-  if (inSvod) return inSvod;
-  // «свод» — отдельным словом («Свод МБ», «Свод_2026»), а не «Сводная таблица»
-  return newest(found.filter((f) => /(^|[^а-яё])свод(?![а-яё])/i.test(f.name))) || newest(found.filter((f) => /(^|[^а-яё])мб(?![а-яё])|микроб|nok/i.test(f.name)));
+  mounts().filter((m) => roleOf(m) === 'svod').forEach((m) => found.push(...xlsxIn(m.path, m.name)));
+  return found.sort((x, y) => y.mtime - x.mtime)[0] || null;
+}
+// какие папки на что: для вкладок
+function rolesInfo() {
+  const r = { acts: [], media: [], svod: [] };
+  mounts().forEach((m) => r[roleOf(m)].push(m.name));
+  try { if (fs.readdirSync(spDir()).length) r.media.push('SharePoint'); } catch (e) { /* SharePoint не подключали */ }
+  return r;
 }
 const json = (o, status) => new Response(JSON.stringify(o), { status: status || 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 
@@ -205,6 +200,7 @@ async function handleApp(req) {
   const u = new URL(req.url);
   const p = decodeURIComponent(u.pathname);
   try {
+    if (p === '/data-roles') return json(rolesInfo());
     if (p === '/data-info') {
       fs.mkdirSync(dataDir(), { recursive: true });
       return json({ dir: dataDir(), latest: latestSvod() });
@@ -270,7 +266,7 @@ async function manageFolders() {
   const shown = c.mounts.slice(0, 5);
   const r = await dialog.showMessageBox(win, {
     type: 'info', title: 'Папки на компьютере', message: 'Папки на компьютере, из которых берутся данные',
-    detail: (c.mounts.length ? c.mounts.map((m, i) => `${i + 1}. ${m.name}\n${m.path}`).join('\n\n') : 'Пока ни одной.') +
+    detail: (c.mounts.length ? c.mounts.map((m, i) => `${i + 1}. ${m.name} — ${ROLE_TITLE[roleOf(m)]}\n${m.path}`).join('\n\n') : 'Пока ни одной.') +
       '\n\nИз них, как и из «Данных», берутся акты (приёмка мойки, Инкубаторий, ЗПП, график ПР/Р — по имени файла), Свод МБ, фото/видео и презентации. Изменения подхватываются сами.',
     buttons: ['Добавить папку…'].concat(shown.map((m) => 'Убрать «' + m.name + '»'), ['Закрыть']), cancelId: shown.length + 1, defaultId: 0, noLink: true,
   });
@@ -280,7 +276,10 @@ async function manageFolders() {
     const abs = pick.filePaths[0];
     let name = path.basename(abs) || 'Папка';
     while (c.mounts.some((m) => m.name === name) || name === 'SharePoint') name += ' 2';
-    if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name, path: abs });
+    const rr = await dialog.showMessageBox(win, { type: 'question', title: 'Что в этой папке?', message: `Что брать из папки «${name}»?`, noLink: true,
+      buttons: ['Акты (выращивание, Инкубаторий, ЗПП)', 'Фото/видео и презентации', 'Свод МБ'], defaultId: 1, cancelId: 1 });
+    const role = ['acts', 'media', 'svod'][rr.response];
+    if (!c.mounts.some((m) => m.path === abs)) c.mounts.push({ name, path: abs, role });
     saveFolders(c);
   } else if (r.response <= shown.length) {
     c.mounts.splice(r.response - 1, 1);
@@ -470,11 +469,22 @@ async function dataReport() {
   L.push('ПАПКИ');
   L.push(`  OneDrive на компьютере: ${oneDriveBases().join(' | ') || 'не найден'}`);
   L.push(`  Данные: ${dataDir()}`);
-  fc.mounts.forEach((m) => L.push(`  ${m.name}: ${m.path} — ${fs.existsSync(m.path) ? 'есть' : 'НЕ НАЙДЕНА'}`));
+  fc.mounts.forEach((m) => L.push(`  ${m.name} [${ROLE_TITLE[roleOf(m)]}]: ${m.path} — ${fs.existsSync(m.path) ? 'есть' : 'НЕ НАЙДЕНА'}`));
   ONEDRIVE_AUTO.filter((f) => !fc.mounts.some((m) => m.name === f.name)).forEach((f) => L.push(`  ${f.name}: НЕ ПОДКЛЮЧЕНА (искал OneDrive\\${f.rel})`));
   spc.links.forEach((l) => L.push(`  SharePoint «${spName(l)}»: ${l.lastSync ? 'обновлено ' + new Date(l.lastSync).toLocaleString('ru-RU') : 'ещё не скачивалась'}`));
   L.push('');
-  for (const [name, root] of [['Данные', dataDir()]].concat(mounts().map((m) => [m.name, m.path]))) {
+  // что возьмётся: акты — по одному свежему каждого вида из самой папки актов; Свод — свежий .xlsx из самой папки Свода
+  const sv = latestSvod();
+  L.push('ЧТО БЕРЁТСЯ', `  Свод МБ (NOK, Мойка и МБ): ${sv ? sv.path + ' (' + new Date(sv.mtime).toLocaleString('ru-RU') + ')' : 'НЕ НАЙДЕН — в папке Свода нет .xlsx'}`);
+  mounts().filter((m) => roleOf(m) === 'acts').forEach((m) => {
+    const top = xlsxIn(m.path, m.name);
+    ['акт приёма мойки (выращивание)', 'акт Инкубатория', 'акт ЗПП', 'график ПР/Р'].forEach((k) => {
+      const f = top.filter((x) => actKind(x.name) === k).sort((a, b) => b.mtime - a.mtime)[0];
+      L.push(`  ${k}: ${f ? f.path + ' (' + new Date(f.mtime).toLocaleString('ru-RU') + ')' : 'в самой папке нет — ищется в подпапках'}`);
+    });
+  });
+  L.push(`  Фото/видео и презентации — из: ${rolesInfo().media.join(', ') || 'НЕТ ПАПОК'}`, '');
+  for (const [name, root] of [['Данные', dataDir()]].concat(mounts().map((m) => [m.name + ' [' + ROLE_TITLE[roleOf(m)] + ']', m.path]))) {
     const r = scanForReport(root);
     L.push(`ФАЙЛЫ — ${name}: всего ${r.files}, фото/видео ${r.media}, папок-дат (ГГГГ-ММ-ДД) ${r.dateDirs}, презентаций ${r.pptx.length}`);
     Object.entries(r.xlsx).forEach(([k, list]) => L.push(`  ${k}: ${list.length}` + list.slice(0, 12).map((x) => '\n     ' + x).join('')));

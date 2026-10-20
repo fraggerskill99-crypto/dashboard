@@ -90,13 +90,24 @@
       const m = frame('moika');
       if (!(await loaded(m))) return;
       const w = m.contentWindow;
-      if (!w.APP_FS || !(await w.APP_FS.hasData())) { document.getElementById('dataHint').textContent = ''; return; }
-      document.getElementById('dataHint').textContent = '📁 Данные: Документы\\Качество мойки\\Данные';
-      try { if (w.__useMediaHandle) await w.__useMediaHandle(w.APP_FS.root(), false); } catch (e) { console.warn('moika media', e); }
-      try { if (w.useIncubMediaHandle) await w.useIncubMediaHandle(w.APP_FS.root(), false); } catch (e) { console.warn('moika incub', e); }
+      if (!w.APP_FS) return;
+      // каждой вкладке — только свои папки: акты — из папки актов, фото — из папок с фото, Свод — из папки Свода
+      const roles = await w.APP_FS.roles();
+      const all = roles.acts.concat(roles.media, roles.svod);
+      document.getElementById('dataHint').textContent = all.length ? '📁 ' + all.join(' · ') : '';
+      if (!all.length) return;
+      w.__APP_ACTS_SEPARATE = true;   // акты не ищем в папках с фото
+      if (roles.media.length) {
+        const media = w.APP_FS.group(roles.media, 'Фото/видео');
+        try { if (w.__useMediaHandle) await w.__useMediaHandle(media, false); } catch (e) { console.warn('moika media', e); }
+        try { if (w.useIncubMediaHandle) await w.useIncubMediaHandle(media, false); } catch (e) { console.warn('moika incub', e); }
+      }
+      if (roles.acts.length) {
+        try { if (w.applyActsFromFolder) await w.applyActsFromFolder(w.APP_FS.group(roles.acts, 'Акты')); } catch (e) { console.warn('moika acts', e); }
+      }
       const mb = frame('mb');
       if (mb.getAttribute('src') && await loaded(mb)) {
-        try { const x = mb.contentWindow; if (x.__mbAttachDir) x.__mbAttachDir(x.APP_FS.root()); x.postMessage('app:media', '*'); } catch (e) { console.warn('mb', e); }
+        try { const x = mb.contentWindow; if (x.__mbAttachDir) x.__mbAttachDir(x.APP_FS.group(roles.svod.concat(roles.acts), 'Свод и акты'), roles.svod); x.postMessage('app:media', '*'); } catch (e) { console.warn('mb', e); }
       }
       const wk = frame('week');
       if (wk.getAttribute('src')) try { wk.contentWindow.postMessage('app:media', '*'); } catch (e) {}

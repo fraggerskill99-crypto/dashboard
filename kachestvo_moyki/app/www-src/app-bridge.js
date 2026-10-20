@@ -68,8 +68,27 @@
     });
   }
 
+  // папка-«сборник» из нескольких папок «Данных» (например, только папки с фото) — для вкладки она одна привязанная папка
+  function groupHandle(names, title) {
+    const kids = () => names.map((n) => dirHandle(n, n));
+    const h = {
+      kind: 'directory', name: title, _rel: '#' + names.join('|'),
+      queryPermission: granted, requestPermission: granted,
+      isSameEntry: async (o) => !!o && o._rel === h._rel,
+      async *entries() { for (const k of kids()) yield [k.name, k]; },
+      async *values() { for (const k of kids()) yield k; },
+      async *keys() { for (const n of names) yield n; },
+      async getDirectoryHandle(n) { if (!names.includes(n)) throw notFound(n); return dirHandle(n, n); },
+      async getFileHandle(n) { throw notFound(n); },
+    };
+    h[Symbol.asyncIterator] = h.entries;
+    return h;
+  }
   window.APP_FS = {
     root: () => dirHandle('', 'Данные'),
+    group: groupHandle,
+    // какие папки на что: { acts: [...], media: [...], svod: [...] }
+    roles: () => fetch('/data-roles').then((r) => r.json()),
     async hasData() { try { return (await list('')).length > 0; } catch (e) { return false; } },
   };
 

@@ -4856,7 +4856,8 @@ async function setupMediaPinning() {
       setPinnedUI(handle.name);
       statusEl.textContent = 'Папка привязана, сканирую содержимое\u2026';
       DYNAMIC_MEDIA_INDEX = await scanMediaFolder(handle);
-      await applyActsFromFolder(handle, (t) => { statusEl.textContent = t; });
+      // в приложении акты берутся из своей папки (УКПФ), а не из папок с фото
+      if (!window.__APP_ACTS_SEPARATE) await applyActsFromFolder(handle, (t) => { statusEl.textContent = t; });
       setCpStatus('Читаю презентации в папке «' + handle.name + '»…');
       const pr = await scanPresentations(handle, (i, n, name) => { const t = 'Читаю презентации: ' + i + ' из ' + n + ' \u2014 ' + name; statusEl.textContent = t; setCpStatus(t); });
       const nFound = new Set(Object.keys(DYNAMIC_MEDIA_INDEX).concat(Object.keys(PPTX_INDEX))).size;
@@ -6019,7 +6020,7 @@ async function collectFolderActs(dir, prefix, depth, out) {
     if (h.kind === 'directory') { if (depth < 6 && !name.startsWith('.') && !/(^|[^а-яё])свод(?![а-яё])/i.test(name)) await collectFolderActs(h, prefix + name + '/', depth + 1, out); continue; }
     if (name.startsWith('~$') || !/\.(xlsx|xlsm)$/i.test(name)) continue;
     const kind = folderActKind(name);
-    if (kind) out.push({ kind, path: prefix + name, handle: h });
+    if (kind) out.push({ kind, path: prefix + name, handle: h, depth });
   }
   return out;
 }
@@ -6030,11 +6031,14 @@ async function applyActsFromFolder(root, onStatus) {
   const files = [];
   for (const it of list) { try { it.file = await it.handle.getFile(); files.push(it); } catch (e) { console.warn('act', it.path, e); } }
   const apply = { akt: applyAktBuffer, incub: applyIncubBuffer, zpp: applyZppBuffer, schedule: applyScheduleBuffer };
-  // приёмка мойки — все файлы (сливаются), остальное — только самый свежий файл
-  const pick = files.filter((f) => f.kind === 'akt').sort((a, b) => a.file.lastModified - b.file.lastModified);
-  ['incub', 'zpp', 'schedule'].forEach((k) => {
-    const fresh = files.filter((f) => f.kind === k).sort((a, b) => b.file.lastModified - a.file.lastModified)[0];
-    if (fresh) pick.push(fresh);
+  // по одному файлу каждого вида — как три закреплённых акта в веб-дашборде: из самой папки
+  // (подпапки — обычно архив, берутся, только если в папке такого акта нет), самый свежий
+  const pick = [];
+  ['akt', 'incub', 'zpp', 'schedule'].forEach((k) => {
+    const of = files.filter((f) => f.kind === k);
+    if (!of.length) return;
+    const top = Math.min(...of.map((f) => f.depth));
+    pick.push(of.filter((f) => f.depth === top).sort((a, b) => b.file.lastModified - a.file.lastModified)[0]);
   });
   let n = 0;
   for (const it of pick) {
