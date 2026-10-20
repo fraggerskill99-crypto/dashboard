@@ -5,12 +5,16 @@
 
 ## Как получить
 
-Сборку делает GitHub Actions на Windows при каждом изменении в папке `kachestvo_moyki/`
+Сборку делает GitHub Actions (APK — на Linux, .exe — на Windows) при каждом изменении в папке `kachestvo_moyki/`
 (или вручную: Actions → «Приложение «Качество мойки» для Windows» → Run workflow).
-Готовые файлы — на странице **Releases** репозитория:
+Готовые файлы — выпуск **kachestvo-moyki-app**:
+https://github.com/fraggerskill99-crypto/dashboard/releases/tag/kachestvo-moyki-app
 
-- `KachestvoMoyki-Setup-*.exe` — установщик: ярлык «Качество мойки» на рабочем столе и в меню «Пуск»;
-- `KachestvoMoyki-portable-*.exe` — без установки, запускается сразу (удобно на флешке).
+- `kachestvo-moyki-setup.exe` — установщик: ярлык «Качество мойки» на рабочем столе и в меню «Пуск»;
+- `kachestvo-moyki-portable.exe` — без установки, запускается сразу (удобно на флешке);
+- `kachestvo-moyki.apk` — телефон Android: акты загружаются кнопками, выгрузки (PNG, PowerPoint, Excel)
+  открывают окно «Поделиться» — сохранить, WhatsApp, Telegram. Привязки папок с фото/видео на телефоне нет;
+- `kachestvo_moyki.html` — сам дашборд, открыть в Chrome/Edge двойным щелчком.
 
 Файл не подписан сертификатом, поэтому при первом запуске Windows может показать
 «Система Windows защитила ваш компьютер» → **Подробнее → Выполнить в любом случае**.

@@ -48,10 +48,10 @@
         "ru_RU"
       ],
       "language": "1049",
-      "artifactName": "KachestvoMoyki-Setup-${version}.exe"
+      "artifactName": "kachestvo-moyki-setup.exe"
     },
     "portable": {
-      "artifactName": "KachestvoMoyki-portable-${version}.exe"
+      "artifactName": "kachestvo-moyki-portable.exe"
     }
   }
 }

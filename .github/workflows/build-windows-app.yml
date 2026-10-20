@@ -1,4 +1,4 @@
-name: Приложение «Качество мойки» для Windows
+name: Приложение «Качество мойки» — Android и Windows
 
 on:
   push:
@@ -10,8 +10,71 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: kachestvo-moyki-app
+  cancel-in-progress: true
+
 jobs:
-  build:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Android-оболочка (Capacitor)
+        run: |
+          mkdir -p shell/www && cd shell
+          # дашборд + перехват «скачать» → окно «Поделиться» (в WebView скачивание не работает)
+          python3 - <<'PY'
+          src = open('../kachestvo_moyki/dashboard_kachestvo_moyki.html', encoding='utf-8').read()
+          shim = open('../kachestvo_moyki/app/android/download-shim.js', encoding='utf-8').read()
+          assert '</head>' in src
+          open('www/index.html', 'w', encoding='utf-8').write(src.replace('</head>', '<script>\n' + shim + '\n</script>\n</head>', 1))
+          PY
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/filesystem@7 @capacitor/share@7
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "kz.ukpf.kachestvomoyki",
+            "appName": "Качество мойки",
+            "webDir": "www",
+            "android": { "allowMixedContent": false, "adjustMarginsForEdgeToEdge": "force" }
+          }
+          JSON
+          npx cap add android
+          npx cap sync android
+          RES=android/app/src/main/res
+          rm -rf $RES/mipmap-anydpi-v26
+          for dir in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp ../kachestvo_moyki/app/android/icons/$dir.png $RES/mipmap-$dir/ic_launcher.png
+            cp ../kachestvo_moyki/app/android/icons/$dir.png $RES/mipmap-$dir/ic_launcher_round.png
+          done
+
+      - name: Сборка APK
+        working-directory: shell/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon -q
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/kachestvo-moyki.apk"
+          cp "$GITHUB_WORKSPACE/kachestvo_moyki/dashboard_kachestvo_moyki.html" "$GITHUB_WORKSPACE/kachestvo_moyki.html"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: |
+            kachestvo-moyki.apk
+            kachestvo_moyki.html
+          if-no-files-found: error
+
+  windows:
     runs-on: windows-latest
     defaults:
       run:
@@ -34,21 +97,31 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: KachestvoMoyki-Windows
-          path: kachestvo_moyki/app/dist/*.exe
+          name: windows
+          path: |
+            kachestvo_moyki/app/dist/kachestvo-moyki-setup.exe
+            kachestvo_moyki/app/dist/kachestvo-moyki-portable.exe
           if-no-files-found: error
 
-      # последняя сборка — на странице Releases, скачивается без входа в Actions
-      - name: Выложить в Releases
-        uses: softprops/action-gh-release@v2
+  release:
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          tag_name: app-build-${{ github.run_number }}
-          name: Качество мойки — сборка ${{ github.run_number }}
-          target_commitish: ${{ github.sha }}
-          body: |
-            Приложение «Качество мойки — УКПФ» для Windows (64-бит).
-            • KachestvoMoyki-Setup-*.exe — установщик: ярлык на рабочем столе и в меню «Пуск».
-            • KachestvoMoyki-portable-*.exe — без установки, запускается сразу.
-            Ветка: ${{ github.ref_name }}, коммит ${{ github.sha }}.
-          files: kachestvo_moyki/app/dist/*.exe
-          make_latest: true
+          merge-multiple: true
+
+      - name: Выпуск «kachestvo-moyki-app» с файлами для установки
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          find . -type f | sort
+          # пробные выпуски первой сборки больше не нужны
+          for t in $(gh release list --limit 100 --json tagName -q '.[].tagName' | grep '^app-build-' || true); do
+            gh release delete "$t" --cleanup-tag -y || true
+          done
+          gh release delete kachestvo-moyki-app --cleanup-tag -y || true
+          gh release create kachestvo-moyki-app kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe kachestvo_moyki.html \
+            --target "$GITHUB_SHA" --title "Качество мойки — УКПФ (Выращивание и Инкубаторий)" \
+            --notes "Телефон Android: kachestvo-moyki.apk — скачать, открыть, разрешить установку из этого источника. Компьютер Windows: kachestvo-moyki-setup.exe — установщик с ярлыком на рабочем столе; kachestvo-moyki-portable.exe — запуск без установки. Любой компьютер с Chrome/Edge: kachestvo_moyki.html — открыть двойным щелчком. На телефоне акты загружаются кнопками, привязка папок с фото/видео работает только на ПК. Сборка ${GITHUB_SHA::7}."
