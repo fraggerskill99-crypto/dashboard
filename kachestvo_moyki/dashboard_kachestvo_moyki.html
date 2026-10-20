@@ -6006,7 +6006,7 @@ async function setupIncubMediaPinning() {
 const FOLDER_ACTS_SEEN = {};
 function folderActKind(name) {
   const n = name.toLowerCase().replace(/ё/g, 'е');
-  if (/свод|журнал|микроб|(^|[^а-я])мб([^а-я]|$)|nok/.test(n)) return null;
+  if (/(^|[^а-я])свод(?![а-я])|журнал|микроб|(^|[^а-я])мб([^а-я]|$)|nok/.test(n)) return null;
   if (/инкуб/.test(n)) return 'incub';
   if (/зпп/.test(n)) return 'zpp';
   if (/график|пр[\s._-]*р|санразрыв/.test(n)) return 'schedule';

@@ -2241,7 +2241,8 @@ setupFileLink({
 
 // ===================== ПРИВЯЗКА ПАПКИ (Свод МБ + Акт приёмки мойки) =====================
 const DIR = {handle: null, seen: {}, busy: false};
-const dirIsMb = n => /свод|журнал|мб|микроб/i.test(n) || /\.csv$/i.test(n);
+// «свод» — отдельным словом («Свод МБ»), а не «Сводная таблица»
+const dirIsMb = n => /(^|[^а-яё])свод(?![а-яё])|журнал|(^|[^а-яё])мб(?![а-яё])|микроб/i.test(n) || (location.protocol !== 'app:' && /\.csv$/i.test(n));
 const dirIsAkt = n => /акт|мойк/i.test(n) && !dirIsMb(n);
 async function dirPick(handle){
   const files = [];
@@ -2258,7 +2259,9 @@ async function dirPick(handle){
   const cand = files.filter(f => !dirIsAkt(f.name));
   // акт приёма мойки (не Инкубатория и не ЗПП) — для баллов мойки и «балла перед обнаружением»
   const akt = newest(files.filter(f => dirIsAkt(f.name) && /\.xlsx$/i.test(f.name) && !/инкуб|зпп|график/i.test(f.name)));
-  return {mb: newest(cand.filter(f => dirIsMb(f.name))) || newest(cand), akt, count: files.length};
+  // в приложении папка большая (OneDrive отдела) — случайную свежую таблицу за свод не берём
+  const loose = location.protocol === 'app:' ? null : newest(cand);
+  return {mb: newest(cand.filter(f => dirIsMb(f.name))) || loose, akt, count: files.length};
 }
 function dirTime(){ const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 function dirShowButtons(linked){

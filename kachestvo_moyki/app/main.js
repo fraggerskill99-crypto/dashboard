@@ -4,7 +4,7 @@
 // у всех вкладок один адрес, поэтому они видят данные друг друга.
 // Папка «Документы\Качество мойки\Данные» (туда скачиваются папки SharePoint) отдаётся
 // дашбордам сама — без окна выбора папки.
-const { app, BrowserWindow, Menu, shell, session, dialog, protocol, net } = require('electron');
+const { app, BrowserWindow, Menu, shell, session, dialog, protocol, net, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -65,14 +65,37 @@ function foldersConfig() {
   return c;
 }
 function saveFolders(c) { try { fs.writeFileSync(foldersFile(), JSON.stringify(c, null, 2)); } catch (e) { /* не критично */ } }
-function findOneDrive(relPath) {
+function oneDriveBases() {
   const home = app.getPath('home');
   const bases = [process.env.OneDriveCommercial, process.env.OneDrive].filter(Boolean);
   try { fs.readdirSync(home).filter((n) => /^OneDrive/i.test(n)).forEach((n) => bases.push(path.join(home, n))); } catch (e) { /* нет домашней папки */ }
+  return [...new Set(bases)];
+}
+const sameName = (a, b) => a.toLowerCase().replace(/ё/g, 'е').trim() === b.toLowerCase().replace(/ё/g, 'е').trim();
+function findOneDrive(relPath) {
+  const bases = oneDriveBases();
   for (const b of bases) {
     for (const rel of [relPath, relPath.replace('Рабочий стол', 'Desktop')]) {
       const abs = path.join(b, rel);
       try { if (fs.statSync(abs).isDirectory()) return abs; } catch (e) { /* нет такой */ }
+    }
+  }
+  // не нашлась по точному пути — ищем папку с тем же именем (и тем же родителем) глубже в OneDrive
+  const segs = relPath.split(path.sep), name = segs[segs.length - 1], parent = segs.length > 1 ? segs[segs.length - 2] : null;
+  let seen = 0;
+  for (const b of bases) {
+    const queue = [[b, 0]];
+    while (queue.length && seen < 4000) {
+      const [dir, depth] = queue.shift();
+      let items = [];
+      try { items = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { continue; }
+      for (const d of items) {
+        if (!d.isDirectory() || d.name.startsWith('.')) continue;
+        seen++;
+        const abs = path.join(dir, d.name);
+        if (sameName(d.name, name) && (!parent || segs.length < 3 || sameName(path.basename(dir), parent))) return abs;
+        if (depth < 5) queue.push([abs, depth + 1]);
+      }
     }
   }
   return null;
@@ -90,6 +113,32 @@ function autoMountOneDrive() {
     changed = true;
   }
   if (changed) saveFolders(c);
+}
+// папку отдела не нашли сами — один раз спрашиваем, где она
+async function askMissingOneDrive() {
+  const c = foldersConfig();
+  if (!Array.isArray(c.autoDone)) c.autoDone = [];
+  if (!Array.isArray(c.asked)) c.asked = [];
+  for (const f of ONEDRIVE_AUTO) {
+    if (c.autoDone.includes(f.name) || c.asked.includes(f.name)) continue;
+    c.asked.push(f.name);
+    saveFolders(c);
+    const what = f.name.startsWith('УКПФ') ? 'акты выращивания, Инкубатория, ЗПП и Свод МБ' : 'фото/видео и презентации еженедельных несоответствий';
+    const r = await dialog.showMessageBox(win, {
+      type: 'question', title: 'Папка не найдена', noLink: true, buttons: ['Выбрать папку…', 'Позже'], defaultId: 0, cancelId: 1,
+      message: `Не нашёл папку «${f.rel.split(path.sep).pop()}» в OneDrive`,
+      detail: `Отсюда берутся ${what}.\nИскал: OneDrive\\${f.rel}\n\nУкажите эту папку один раз — дальше данные будут подтягиваться сами. Позже — меню «Файл → Папки на компьютере…».`,
+    });
+    if (r.response !== 0) continue;
+    const pick = await dialog.showOpenDialog(win, { title: f.name, defaultPath: oneDriveBases()[0], properties: ['openDirectory'] });
+    if (pick.canceled || !pick.filePaths[0]) continue;
+    const cc = foldersConfig();
+    if (!cc.mounts.some((m) => m.path === pick.filePaths[0])) cc.mounts.push({ name: f.name, path: pick.filePaths[0] });
+    cc.autoDone = (cc.autoDone || []).concat(f.name);
+    saveFolders(cc);
+    watchData();
+    dataChanged();
+  }
 }
 const mounts = () => foldersConfig().mounts.filter((m) => { try { return fs.statSync(m.path).isDirectory(); } catch (e) { return false; } });
 
@@ -141,7 +190,8 @@ function latestSvod() {
     })(abs, rel, 0);
   }
   const newest = (a) => a.sort((x, y) => y.mtime - x.mtime)[0] || null;
-  return newest(found.filter((f) => /свод/i.test(f.name))) || newest(found.filter((f) => /мб|микроб|nok/i.test(f.name)));
+  // «свод» — отдельным словом («Свод МБ», «Свод_2026»), а не «Сводная таблица»
+  return newest(found.filter((f) => /(^|[^а-яё])свод(?![а-яё])/i.test(f.name))) || newest(found.filter((f) => /(^|[^а-яё])мб(?![а-яё])|микроб|nok/i.test(f.name)));
 }
 const json = (o, status) => new Response(JSON.stringify(o), { status: status || 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 
@@ -373,6 +423,80 @@ async function spLogout() {
   toast('SharePoint: вы вышли из учётной записи. Следующее обновление попросит войти.', 'ok');
 }
 
+
+// ---------- «Справка → Проверка данных»: что лежит в папках и что загрузилось во вкладки ----------
+function frameJs(page, code) {
+  const f = win && !win.isDestroyed() && win.webContents.mainFrame.framesInSubtree.find((x) => x.url.endsWith('/' + page));
+  return f ? f.executeJavaScript(code).catch((e) => 'ошибка: ' + e.message) : Promise.resolve('вкладка ещё не открывалась');
+}
+// так же, как «Качество мойки» разбирает акты по имени файла
+function actKind(name) {
+  const n = name.toLowerCase().replace(/ё/g, 'е');
+  if (/(^|[^а-я])свод(?![а-я])|журнал|микроб|(^|[^а-я])мб([^а-я]|$)|nok/.test(n)) return 'Свод/журнал МБ';
+  if (/инкуб/.test(n)) return 'акт Инкубатория';
+  if (/зпп/.test(n)) return 'акт ЗПП';
+  if (/график|пр[\s._-]*р|санразрыв/.test(n)) return 'график ПР/Р';
+  if (/акт|мойк|при[её]м/.test(n)) return 'акт приёма мойки (выращивание)';
+  return null;
+}
+function scanForReport(root) {
+  const r = { xlsx: {}, other: [], pptx: [], media: 0, dateDirs: 0, files: 0 };
+  (function walk(dir, rel, depth) {
+    let items = [];
+    try { items = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    for (const d of items) {
+      if (r.files > 30000 || SKIP_RE.test(d.name)) continue;
+      const relp = rel ? rel + '\\' + d.name : d.name;
+      if (d.isDirectory()) { if (/^\d{4}-\d{2}-\d{2}$/.test(d.name)) r.dateDirs++; if (depth < 8) walk(path.join(dir, d.name), relp, depth + 1); continue; }
+      r.files++;
+      if (/\.(xlsx|xlsm|csv)$/i.test(d.name)) { const k = actKind(d.name); if (k) (r.xlsx[k] = r.xlsx[k] || []).push(relp); else r.other.push(relp); }
+      else if (/\.(pptx|pptm|ppsx)$/i.test(d.name)) r.pptx.push(relp);
+      else if (/\.(jpe?g|png|webp|gif|mp4|mov|avi|webm|m4v)$/i.test(d.name)) r.media++;
+    }
+  })(root, '', 0);
+  return r;
+}
+async function dataReport() {
+  toast('Проверяю папки и вкладки…');
+  const L = [];
+  const fc = foldersConfig(), spc = spConfig();
+  L.push(`Качество мойки — версия ${app.getVersion()} · ${new Date().toLocaleString('ru-RU')}`, '');
+  L.push('ПАПКИ');
+  L.push(`  OneDrive на компьютере: ${oneDriveBases().join(' | ') || 'не найден'}`);
+  L.push(`  Данные: ${dataDir()}`);
+  fc.mounts.forEach((m) => L.push(`  ${m.name}: ${m.path} — ${fs.existsSync(m.path) ? 'есть' : 'НЕ НАЙДЕНА'}`));
+  ONEDRIVE_AUTO.filter((f) => !fc.mounts.some((m) => m.name === f.name)).forEach((f) => L.push(`  ${f.name}: НЕ ПОДКЛЮЧЕНА (искал OneDrive\\${f.rel})`));
+  spc.links.forEach((l) => L.push(`  SharePoint «${spName(l)}»: ${l.lastSync ? 'обновлено ' + new Date(l.lastSync).toLocaleString('ru-RU') : 'ещё не скачивалась'}`));
+  L.push('');
+  for (const [name, root] of [['Данные', dataDir()]].concat(mounts().map((m) => [m.name, m.path]))) {
+    const r = scanForReport(root);
+    L.push(`ФАЙЛЫ — ${name}: всего ${r.files}, фото/видео ${r.media}, папок-дат (ГГГГ-ММ-ДД) ${r.dateDirs}, презентаций ${r.pptx.length}`);
+    Object.entries(r.xlsx).forEach(([k, list]) => L.push(`  ${k}: ${list.length}` + list.slice(0, 12).map((x) => '\n     ' + x).join('')));
+    if (r.other.length) L.push(`  Excel без признаков акта/свода (не читаются): ${r.other.length}` + r.other.slice(0, 15).map((x) => '\n     ' + x).join(''));
+    if (r.pptx.length) L.push('  Презентации:' + r.pptx.slice(0, 10).map((x) => '\n     ' + x).join('') + (r.pptx.length > 10 ? '\n     …' : ''));
+    L.push('');
+  }
+  const moika = await frameJs('moika.html', `JSON.stringify({
+    акты: AKT_SOURCES.map((s) => s.name + ' — ' + s.records.length + ' записей'), записей_всего: RECORDS_FULL.length,
+    акт_инкубатория: INCUB_FILE_NAME, акт_ЗПП: (typeof ZPP_FILE_NAME !== 'undefined' ? ZPP_FILE_NAME : null),
+    папка_фото: MEDIA_DIR_HANDLE && MEDIA_DIR_HANDLE.name, корпусо_дней_из_папок: Object.keys(DYNAMIC_MEDIA_INDEX).length,
+    корпусо_дней_из_презентаций: Object.keys(PPTX_INDEX).length, зало_дней_инкубатория: Object.keys(INCUB_MEDIA_INDEX).length,
+    статус_актов: document.getElementById('uploadStatus').textContent, статус_инкубатория: document.getElementById('incubUploadStatus').textContent,
+    статус_ЗПП: document.getElementById('zppUploadStatus').textContent, статус_фото: document.getElementById('mediaUploadStatus').textContent,
+    презентации_с_замечаниями: PPTX_REPORT.filter((r) => r.err || !r.n || r.noDate || r.noCorpus).slice(0, 15).map((r) => r.path + ': ' + (r.err || ('фото ' + r.n + ', без даты ' + (r.noDate || 0) + ', без корпуса ' + (r.noCorpus || 0)))),
+  }, null, 2)`);
+  const mbr = await frameJs('mb.html', `(document.getElementById('dirStatus') || {}).innerText || ''`);
+  const nok = await frameJs('nok.html', `(document.getElementById('nokSync') || {}).innerText || ''`);
+  L.push('ВКЛАДКА «КАЧЕСТВО МОЙКИ»', String(moika), '', 'ВКЛАДКА «МОЙКА И МБ»', String(mbr), '', 'ВКЛАДКА «NOK-ДАШБОРД»', String(nok));
+  const text = L.join('\n');
+  const file = path.join(exportsDir(), 'Проверка данных.txt');
+  fs.mkdirSync(exportsDir(), { recursive: true });
+  fs.writeFileSync(file, '﻿' + text.replace(/\n/g, '\r\n'), 'utf8');
+  clipboard.writeText(text);
+  shell.openPath(file);
+  toast('Отчёт «Проверка данных» открыт и скопирован — его можно вставить в сообщение (Ctrl+V).', 'ok');
+}
+
 function start() {
   protocol.handle('app', handleApp);
   const ses = session.defaultSession;
@@ -405,6 +529,7 @@ function createWindow() {
   win.webContents.on('did-finish-load', () => { if (st.zoom) win.webContents.setZoomFactor(st.zoom); });
   // папки SharePoint: докачать новое после запуска и затем каждые 30 минут
   win.webContents.once('did-finish-load', () => {
+    setTimeout(askMissingOneDrive, 3000);
     setTimeout(() => syncSharePoint({ interactive: false }), 8000);
     setInterval(() => syncSharePoint({ interactive: false }), SP_SYNC_EVERY);
   });
@@ -508,6 +633,7 @@ function buildMenu() {
             detail: `Версия ${app.getVersion()}\n\nВкладки: Качество мойки, NOK-дашборд, Мойка и МБ.\n\nПапка «Данные» (акты, своды МБ, фото/видео, презентации; сюда же скачиваются папки SharePoint) — подключается ко всем вкладкам сама:\n${dataDir()}\n\nВыгрузки по умолчанию сохраняются в:\n${exportsDir()}\n\nНастройки и баллы хранятся в профиле Windows:\n${app.getPath('userData')}`,
           }),
         },
+        { label: 'Проверка данных (что найдено в папках)…', accelerator: 'F1', click: dataReport },
         { type: 'separator' },
         { label: 'Инструменты разработчика', accelerator: 'CmdOrCtrl+Shift+I', click: () => win && win.webContents.toggleDevTools() },
       ],
