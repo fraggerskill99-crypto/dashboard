@@ -4002,7 +4002,8 @@ function renderCatHistoryByTour() {
     return;
   }
   if (catHistState.tour === null || catHistState.tour >= tours.length) catHistState.tour = 0;
-  sel.innerHTML = tours.map((t, i) => `<option value="${i}">Тур ${fmtTourLabel(t)} · ${t.length} дн.</option>`).join('');
+  const hk = tourKeys(tours.slice().reverse()).reverse();   // tours здесь — свежие сверху
+  sel.innerHTML = tours.map((t, i) => `<option value="${i}">${tName(hk[i])} · ${fmtTourLabel(t)} · ${t.length} дн.</option>`).join('');
   sel.value = String(catHistState.tour);
   sel.onchange = () => { catHistState.tour = Number(sel.value); renderCatHistory(); };
   const i = catHistState.tour;
@@ -4042,7 +4043,7 @@ function renderCatHistoryByTour() {
 
   const showNok = catHistState.val === 'nok';
   const manualAt = (date, key) => getManualZoneScore(date, key, null);
-  setHistTitle(`Тур ${fmtTourLabel(tourDates)} — ${showNok ? 'несоответствия' : 'качество мойки'}`,
+  setHistTitle(`Тур ${tName(hk[i])} (${fmtTourLabel(tourDates)}) — ${showNok ? 'несоответствия' : 'качество мойки'}`,
     `зона ${catHistState.group} · приёмок: ${tourDates.length} дн.`);
   let html = '<table class="hist"><thead><tr><th class="wk">Дата</th>' +
     corpuses.map((c) => `<th><span class="zdot" style="background:${HIST_ZONE_COLORS[corpMeta[c].zone] || '#64748b'}"></span>${c}</th>`).join('') +
@@ -4298,6 +4299,15 @@ function getGroupTours(groupRecords) {
   return tours; // array of arrays of ISO date strings
 }
 
+// Туры нумеруются заново каждый год: Т1 — первый тур, начатый с января; в году 7 туров.
+// Ключ тура — число ГГГГNN (202603 = 3-й тур 2026 года), подпись — «Т3·26».
+const TOURS_PER_YEAR = 7;
+function tourKeys(tours) {
+  const cnt = {};
+  return tours.map((t) => { const y = +String(t[0]).slice(0, 4); cnt[y] = (cnt[y] || 0) + 1; return y * 100 + cnt[y]; });
+}
+const tourYear = (k) => Math.floor(k / 100), tourNo = (k) => k % 100;
+function tName(k) { return 'Т' + tourNo(k) + '·' + String(tourYear(k)).slice(2); }
 function corpNum(c) { const m = c.match(/(\d+)$/); return m ? parseInt(m[1], 10) : 0; }
 
 // ============================================================
@@ -4325,8 +4335,9 @@ function buildWashData(records) {
     const tours = getGroupTours(zoneRecords); // array of arrays of ISO dates
     const clusters = {};
     const corps = {};
+    const keys = tourKeys(tours);
     tours.forEach((tourDates, i) => {
-      const t = i + 1;
+      const t = keys[i];
       clusters[t] = fmtTourLabel(tourDates);
       const tourSet = new Set(tourDates);
       zoneRecords.filter((r) => tourSet.has(r.date)).forEach((r) => {
@@ -4347,7 +4358,7 @@ function wGetCorps(pl) {
     return n(a) - n(b) || a.localeCompare(b, 'ru');
   });
 }
-function wGetTourNums(pl) { return Object.keys(WASH_DATA[pl].clusters).map(Number); }
+function wGetTourNums(pl) { return Object.keys(WASH_DATA[pl].clusters).map(Number).sort((a, b) => a - b); }
 
 function wRender(pl) {
   wActivePl = pl;
@@ -4356,26 +4367,26 @@ function wRender(pl) {
   if (wActiveTours.size === 0 || !tourNums.some((t) => wActiveTours.has(t))) wActiveTours = new Set(tourNums.slice(-3));
   const lastVals = corps.map((c) => d.corps[c][lastT]).filter((v) => v != null);
   const lastAvg = wAvg(lastVals);
-  const prevT = lastT > 1 ? lastT - 1 : null;
+  const prevT = tourNums.length > 1 ? tourNums[tourNums.length - 2] : null;   // предыдущий тур по времени (и через Новый год)
   const prevAvg = prevT ? wAvg(corps.map((c) => d.corps[c][prevT]).filter((v) => v != null)) : null;
   const delta = lastAvg != null && prevAvg != null ? lastAvg - prevAvg : null;
   const below = lastVals.filter((v) => v < 8).length;
   document.getElementById('w-kpi-row').innerHTML =
-    `<div class="kpi"><div class="kpi-lbl">Тур ${lastT} — среднее</div><div class="kpi-val" style="color:${lastAvg == null ? 'inherit' : lastAvg >= 8 ? '#0F6E56' : '#791F1F'}">${lastAvg != null ? lastAvg.toFixed(2) : '—'}</div><div class="kpi-sub">${d.clusters[lastT]}</div></div>` +
-    `<div class="kpi"><div class="kpi-lbl">Изменение к пред.</div><div class="kpi-val" style="color:${delta == null ? 'inherit' : delta >= 0 ? '#0F6E56' : '#791F1F'}">${delta != null ? (delta >= 0 ? '+' : '') + delta.toFixed(2) : '—'}</div><div class="kpi-sub">тур ${lastT - 1}→${lastT}</div></div>` +
+    `<div class="kpi"><div class="kpi-lbl">Тур ${tName(lastT)} — среднее</div><div class="kpi-val" style="color:${lastAvg == null ? 'inherit' : lastAvg >= 8 ? '#0F6E56' : '#791F1F'}">${lastAvg != null ? lastAvg.toFixed(2) : '—'}</div><div class="kpi-sub">${d.clusters[lastT]}</div></div>` +
+    `<div class="kpi"><div class="kpi-lbl">Изменение к пред.</div><div class="kpi-val" style="color:${delta == null ? 'inherit' : delta >= 0 ? '#0F6E56' : '#791F1F'}">${delta != null ? (delta >= 0 ? '+' : '') + delta.toFixed(2) : '—'}</div><div class="kpi-sub">${prevT ? tName(prevT) + '→' + tName(lastT) : 'первый тур'}</div></div>` +
     `<div class="kpi"><div class="kpi-lbl">Ниже нормы 8</div><div class="kpi-val" style="color:${below > 0 ? '#791F1F' : '#0F6E56'}">${below}</div><div class="kpi-sub">из ${lastVals.length} корп.</div></div>` +
-    `<div class="kpi"><div class="kpi-lbl">Всего туров</div><div class="kpi-val">${tourNums.length}</div><div class="kpi-sub">с ${d.clusters[1]}</div></div>`;
+    `<div class="kpi"><div class="kpi-lbl">Туров в ${tourYear(lastT)} году</div><div class="kpi-val">${tourNums.filter((t) => tourYear(t) === tourYear(lastT)).length} из ${TOURS_PER_YEAR}</div><div class="kpi-sub">всего с ${d.clusters[tourNums[0]]}: ${tourNums.length}</div></div>`;
   const pairs = corps.map((c) => ({ c, v: d.corps[c][lastT] })).filter((x) => x.v != null);
   const best = pairs.length ? pairs.reduce((a, b) => (b.v > a.v ? b : a)) : null;
   const worst = pairs.length ? pairs.reduce((a, b) => (b.v < a.v ? b : a)) : null;
   document.getElementById('w-winners').innerHTML =
-    `<div class="wcard" style="background:#EAF3DE;border-color:#97C459;"><div class="wcard-lbl" style="color:#3B6D11">Лучший — тур ${lastT}</div><div class="wcard-name" style="color:#173404">${best ? best.c : '—'}</div><div class="wcard-score" style="color:#27500A">${best ? 'балл: ' + best.v : ''}</div></div>` +
-    `<div class="wcard" style="background:#FCEBEB;border-color:#F09595;"><div class="wcard-lbl" style="color:#A32D2D">Худший — тур ${lastT}</div><div class="wcard-name" style="color:#501313">${worst ? worst.c : '—'}</div><div class="wcard-score" style="color:#791F1F">${worst ? 'балл: ' + worst.v : ''}</div></div>`;
+    `<div class="wcard" style="background:#EAF3DE;border-color:#97C459;"><div class="wcard-lbl" style="color:#3B6D11">Лучший — тур ${tName(lastT)}</div><div class="wcard-name" style="color:#173404">${best ? best.c : '—'}</div><div class="wcard-score" style="color:#27500A">${best ? 'балл: ' + best.v : ''}</div></div>` +
+    `<div class="wcard" style="background:#FCEBEB;border-color:#F09595;"><div class="wcard-lbl" style="color:#A32D2D">Худший — тур ${tName(lastT)}</div><div class="wcard-name" style="color:#501313">${worst ? worst.c : '—'}</div><div class="wcard-score" style="color:#791F1F">${worst ? 'балл: ' + worst.v : ''}</div></div>`;
   const btnsEl = document.getElementById('w-tour-btns'); btnsEl.innerHTML = '';
   tourNums.forEach((t) => {
     const btn = document.createElement('button');
     btn.className = 'tbtn' + (wActiveTours.has(t) ? ' active' : '');
-    btn.textContent = 'Т' + t; btn.title = d.clusters[t];
+    btn.textContent = tName(t); btn.title = d.clusters[t];
     btn.onclick = () => {
       if (wActiveTours.has(t) && wActiveTours.size > 1) wActiveTours.delete(t);
       else wActiveTours.add(t);
@@ -4391,14 +4402,14 @@ function wRenderChart(pl) {
   const sel = tourNums.filter((t) => wActiveTours.has(t));
   document.querySelectorAll('#w-tour-btns .tbtn').forEach((b, i) => b.classList.toggle('active', wActiveTours.has(tourNums[i])));
   let legHtml = '';
-  sel.forEach((t, i) => { legHtml += `<span><span class="lsq" style="background:${W_PAL[i % W_PAL.length]}"></span>Т${t}: ${d.clusters[t]}</span>`; });
+  sel.forEach((t, i) => { legHtml += `<span><span class="lsq" style="background:${W_PAL[i % W_PAL.length]}"></span>${tName(t)}: ${d.clusters[t]}</span>`; });
   legHtml += `<span style="display:flex;align-items:center;gap:2px;"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed rgba(120,120,120,0.4);vertical-align:2px;"></span>Норма 8</span>`;
   document.getElementById('w-leg').innerHTML = legHtml;
   if (wChart) wChart.destroy();
-  const datasets = sel.map((t, i) => ({ label: 'Т' + t, data: corps.map((c) => (d.corps[c][t] ?? null)), backgroundColor: W_PAL[i % W_PAL.length] + 'BF', borderColor: W_PAL[i % W_PAL.length], borderWidth: 1, borderRadius: 3 }));
+  const datasets = sel.map((t, i) => ({ label: tName(t), data: corps.map((c) => (d.corps[c][t] ?? null)), backgroundColor: W_PAL[i % W_PAL.length] + 'BF', borderColor: W_PAL[i % W_PAL.length], borderWidth: 1, borderRadius: 3 }));
   datasets.push({ label: 'Норма 8', data: Array(corps.length).fill(8), type: 'line', borderColor: 'rgba(120,120,120,0.4)', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0, fill: false, tension: 0, order: 0 });
   wChart = new Chart(document.getElementById('w-mainChart'), { type: 'bar', data: { labels: corps, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { display: false }, tooltip: { backgroundColor: '#1c2333', callbacks: { label: (ctx) => (ctx.raw != null ? ` ${ctx.dataset.label}: ${ctx.raw}` : null) } } }, scales: { y: { min: 0, max: 10.5, ticks: { stepSize: 1, font: { size: 10 }, color: '#888' }, grid: { color: 'rgba(150,150,150,0.1)' } }, x: { ticks: { font: { size: 9 }, color: '#888', autoSkip: false, maxRotation: 50 }, grid: { display: false } } }, layout: { padding: { top: 10 } } } });
-  const thCols = `<th>Корпус</th>` + sel.map((t) => `<th>Т${t}<br><span style="font-weight:400;font-size:9px">${d.clusters[t]}</span></th>`).join('');
+  const thCols = `<th>Корпус</th>` + sel.map((t) => `<th>${tName(t)}<br><span style="font-weight:400;font-size:9px">${d.clusters[t]}</span></th>`).join('');
   const rows = corps.map((c) => {
     const cells = sel.map((t) => { const v = d.corps[c][t]; return `<td><span class="${wSc(v)}">${v != null ? v : '—'}</span></td>`; }).join('');
     return `<tr><td>${c}</td>${cells}</tr>`;
@@ -4408,7 +4419,7 @@ function wRenderChart(pl) {
 
 function wExportCSV() {
   const d = WASH_DATA[wActivePl], corps = wGetCorps(wActivePl), tourNums = wGetTourNums(wActivePl);
-  const lines = [['Корпус', ...tourNums.map((t) => `Т${t} (${d.clusters[t]})`)].join(';')];
+  const lines = [['Корпус', ...tourNums.map((t) => `${tName(t)} (${d.clusters[t]})`)].join(';')];
   corps.forEach((c) => { lines.push([c, ...tourNums.map((t) => d.corps[c][t] ?? '')].join(';')); });
   const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `УКПФ_${wActivePl}_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
@@ -4416,7 +4427,7 @@ function wExportCSV() {
 
 function wCopyTable() {
   const d = WASH_DATA[wActivePl], corps = wGetCorps(wActivePl), tourNums = wGetTourNums(wActivePl);
-  let txt = `Площадка ${wActivePl}\n Корпус\t${tourNums.map((t) => `Т${t}`).join('\t')}\n`;
+  let txt = `Площадка ${wActivePl}\n Корпус\t${tourNums.map((t) => tName(t)).join('\t')}\n`;
   corps.forEach((c) => { txt += `${c}\t${tourNums.map((t) => d.corps[c][t] ?? '—').join('\t')}\n`; });
   navigator.clipboard.writeText(txt).then(() => {
     const btn = document.getElementById('w-copybtn'), orig = btn.innerHTML;
@@ -4468,7 +4479,7 @@ function renderChecklistTab() {
   }
   const tourDates = tours[clState.tourIdx];
   document.getElementById('clTourLabel').textContent =
-    `Тур ${clState.tourIdx + 1} из ${tours.length} · ${fmtDate(tourDates[0])}${tourDates.length > 1 ? ' – ' + fmtDate(tourDates[tourDates.length - 1]) : ''}`;
+    `Тур ${tName(tourKeys(tours)[clState.tourIdx])} (${tourNo(tourKeys(tours)[clState.tourIdx])}-й из ${TOURS_PER_YEAR} в ${tourYear(tourKeys(tours)[clState.tourIdx])} году) · ${fmtDate(tourDates[0])}${tourDates.length > 1 ? ' – ' + fmtDate(tourDates[tourDates.length - 1]) : ''}`;
 
   const tourSet = new Set(tourDates);
   const corpusRecs = groupRecords.filter((r) => tourSet.has(r.date)).sort((a, b) => corpNum(a.corpus) - corpNum(b.corpus));

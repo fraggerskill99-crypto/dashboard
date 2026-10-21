@@ -1470,6 +1470,11 @@ renderEvtBody();
 <script>
 
 const W_PAL=['#378ADD','#E24B4A','#1D9E75','#7F77DD','#EF9F27','#D4537E','#5DCAA5','#D85A30','#639922','#534AB7'];
+// Туры нумеруются заново каждый год: Т1 — первый тур, начатый с января; в году 7 туров.
+// Ключ тура — число ГГГГNN (202603 = 3-й тур 2026 года), подпись — «Т3·26».
+const TOURS_PER_YEAR = 7;
+const tourYear = k => Math.floor(k / 100), tourNo = k => k % 100;
+const tName = k => 'Т' + tourNo(k) + '·' + String(tourYear(k)).slice(2);
 const WASH_DATA={
 "А":{clusters:{1:"27.04–29.04.25",2:"16.06–19.06.25",3:"06.08–08.08.25",4:"25.09–27.09.25",5:"15.11–18.11.25",6:"07.01–09.01.26",7:"28.02–02.03.26",8:"19.04–22.04.26",9:"10.06–12.06.26"},corps:{"А-1":{1:9,2:8,3:9,4:5,5:7,6:8,7:9,8:9,9:5},"А-2":{1:9,2:8,3:7,4:3,5:7,6:8,7:8,8:9,9:6},"А-3":{1:6,2:5,3:10,4:4,5:7,6:8,7:8,8:8,9:4},"А-4":{1:7,2:6,3:8,4:0,5:7,6:9,7:8,8:8,9:7},"А-5":{1:7,2:8,3:8,4:7,5:8,6:10,7:8,8:8,9:9},"А-6":{1:8,2:5,3:5,4:6,5:7,6:9,7:9,8:7,9:8},"А-7":{1:8,2:8,3:8,4:6,5:8,6:9,7:8,8:6,9:9},"А-8":{1:8,2:9,3:7,4:7,5:8,6:10,7:8,8:8,9:6},"А-9":{1:7,2:8,3:6,4:3,5:5,6:10,7:7,8:8,9:1},"А-10":{1:6,2:8,3:5,4:4,5:3,6:9,7:9,8:8,9:2}}},
 "Б":{clusters:{1:"01.05–04.05.25",2:"21.06–23.06.25",3:"11.08–13.08.25",4:"28.09–03.10.25",5:"19.11–23.11.25",6:"11.01–15.01.26",7:"04.03–06.03.26",8:"24.04–26.04.26",9:"14.06–16.06.26"},corps:{"Б-1":{1:4,2:7,3:9,4:5,5:8,6:10,7:8,8:9,9:4},"Б-2":{1:4,2:8,3:8,4:6,5:7,6:10,7:7,8:9,9:5},"Б-3":{1:8,2:6,3:8,4:3,5:7,6:10,7:8,8:9,9:4},"Б-4":{1:6,2:8,3:9,4:6,5:7,6:10,7:7,8:8,9:7},"Б-5":{1:7,2:8,3:9,4:7,5:8,6:10,7:8,8:9,9:8},"Б-6":{1:9,2:8,3:8,4:5,5:7,6:10,7:5,8:8,9:8},"Б-7":{1:6,2:9,3:5,4:7,5:9,6:10,7:4,8:8,9:6},"Б-8":{1:4,2:8,3:9,4:8,5:8,6:10,7:4,8:9,9:8},"Б-9":{1:7,2:8,3:8,4:6,5:8,6:10,7:8,8:8,9:5},"Б-10":{1:7,2:7,3:8,4:7,5:9,6:10,7:7,8:9,9:5}}},
@@ -1482,12 +1487,32 @@ const WASH_DATA={
 "БП-13":{clusters:{1:"31.03–06.04.25",2:"21.05–25.05.25",3:"10.07–15.07.25",4:"31.08–05.09.25",5:"19.10–24.10.25",6:"07.12–13.12.25",7:"01.02–05.02.26",8:"24.03–28.03.26",9:"13.05–19.05.26",10:"04.07–07.07.26"},corps:{"БП-13-1":{1:10,2:9,3:8,4:8,5:9,6:9,7:9,8:9,9:7,10:6},"БП-13-2":{1:10,2:9,3:10,4:6,5:8,6:9,7:9,8:9,9:5,10:4},"БП-13-3":{1:9,2:9,3:9,4:8,5:7,6:8,7:9,8:9,9:7,10:8},"БП-13-4":{1:9,2:10,3:9,4:7,5:7,6:8,7:8,8:8,9:8,10:8},"БП-13-5":{1:9,2:10,3:9,4:9,5:5,6:6,7:9,8:9,9:8,10:7},"БП-13-6":{1:9,2:10,3:10,4:8,5:6,6:4,7:9,8:9,9:8,10:7},"БП-13-7":{1:10,2:8,3:9,4:5,5:7,6:7,7:9,8:9,9:7,10:7},"БП-13-8":{1:10,2:10,3:8,4:2,5:6,6:7,7:10,8:9,9:8,10:8},"БП-13-9":{1:9,2:7,3:8,4:4,5:7,6:7,7:9,8:9,9:9,10:8},"БП-13-10":{1:9,2:8,3:9,4:2,5:7,6:7,7:8,8:8,9:9,10:7},"БП-13-11":{1:10,2:9,3:8,4:8,5:7,6:8,7:8,8:9,9:9,10:8},"БП-13-12":{1:9,2:8,3:8,4:9,5:6,6:7,7:9,8:9,9:8,10:8}}},
 "БП-14":{clusters:{1:"07.04–11.04.25",2:"06.09–10.09.25",3:"24.10–29.10.25",4:"14.12–19.12.25",5:"06.02–12.02.26",6:"29.03–03.04.26",7:"20.05–25.05.26",8:"08.07–12.07.26"},corps:{"БП-14-1":{1:8,2:3,3:7,4:8,5:8,6:9,7:8,8:4},"БП-14-2":{1:10,2:0,3:8,4:7,5:9,6:9,7:8,8:4},"БП-14-3":{1:9,2:3,3:3,4:7,5:9,6:9,7:5,8:4},"БП-14-4":{1:8,2:6,3:4,4:6,5:10,6:8,7:5,8:7},"БП-14-5":{1:8,2:5,3:3,4:8,5:9,6:9,7:7,8:7},"БП-14-6":{1:8,2:2,3:1,4:6,5:9,6:8,7:7,8:7},"БП-14-7":{1:8,2:6,3:1,4:6,5:8,6:9,7:9,8:9},"БП-14-8":{1:8,2:7,3:8,4:6,5:9,6:9,7:8,8:7},"БП-14-9":{1:7,2:5,3:8,4:8,5:10,6:9,7:8,8:6},"БП-14-10":{1:8,2:8,3:7,4:7,5:9,6:8,7:8,8:7},"БП-14-11":{1:8,2:8,3:7,4:7,5:9,6:10,7:8,8:5},"БП-14-12":{1:10,2:8,3:8,4:8,5:9,6:10,7:8,8:6}}}
 };
+// встроенные туры (1, 2, 3… подряд) → по годам: ключ ГГГГNN; год — по дате начала тура из подписи «дд.мм–дд.мм.гг»
+(function renumberEmbeddedTours(){
+  Object.keys(WASH_DATA).forEach(site => {
+    const d = WASH_DATA[site]; if (!d || !d.clusters) return;
+    const keys = Object.keys(d.clusters).map(Number).sort((a, b) => a - b);
+    if (!keys.length || keys[0] > 9999) return;   // уже по годам
+    const perYear = {}, map = {}, clusters = {};
+    keys.forEach(k => {
+      const lbl = String(d.clusters[k]);
+      const m = lbl.match(/^(\d{2})\.(\d{2})(?:\.(\d{2}))?(?:–(\d{2})\.(\d{2})\.(\d{2}))?$/);
+      let y = 2000 + +(m && (m[6] || m[3]) || 26);
+      if (m && m[4] && +m[2] > +m[5]) y -= 1;   // тур через Новый год: начало — в прошлом году
+      perYear[y] = (perYear[y] || 0) + 1;
+      map[k] = y * 100 + perYear[y]; clusters[map[k]] = lbl;
+    });
+    d.clusters = clusters;
+    Object.keys(d.corps || {}).forEach(c => { const o = {}; Object.keys(d.corps[c]).forEach(k => { o[map[k] || k] = d.corps[c][k]; }); d.corps[c] = o; });
+  });
+})();
+
 
 let wChart=null,wActivePl='А',wActiveTours=new Set();
 function wAvg(a){const f=a.filter(v=>v!=null);return f.length?f.reduce((a,b)=>a+b,0)/f.length:null;}
 function wSc(v){if(v==null)return'nil';if(v>=8)return'ok';if(v>=6)return'warn';return'bad';}
 function wGetCorps(pl){return Object.keys(WASH_DATA[pl].corps).sort((a,b)=>{const n=x=>parseInt(x.replace(/\D/g,'')||0);return n(a)-n(b)||a.localeCompare(b,'ru');});}
-function wGetTourNums(pl){return Object.keys(WASH_DATA[pl].clusters).map(Number);}
+function wGetTourNums(pl){return Object.keys(WASH_DATA[pl].clusters).map(Number).sort((a,b)=>a-b);}
 
 function wRender(pl){
   wActivePl=pl;
@@ -1496,26 +1521,26 @@ function wRender(pl){
   if(wActiveTours.size===0||!tourNums.some(t=>wActiveTours.has(t)))wActiveTours=new Set(tourNums.slice(-3));
   const lastVals=corps.map(c=>d.corps[c][lastT]).filter(v=>v!=null);
   const lastAvg=wAvg(lastVals);
-  const prevT=lastT>1?lastT-1:null;
+  const prevT=tourNums.length>1?tourNums[tourNums.length-2]:null; // предыдущий тур по времени (и через Новый год)
   const prevAvg=prevT?wAvg(corps.map(c=>d.corps[c][prevT]).filter(v=>v!=null)):null;
   const delta=lastAvg!=null&&prevAvg!=null?lastAvg-prevAvg:null;
   const below=lastVals.filter(v=>v<8).length;
   document.getElementById('w-kpi-row').innerHTML=
-    `<div class="kpi"><div class="kpi-lbl">Тур ${lastT} — среднее</div><div class="kpi-val" style="color:${lastAvg==null?'inherit':lastAvg>=8?'#0F6E56':'#791F1F'}">${lastAvg!=null?lastAvg.toFixed(2):'—'}</div><div class="kpi-sub">${d.clusters[lastT]}</div></div>`+
-    `<div class="kpi"><div class="kpi-lbl">Изменение к пред.</div><div class="kpi-val" style="color:${delta==null?'inherit':delta>=0?'#0F6E56':'#791F1F'}">${delta!=null?(delta>=0?'+':'')+delta.toFixed(2):'—'}</div><div class="kpi-sub">тур ${lastT-1}→${lastT}</div></div>`+
+    `<div class="kpi"><div class="kpi-lbl">Тур ${tName(lastT)} — среднее</div><div class="kpi-val" style="color:${lastAvg==null?'inherit':lastAvg>=8?'#0F6E56':'#791F1F'}">${lastAvg!=null?lastAvg.toFixed(2):'—'}</div><div class="kpi-sub">${d.clusters[lastT]}</div></div>`+
+    `<div class="kpi"><div class="kpi-lbl">Изменение к пред.</div><div class="kpi-val" style="color:${delta==null?'inherit':delta>=0?'#0F6E56':'#791F1F'}">${delta!=null?(delta>=0?'+':'')+delta.toFixed(2):'—'}</div><div class="kpi-sub">${prevT ? tName(prevT) + '→' + tName(lastT) : 'первый тур'}</div></div>`+
     `<div class="kpi"><div class="kpi-lbl">Ниже нормы 8</div><div class="kpi-val" style="color:${below>0?'#791F1F':'#0F6E56'}">${below}</div><div class="kpi-sub">из ${lastVals.length} корп.</div></div>`+
-    `<div class="kpi"><div class="kpi-lbl">Всего туров</div><div class="kpi-val">${tourNums.length}</div><div class="kpi-sub">с ${d.clusters[1]}</div></div>`;
+    `<div class="kpi"><div class="kpi-lbl">Туров в ${tourYear(lastT)} году</div><div class="kpi-val">${tourNums.filter(t=>tourYear(t)===tourYear(lastT)).length} из ${TOURS_PER_YEAR}</div><div class="kpi-sub">всего с ${d.clusters[tourNums[0]]}: ${tourNums.length}</div></div>`;
   const pairs=corps.map(c=>({c,v:d.corps[c][lastT]})).filter(x=>x.v!=null);
   const best=pairs.length?pairs.reduce((a,b)=>b.v>a.v?b:a):null;
   const worst=pairs.length?pairs.reduce((a,b)=>b.v<a.v?b:a):null;
   document.getElementById('w-winners').innerHTML=
-    `<div class="wcard" style="background:#EAF3DE;border-color:#97C459;"><div class="wcard-lbl" style="color:#3B6D11">Лучший — тур ${lastT}</div><div class="wcard-name" style="color:#173404">${best?best.c:'—'}</div><div class="wcard-score" style="color:#27500A">${best?'балл: '+best.v:''}</div></div>`+
-    `<div class="wcard" style="background:#FCEBEB;border-color:#F09595;"><div class="wcard-lbl" style="color:#A32D2D">Худший — тур ${lastT}</div><div class="wcard-name" style="color:#501313">${worst?worst.c:'—'}</div><div class="wcard-score" style="color:#791F1F">${worst?'балл: '+worst.v:''}</div></div>`;
+    `<div class="wcard" style="background:#EAF3DE;border-color:#97C459;"><div class="wcard-lbl" style="color:#3B6D11">Лучший — тур ${tName(lastT)}</div><div class="wcard-name" style="color:#173404">${best?best.c:'—'}</div><div class="wcard-score" style="color:#27500A">${best?'балл: '+best.v:''}</div></div>`+
+    `<div class="wcard" style="background:#FCEBEB;border-color:#F09595;"><div class="wcard-lbl" style="color:#A32D2D">Худший — тур ${tName(lastT)}</div><div class="wcard-name" style="color:#501313">${worst?worst.c:'—'}</div><div class="wcard-score" style="color:#791F1F">${worst?'балл: '+worst.v:''}</div></div>`;
   const btnsEl=document.getElementById('w-tour-btns');btnsEl.innerHTML='';
   tourNums.forEach(t=>{
     const btn=document.createElement('button');
     btn.className='tbtn'+(wActiveTours.has(t)?' active':'');
-    btn.textContent='Т'+t;btn.title=d.clusters[t];
+    btn.textContent=tName(t);btn.title=d.clusters[t];
     btn.onclick=()=>{
       if(wActiveTours.has(t)&&wActiveTours.size>1)wActiveTours.delete(t);
       else wActiveTours.add(t);
@@ -1531,21 +1556,21 @@ function wRenderChart(pl){
   const sel=tourNums.filter(t=>wActiveTours.has(t));
   document.querySelectorAll('.tbtn').forEach((b,i)=>b.classList.toggle('active',wActiveTours.has(tourNums[i])));
   let legHtml='';
-  sel.forEach((t,i)=>{legHtml+=`<span><span class="lsq" style="background:${W_PAL[i%W_PAL.length]}"></span>Т${t}: ${d.clusters[t]}</span>`;});
+  sel.forEach((t,i)=>{legHtml+=`<span><span class="lsq" style="background:${W_PAL[i%W_PAL.length]}"></span>${tName(t)}: ${d.clusters[t]}</span>`;});
   legHtml+=`<span style="display:flex;align-items:center;gap:2px;"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed rgba(120,120,120,0.4);vertical-align:2px;"></span>Норма 8</span>`;
   document.getElementById('w-leg').innerHTML=legHtml;
   if(wChart)wChart.destroy();
-  const datasets=sel.map((t,i)=>({label:'Т'+t,data:corps.map(c=>d.corps[c][t]??null),backgroundColor:W_PAL[i%W_PAL.length]+'BF',borderColor:W_PAL[i%W_PAL.length],borderWidth:1,borderRadius:3}));
+  const datasets=sel.map((t,i)=>({label:tName(t),data:corps.map(c=>d.corps[c][t]??null),backgroundColor:W_PAL[i%W_PAL.length]+'BF',borderColor:W_PAL[i%W_PAL.length],borderWidth:1,borderRadius:3}));
   datasets.push({label:'Норма 8',data:Array(corps.length).fill(8),type:'line',borderColor:'rgba(120,120,120,0.4)',borderWidth:1.5,borderDash:[4,4],pointRadius:0,fill:false,tension:0,order:0});
   wChart=new Chart(document.getElementById('w-mainChart'),{type:'bar',data:{labels:corps,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2333',callbacks:{label:ctx=>ctx.raw!=null?` ${ctx.dataset.label}: ${ctx.raw}`:null}}},scales:{y:{min:0,max:10.5,ticks:{stepSize:1,font:{size:10},color:'#888'},grid:{color:'rgba(150,150,150,0.1)'}},x:{ticks:{font:{size:9},color:'#888',autoSkip:false,maxRotation:50},grid:{display:false}}},layout:{padding:{top:10}}}});
-  const thCols=`<th>Корпус</th>`+sel.map(t=>`<th>Т${t}<br><span style="font-weight:400;font-size:9px">${d.clusters[t]}</span></th>`).join('');
+  const thCols=`<th>Корпус</th>`+sel.map(t=>`<th>${tName(t)}<br><span style="font-weight:400;font-size:9px">${d.clusters[t]}</span></th>`).join('');
   const rows=corps.map(c=>{const cells=sel.map(t=>{const v=d.corps[c][t];return`<td><span class="${wSc(v)}">${v!=null?v:'—'}</span></td>`;}).join('');return`<tr><td>${c}</td>${cells}</tr>`;}).join('');
   document.getElementById('w-tbl-wrap').innerHTML=`<table><thead><tr>${thCols}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function wExportCSV(){
   const d=WASH_DATA[wActivePl],corps=wGetCorps(wActivePl),tourNums=wGetTourNums(wActivePl);
-  const lines=[['Корпус',...tourNums.map(t=>`Т${t} (${d.clusters[t]})`)].join(';')];
+  const lines=[['Корпус',...tourNums.map(t=>`${tName(t)} (${d.clusters[t]})`)].join(';')];
   corps.forEach(c=>{lines.push([c,...tourNums.map(t=>d.corps[c][t]??'')].join(';'));});
   const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`УКПФ_${wActivePl}_${new Date().toISOString().slice(0,10)}.csv`;a.click();
@@ -1553,7 +1578,7 @@ function wExportCSV(){
 
 function wCopyTable(){
   const d=WASH_DATA[wActivePl],corps=wGetCorps(wActivePl),tourNums=wGetTourNums(wActivePl);
-  let txt=`Площадка ${wActivePl}\nКорпус\t${tourNums.map(t=>`Т${t}`).join('\t')}\n`;
+  let txt=`Площадка ${wActivePl}\nКорпус\t${tourNums.map(t=>tName(t)).join('\t')}\n`;
   corps.forEach(c=>{txt+=`${c}\t${tourNums.map(t=>d.corps[c][t]??'—').join('\t')}\n`;});
   navigator.clipboard.writeText(txt).then(()=>{
     const btn=document.getElementById('w-copybtn'),orig=btn.innerHTML;
@@ -1622,9 +1647,10 @@ function buildWashDataFromRecords(records){
       if (gap > 10){ clusters.push(cur); cur=[d]; } else cur.push(d);
     });
     if (cur.length) clusters.push(cur);
-    const clusterLabels = {}, tourOf = {};
-    clusters.forEach((arr, idx) => {
-      const tourNum = idx+1, start = arr[0], end = arr[arr.length-1];
+    const clusterLabels = {}, tourOf = {}, perYear = {};
+    clusters.forEach((arr) => {
+      const y = arr[0].getFullYear(); perYear[y] = (perYear[y] || 0) + 1;
+      const tourNum = y * 100 + perYear[y], start = arr[0], end = arr[arr.length-1];
       clusterLabels[tourNum] = start.getTime()===end.getTime() ? fmtDMY2(start) : `${fmtDM(start)}–${fmtDMY2(end)}`;
       arr.forEach(d => tourOf[d.getTime()] = tourNum);
     });
