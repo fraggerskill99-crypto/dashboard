@@ -41,6 +41,9 @@
   .cfg-row button, .cfg-add button { border: 1px solid var(--line); background: #f8fafc; border-radius: 7px; padding: 5px 10px; font-size: 12px; cursor: pointer; color: var(--navy); font-weight: 600; }
   .cfg-row button.x { color: #b91c1c; }
   .cfg-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .cfg-hint { margin: 0 0 6px; padding: 8px 10px; border-radius: 8px; background: #fff7e6; color: #6b4a00; font-size: 12.5px; line-height: 1.5; }
+  .cfg-rep { margin-top: 10px; font-size: 12.5px; }
+  .cfg-rep summary { cursor: pointer; font-weight: 600; color: var(--navy); }
   .cfg-ft { position: sticky; bottom: -16px; display: flex; align-items: center; gap: 10px; margin: 16px -18px -16px; padding: 12px 18px 16px; border-top: 1px solid var(--line); background: #fff; }
   .cfg-ft span { color: var(--muted); font-size: 12px; flex: 1; }
   .cfg-main { border: none; background: var(--navy); color: #fff; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
@@ -367,18 +370,35 @@
           <button type="button" data-cmd="pick-file" data-kind="${k}">Выбрать файл…</button>
           ${f.chosen || f.chosenMissing ? `<button type="button" class="x" data-cmd="clear-file" data-kind="${k}" title="Снова искать самому">✕</button>` : ''}</div>`;
       };
+      const folderRow = (m) => `<div class="cfg-row"><span class="lbl">${esc(m.roleTitle)}</span><span class="val"><b>${esc(m.name)}</b><small${m.ok ? '' : ' class="bad"'}>${esc(m.path)}${m.ok ? '' : ' — не найдена'}</small></span>
+          <button type="button" class="x" data-cmd="remove-folder" data-name="${esc(m.name)}" title="Не брать из этой папки">✕</button></div>`;
+      // что прочитано из презентаций: фото/видео и даты по участкам (из вкладки «Качество мойки»)
+      const pptxReport = () => {
+        let rep = [];
+        try { rep = (frame('moika').contentWindow.PPTX_REPORT || []).slice(); } catch (e) { /* вкладка ещё грузится */ }
+        if (!rep.length) return '';
+        const area = (p) => (/инкуб/i.test(p) ? 'Инкубатор' : /(^|[^а-яё])зпп([^а-яё]|$)/i.test(p) ? 'ЗПП' : 'Выращивание');
+        return '<details class="cfg-rep"><summary>Прочитано из презентаций: ' + rep.length + ' файл(ов), фото/видео — ' + rep.reduce((n, r) => n + (r.n || 0), 0) + '</summary>' +
+          rep.map((r) => `<div class="cfg-row"><span class="lbl">${area(r.path)}</span><span class="val"><b>${esc(r.path.split('/').pop())}</b>` +
+            (r.err ? `<small class="bad">${esc(r.err)}</small>` : `<small>фото/видео: ${r.n || 0}${r.noDate ? ' · <span class="bad">без даты: ' + r.noDate + '</span>' : ''}${r.noCorpus ? ' · без корпуса: ' + r.noCorpus : ''}</small>` +
+              (r.days && r.days.length ? `<small>${esc(r.days.join(' | ').replace(/Инкубатор: /g, ''))}</small>` : '')) + '</span></div>').join('') + '</details>';
+      };
       $('cfgBody').innerHTML =
         '<div class="cfg-sec">Акты</div>' + ['akt', 'incub', 'zpp', 'schedule'].map(fileRow).join('') +
         '<div class="cfg-sec">Свод микробиологии</div>' + fileRow('svod') +
-        '<div class="cfg-sec">Папки</div>' +
-        (state.folders.length ? state.folders.map((m) => `<div class="cfg-row"><span class="lbl">${esc(m.roleTitle)}</span><span class="val"><b>${esc(m.name)}</b><small${m.ok ? '' : ' class="bad"'}>${esc(m.path)}${m.ok ? '' : ' — не найдена'}</small></span>
-          <button type="button" class="x" data-cmd="remove-folder" data-name="${esc(m.name)}" title="Не брать из этой папки">✕</button></div>`).join('') : '<div class="cfg-row"><span class="val auto">Папок пока нет.</span></div>') +
-        `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="media">+ Папка с фото/видео и презентациями</button>
-          <button type="button" data-cmd="add-folder" data-role="acts">+ Папка с актами</button>
-          <button type="button" data-cmd="add-folder" data-role="svod">+ Папка со Сводом</button></div>` +
-        (state.noSharePoint ? '' : '<div class="cfg-sec">SharePoint</div>') +
-        (state.sharepoint.length ? state.sharepoint.map((l) => `<div class="cfg-row"><span class="lbl">${esc(l.name)}</span><span class="val"><small>${esc(l.link)}</small>${l.lastSync ? 'обновлено ' + when(Date.parse(l.lastSync)) : '<span class="auto">ещё не скачивалась</span>'}</span></div>`).join('') : '') +
-        (state.noSharePoint ? '' : '<div class="cfg-add"><button type="button" data-cmd="sharepoint">+ Подключить папку SharePoint по ссылке</button></div>');
+        // презентации несоответствий: SharePoint (в приложении — по ссылке) и папки с ними
+        '<div class="cfg-sec">Презентации несоответствий — Инкубатор, Выращивание, ЗПП</div>' +
+        (state.noSharePoint
+          ? '<p class="cfg-hint">По ссылке SharePoint браузер читать не может (защита браузера). Синхронизируйте папку SharePoint через OneDrive («Добавить ярлык в Мои файлы» или «Синхронизировать») и выберите её кнопкой ниже — внутри папки «Инкубатор», «Выращивание», «ЗПП». По ссылке напрямую читает приложение для ПК.</p>'
+          : (state.sharepoint.length ? state.sharepoint.map((l) => `<div class="cfg-row"><span class="lbl">SharePoint: ${esc(l.name)}</span><span class="val"><small>${esc(l.link)}</small>${l.lastSync ? 'прочитано ' + when(Date.parse(l.lastSync)) : '<span class="auto">ещё не скачивалась — «Обновить сейчас»</span>'}</span></div>`).join('') : '') +
+            `<div class="cfg-add"><button type="button" data-cmd="sharepoint">${state.sharepoint.length ? 'Другая ссылка SharePoint…' : '+ Ссылка SharePoint на папку с презентациями'}</button></div>`) +
+        state.folders.filter((m) => m.role === 'media').map((m) => folderRow(m)).join('') +
+        `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="media">+ Папка с презентациями${state.noSharePoint ? ' (синхронизированная SharePoint)' : ''}</button></div>` +
+        pptxReport() +
+        '<div class="cfg-sec">Папки актов и Свода</div>' +
+        (state.folders.filter((m) => m.role !== 'media').map((m) => folderRow(m)).join('') || '<div class="cfg-row"><span class="val auto">Папок пока нет.</span></div>') +
+        `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="acts">+ Папка с актами</button>
+          <button type="button" data-cmd="add-folder" data-role="svod">+ Папка со Сводом</button></div>`;
       $('cfgSt').textContent = state.lastRefresh ? 'Обновлено в ' + new Date(state.lastRefresh).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
     }
     openSettings = () => { $('cfg').hidden = false; cfg('state'); };

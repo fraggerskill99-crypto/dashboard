@@ -66,8 +66,8 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  const SITE_ORDER = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'БП12', 'БП13', 'БП14', 'Инкубатор'];
-  const siteName = (s) => (s === 'Инкубатор' ? 'Инкубаторий' : /^БП\d+$/.test(s) ? 'Площадка ' + s.replace(/^БП/, 'БП-') : /^[А-ЯЁ]$/.test(s) ? 'Площадка ' + s : s);
+  const SITE_ORDER = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'БП12', 'БП13', 'БП14', 'Инкубатор', 'ЗПП'];
+  const siteName = (s) => (s === 'Инкубатор' ? 'Инкубаторий' : s === 'ЗПП' ? 'ЗПП' : /^БП\d+$/.test(s) ? 'Площадка ' + s.replace(/^БП/, 'БП-') : /^[А-ЯЁ]$/.test(s) ? 'Площадка ' + s : s);
   const S = { weeks: [], wi: -1, site: 'all', items: [], list: [], i: 0, url: null, gen: 0 };
 
   function api() {
