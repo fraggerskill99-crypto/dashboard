@@ -426,17 +426,56 @@ function watchSources() {
   });
 }
 const watchers = {};
+// OneDrive/SharePoint сами «трогают» файлы: докачивают при чтении, меняют атрибуты, пишут desktop.ini.
+// Чтобы это не запускало перечитывание по кругу, вкладки обновляются, только если у файлов
+// с данными (акты, Свод, презентации, фото/видео) изменились имя, размер или дата.
+const DATA_FILE_RE = /\.(xlsx|xlsm|xlsb|xls|pptx|pptm|ppsx|ppsm|potx|ppt|pps|jpe?g|png|heic|heif|webp|gif|bmp|mp4|mov|m4v|avi|3gp|mkv|webm)$/i;
+const isNoise = (name) => {
+  const base = path.basename(String(name || ''));
+  return /\.part$|^~\$|^\.|^desktop\.ini$|^thumbs\.db$|\.tmp$/i.test(base) || !DATA_FILE_RE.test(base) && /\.[a-z0-9]{1,5}$/i.test(base);
+};
+async function dataSig(roots) {
+  const parts = [];
+  let n = 0;
+  async function walk(dir, depth) {
+    let list;
+    try { list = await fs.promises.readdir(dir, { withFileTypes: true }); } catch (e) { parts.push(dir + '!'); return; }
+    for (const d of list) {
+      if (++n > 100000) return;
+      if (d.name.startsWith('.') || d.name.startsWith('~$')) continue;
+      const p = path.join(dir, d.name);
+      if (d.isDirectory()) { if (depth < 10) await walk(p, depth + 1); }
+      else if (DATA_FILE_RE.test(d.name)) {
+        try { const st = await fs.promises.stat(p); parts.push(p + '|' + st.size + '|' + Math.round(st.mtimeMs)); } catch (e) { /* файл убрали */ }
+      }
+    }
+  }
+  for (const r of roots) await walk(r, 0);
+  return parts.sort().join('\n');
+}
+let lastSig = null, sigBusy = false, sigAgain = false;
+async function dataChangedIfReal() {
+  if (sigBusy) { sigAgain = true; return; }
+  sigBusy = true;
+  try {
+    const sig = await dataSig(watchRoots());
+    if (sig !== lastSig) { const first = lastSig === null; lastSig = sig; if (!first) dataChanged(); }
+  } catch (e) { console.warn('dataSig', e); }
+  finally { sigBusy = false; if (sigAgain) { sigAgain = false; clearTimeout(watchTimer); watchTimer = setTimeout(dataChangedIfReal, 4000); } }
+}
+const watchRoots = () => [dataDir()].concat(mounts().map((m) => m.path));
 function watchData() {
   fs.mkdirSync(dataDir(), { recursive: true });
-  const roots = [dataDir()].concat(mounts().map((m) => m.path));
+  const roots = watchRoots();
+  lastSig = null; dataChangedIfReal();   // запомнить, что сейчас лежит в папках
   Object.keys(watchers).forEach((r) => { if (!roots.includes(r)) { watchers[r].close(); delete watchers[r]; } });
   roots.forEach((r) => {
     if (watchers[r]) return;
     try {
       watchers[r] = fs.watch(r, { recursive: true }, (ev, name) => {
-        if (spBusy || (name && /\.part$|~\$/i.test(name))) return;
+        if (spBusy || (name && isNoise(name))) return;
         clearTimeout(watchTimer);
-        watchTimer = setTimeout(dataChanged, 4000);
+        watchTimer = setTimeout(dataChangedIfReal, 4000);
       });
     } catch (e) { console.warn('watch', r, e); }
   });
@@ -579,7 +618,7 @@ async function syncSharePoint({ interactive, askLink } = {}) {
     spBusy = false;
     if (win && !win.isDestroyed()) win.setProgressBar(-1);
   }
-  if (files || interactive) dataChanged();
+  if (files || interactive) { dataChanged(); lastSig = null; dataChangedIfReal(); }
   if (errors.length) toast('SharePoint: ' + errors.join('; '), 'err');
   else toast(files ? `SharePoint: скачано новых/изменённых файлов — ${files} (${mb(bytes)}), вкладки обновлены.` : 'SharePoint: новых файлов нет.', 'ok');
 }
