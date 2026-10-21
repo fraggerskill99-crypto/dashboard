@@ -36,7 +36,7 @@ const demoState = {
   },
   folders: [
     { name: 'УКПФ (OneDrive)', path: 'OneDrive…\\Служба Ветеринарной Санитарии и БиБ\\УКПФ', roleTitle: 'акты', ok: true },
-    { name: 'Несоответствия (OneDrive)', path: 'OneDrive…\\Рабочий стол\\Несоответствие еженедельно', role: 'media', roleTitle: 'фото/видео и презентации', ok: true },
+    { name: 'Несоответствия (OneDrive)', path: 'OneDrive…\\Рабочий стол\\Несоответствие еженедельно', role: 'nc', roleTitle: 'несоответствие по площадкам', ok: true },
     { name: 'СВОД МБ (OneDrive)', path: 'OneDrive…\\Рабочий стол\\BI_Business-Local Labs - СВОД', roleTitle: 'Свод МБ', ok: true },
   ],
   sharepoint: [{ name: 'Несоответствия (Инкубатор, Выращивание, ЗПП)', link: 'https://aitas.sharepoint.com/:f:/s/msteams_6c8e7e/…', lastSync: new Date().toISOString(),

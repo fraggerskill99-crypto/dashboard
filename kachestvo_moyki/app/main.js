@@ -57,7 +57,8 @@ const spDir = () => path.join(dataDir(), 'SharePoint');
 //   svod  — Свод МБ для NOK-дашборда и «Мойки и МБ»: самый свежий .xlsx в самой папке (не в подпапках).
 const ONEDRIVE_AUTO = [
   { name: 'УКПФ (OneDrive)', role: 'acts', rel: path.join('Рабочий стол', 'Департамент Ветеринарии - Отчетность Департамента Ветеринарии', 'Служба Ветеринарной Санитарии и БиБ', 'УКПФ') },
-  { name: 'Несоответствия (OneDrive)', role: 'media', rel: path.join('Рабочий стол', 'Несоответствие еженедельно') },
+  // еженедельные несоответствия по площадкам — только для вкладки «Несоответствие по площадкам» (не для фото качества мойки)
+  { name: 'Несоответствия (OneDrive)', role: 'nc', rel: path.join('Рабочий стол', 'Несоответствие еженедельно') },
   { name: 'СВОД МБ (OneDrive)', role: 'svod', rel: path.join('Рабочий стол', 'BI_Business-Local Labs - СВОД') },
 ];
 const ROLE_TITLE = { acts: 'акты', media: 'фото/видео и презентации', svod: 'Свод МБ', nc: 'несоответствие по площадкам' };
@@ -122,6 +123,11 @@ function autoMountOneDrive() {
   const c = foldersConfig();
   if (!Array.isArray(c.autoDone)) c.autoDone = c.ukpfDone ? ['УКПФ (OneDrive)'] : [];
   let changed = false;
+  // раньше «Несоответствие еженедельно» была папкой фото мойки — теперь она для «Несоответствия по площадкам» (один раз)
+  if (!c.ncMoved) {
+    c.mounts.forEach((m) => { if (m.name === 'Несоответствия (OneDrive)' && (!m.role || m.role === 'media')) m.role = 'nc'; });
+    c.ncMoved = true; changed = true;
+  }
   for (const f of ONEDRIVE_AUTO) {
     if (c.autoDone.includes(f.name)) continue;   // уже подключали (или убрали вручную) — не трогаем
     const abs = findOneDrive(f.rel);
@@ -141,7 +147,7 @@ async function askMissingOneDrive() {
     if (c.autoDone.includes(f.name) || c.asked.includes(f.name)) continue;
     c.asked.push(f.name);
     saveFolders(c);
-    const what = { acts: 'акты выращивания, Инкубатория и ЗПП', media: 'фото/видео и презентации еженедельных несоответствий', svod: 'Свод микробиологии для NOK-дашборда и «Мойки и МБ»' }[f.role];
+    const what = { acts: 'акты выращивания, Инкубатория и ЗПП', media: 'презентации качества мойки (фото/видео)', nc: 'презентации еженедельных несоответствий по площадкам', svod: 'Свод микробиологии для NOK-дашборда и «Мойки и МБ»' }[f.role];
     const r = await dialog.showMessageBox(win, {
       type: 'question', title: 'Папка не найдена', noLink: true, buttons: ['Выбрать папку…', 'Позже'], defaultId: 0, cancelId: 1,
       message: `Не нашёл папку «${f.rel.split(path.sep).pop()}» в OneDrive`,
