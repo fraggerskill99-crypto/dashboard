@@ -127,8 +127,15 @@
     });
     if (S.site !== 'all' && !bySite[S.site]) S.site = 'all';
     const cnt = (arr) => arr.reduce((n, it) => n + it.count, 0);
+    // кнопки всех площадок, где фото есть хоть в какую-то неделю: нет в этой — клик откроет последнюю неделю с ней
+    const allSites = [...new Set(S.items.map((it) => it.site))].sort((x, y) => {
+      const ix = SITE_ORDER.indexOf(x), iy = SITE_ORDER.indexOf(y);
+      return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy) || x.localeCompare(y, 'ru');
+    });
     $('chips').innerHTML = `<button class="chip${S.site === 'all' ? ' on' : ''}" data-site="all">Все площадки · <b>${cnt(items)}</b></button>` +
-      sites.map((s) => `<button class="chip${S.site === s ? ' on' : ''}" data-site="${esc(s)}">${esc(siteName(s))} · <b>${cnt(bySite[s])}</b></button>`).join('');
+      allSites.map((s) => bySite[s]
+        ? `<button class="chip${S.site === s ? ' on' : ''}" data-site="${esc(s)}">${esc(siteName(s))} · <b>${cnt(bySite[s])}</b></button>`
+        : `<button class="chip" data-site="${esc(s)}" data-jump="1" style="opacity:.55" title="В этой неделе нет — открыть последнюю неделю с фото">${esc(siteName(s))} · 0</button>`).join('');
     const shown = S.site === 'all' ? sites : [S.site];
     $('list').innerHTML = shown.map((s) => {
       const byCorp = {};
@@ -174,7 +181,14 @@
   $('next').onclick = () => { if (S.wi < S.weeks.length - 1) { S.wi++; render(); } };
   $('wsel').onchange = (e) => { S.wi = S.weeks.findIndex((w) => w.wk.key === e.target.value); render(); };
   $('reload').onclick = load;
-  $('chips').onclick = (e) => { const b = e.target.closest('[data-site]'); if (b) { S.site = b.dataset.site; render(); } };
+  $('chips').onclick = (e) => {
+    const b = e.target.closest('[data-site]'); if (!b) return;
+    S.site = b.dataset.site;
+    if (b.dataset.jump) {   // площадки нет в этой неделе — к последней неделе, где она есть
+      for (let i = S.weeks.length - 1; i >= 0; i--) if (S.items.some((it) => it.site === S.site && it.week === S.weeks[i].wk.key)) { S.wi = i; break; }
+    }
+    render();
+  };
   $('list').onclick = (e) => {
     const b = e.target.closest('.th button'); if (!b) return;
     const all = [...document.querySelectorAll('#list .th button')];

@@ -1767,9 +1767,28 @@ function renderCategoryPie(canvasId, instKey, listOfCountObjects, catNums, palet
 // корпусу: каждый сектор — отдельный принятый в этот день корпус).
 let catDayState = { day: null };
 
+// после чтения папок с фото — обновить дни и Инкубаторий в «Категориях несоответствий»
+function refreshCatDaysAfterMedia() {
+  try {
+    if (typeof activeTab !== 'undefined' && activeTab === 'categories') renderCatDayPie();
+    else if (typeof dirtyTabs !== 'undefined' && dirtyTabs) dirtyTabs.add('categories');
+  } catch (e) { console.warn('cat days', e); }
+}
+// дни с фото/видео Инкубатория (презентации и папки): { '2026-10-14': ['Инкубатор: зал вывода', ...] }
+function incubPhotoDays() {
+  const out = {};
+  [(typeof PPTX_INDEX !== 'undefined' ? PPTX_INDEX : {}), INCUB_MEDIA_INDEX].forEach((ix) => Object.keys(ix || {}).forEach((k) => {
+    const i = k.indexOf('|'), corpus = k.slice(i + 1);
+    if (!isIncubKey(corpus) || !(ix[k] || []).length) return;
+    const d = k.slice(0, i);
+    (out[d] = out[d] || []).includes(corpus) || out[d].push(corpus);
+  }));
+  return out;
+}
 function renderCatDayPie() {
-  // дни приёмки Выращивания + дни, где есть несоответствия Инкубатория
-  const days = Array.from(new Set(RECORDS.map((r) => r.date).concat(Object.keys(INCUB_FILE_NC || {})))).sort();
+  // дни приёмки Выращивания + дни, где есть несоответствия Инкубатория + дни с фото Инкубатория
+  const incPhotos = incubPhotoDays();
+  const days = Array.from(new Set(RECORDS.map((r) => r.date).concat(Object.keys(INCUB_FILE_NC || {}), Object.keys(incPhotos)))).sort();
   if (!catDayState.day || !days.includes(catDayState.day)) {
     catDayState.day = days.length ? days[days.length - 1] : null;
   }
@@ -1870,12 +1889,27 @@ function renderCatDayPie() {
     corps: vyrCorps, totals: corpTotals, cats: corpCatCounts, color: (c) => colorOf(c, corpsSorted.indexOf(c)), day: catDayState.day });
   const incWrap = document.getElementById('incDayPieWrap');
   if (incWrap) {
+    // Инкубаторий виден, если есть акт Инкубатория или фото Инкубатория (без акта — фото по залам)
     const hasIncAct = INCUB_FILE_NC && Object.keys(INCUB_FILE_NC).length > 0;
-    incWrap.style.display = hasIncAct ? '' : 'none';
+    incWrap.style.display = hasIncAct || Object.keys(incPhotos).length ? '' : 'none';
     const incDayLbl = document.getElementById('incDayPieDay');
     if (incDayLbl) incDayLbl.textContent = catDayState.day ? fmtDate(catDayState.day) : '';
     drawDayPieBlock({ chartKey: 'incdaypie', canvasId: 'chartIncDayPie', emptyId: 'incDayPieEmpty', breakdownId: 'incDayPieBreakdown',
       corps: incCorps, totals: corpTotals, cats: corpCatCounts, color: (c) => incubColor(c), day: catDayState.day });
+    const photoHalls = ((catDayState.day && incPhotos[catDayState.day]) || []).filter((h) => !incCorps.includes(h));
+    const emptyEl = document.getElementById('incDayPieEmpty');
+    if (emptyEl) emptyEl.textContent = photoHalls.length
+      ? (hasIncAct ? 'По акту Инкубатория несоответствий в этот день нет — фото/видео из презентаций по залам:' : 'Акт Инкубатория не загружен — фото/видео из презентаций по залам:')
+      : 'В этот день в Инкубатории несоответствий нет (или акт за этот день не заполнен).';
+    if (photoHalls.length && !incCorps.length) {
+      const day = catDayState.day;
+      document.getElementById('incDayPieBreakdown').innerHTML = INCUB_HALLS.concat([INCUB_OTHER]).map((h) => h.key).filter((k) => photoHalls.includes(k)).map((k) =>
+        `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;line-height:1.7">
+          <span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;background:${incubColor(k)};margin-top:6px"></span>
+          <span style="flex-shrink:0;white-space:nowrap"><b>${k}</b></span>
+          <span style="display:flex;flex-direction:column;min-width:0"><span class="cp-thumbs-slot" data-date="${day}" data-corpus="${k}"></span></span></div>`).join('');
+      Promise.all(photoHalls.map((k) => loadThumbsFor(day, k))).then(() => { if (catDayState.day === day) paintCatDayThumbs(); });
+    }
   }
   wireCatDayPieButtons();
   refreshCatDayThumbs();
@@ -4867,6 +4901,7 @@ async function setupMediaPinning() {
       statusEl.className = 'upload-status ok';
       try { if (typeof renderChecklistTab === 'function') renderChecklistTab(); } catch (e) {}
       MEDIA_THUMBS = {}; MEDIA_THUMB_JOBS = {};
+      refreshCatDaysAfterMedia();
       refreshCatDayThumbs();
       return true;
     } catch (err) {
@@ -5958,6 +5993,7 @@ async function useIncubMediaHandle(handle, ask) {
     if (INCUB_MEDIA_DIR !== handle) return false;
     INCUB_MEDIA_INDEX = r.index;
     dropIncubThumbs();
+    refreshCatDaysAfterMedia();
     const total = r.nFiles + r.pptx.items;
     setIncubMediaStatus('Папка «' + handle.name + '»: презентаций ' + r.pptx.files + ' (фото/видео в них ' + r.pptx.items + '), отдельных фото/видео ' + r.nFiles
       + ' — всего по ' + r.keys + ' зало-дням'

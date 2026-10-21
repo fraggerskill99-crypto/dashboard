@@ -21,7 +21,9 @@
       '#pinMediaBtn', '#unpinMediaBtn', '#incubMediaPinBtn', '#incubMediaUnpinBtn',
       'label.upload-btn:has(#incubFileInput)', '#pinIncubBtn', '#unpinIncubBtn',
       'label.upload-btn:has(#zppFileInput)', '#pinZppBtn', '#unpinZppBtn',
-      'label:has(#scheduleFileInput)', '#scheduleFileInput', '#pinSchedBtn', '#unpinSchedBtn'],
+      'label:has(#scheduleFileInput)', '#scheduleFileInput', '#pinSchedBtn', '#unpinSchedBtn',
+      // служебные строки ручной привязки папки Инкубатория — всё прочитанное видно в «⚙ Настройках»
+      'div:has(> #incubMediaPinBtn)', 'div:has(> #incubMediaPinBtn) + p.note', '#incubPptxReport'],
     'mb.html': ['#dirLinkBtn', '#dirAllowBtn', '#dirCheckBtn', '#dirUnlinkBtn', '#dirBox + div'],
     'nok.html': ['#uploadBtn', '#fileInput', '#nokPinBtn', '#nokAllowBtn', '#nokChooseBtn', '#nokCheckBtn', '#nokImportBtn'],
   }[page];
