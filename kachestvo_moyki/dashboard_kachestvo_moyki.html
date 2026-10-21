@@ -257,12 +257,32 @@ footer.foot img { height:36px; width:auto; display:block; }
   <div class="kpi-row" id="kpiRow"></div>
 
   <div class="tabs" id="tabs">
+    <button class="tab-btn" data-tab="report" style="font-weight:800">&#128202; ОТЧЕТ</button>
     <button class="tab-btn active" data-tab="overview">Обзор</button>
     <button class="tab-btn" data-tab="dynamics">Сравнение по турам</button>
     <button class="tab-btn" data-tab="categories">Категории несоответствий</button>
     <button class="tab-btn" data-tab="schedule">График СР &middot; ПР/Р</button>
     <button class="tab-btn" data-tab="checklist">Чек-лист по турам</button>
     <button class="tab-btn" data-tab="sources">&#128206; Акты</button>
+  </div>
+
+  <div class="panel" id="panel-report">
+    <div class="card">
+      <h2>ОТЧЕТ &mdash; слайд PowerPoint «Качество мойки»</h2>
+      <div class="action-bar" style="margin-bottom:10px">
+        <button id="slidePptx" class="chip" style="cursor:pointer;font-weight:800;background:#16A9B4;color:#fff;border-color:#16A9B4">&#128202; Скачать PowerPoint (.pptx)</button>
+        <button id="slideShowBtn" class="chip" style="cursor:pointer;font-weight:800;background:#DC2626;color:#fff;border-color:#DC2626" title="Слайд на весь экран; клик по контрольной точке открывает фото/видео — для оперативки">&#128250; Показ слайда (для оперативки)</button>
+        <button id="slideToReport" class="chip" style="cursor:pointer;font-weight:800;background:#1F3864;color:#fff;border-color:#1F3864" title="Выберите свой отчёт .pptx — слайд с фото/видео допишется в конец, ссылки будут работать">&#128206; Добавить в мой отчёт (.pptx)</button>
+        <input type="file" id="slideReportFile" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" hidden>
+        <button id="slideCopyPng" class="chip" style="cursor:pointer;font-weight:700">&#128203; Копировать слайд</button>
+        <button id="slidePng" class="chip" style="cursor:pointer;font-weight:700">&#128247; Скачать PNG</button>
+        <button id="slideRefresh" class="chip" style="cursor:pointer;font-weight:700">&#8635; Обновить превью</button>
+        <span class="note" id="slideMsg" style="margin:0;font-weight:600"></span>
+      </div>
+      <div style="background:#E5DBC0;border:1px solid rgba(60,50,30,.25);border-radius:8px;padding:6px">
+        <img id="slidePreview" alt="Превью слайда" style="width:100%;display:block;border-radius:4px">
+      </div>
+    </div>
   </div>
 
   <div class="panel active" id="panel-overview">
@@ -503,22 +523,6 @@ footer.foot img { height:36px; width:auto; display:block; }
         <button id="catMonthScorePng" class="chip" style="cursor:pointer;font-weight:700">&#128247; Скачать PNG</button>
         <button id="catMonthScoreCopyPng" class="chip" style="cursor:pointer;font-weight:700">&#128203; Копировать картинку</button>
         <span class="note" id="catMonthScoreMsg" style="margin:0;font-weight:600"></span>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Слайд для презентации &mdash; «Качество мойки»</h2>
-      <div class="action-bar" style="margin-bottom:10px">
-        <button id="slidePptx" class="chip" style="cursor:pointer;font-weight:800;background:#16A9B4;color:#fff;border-color:#16A9B4">&#128202; Скачать PowerPoint (.pptx)</button>
-        <button id="slideShowBtn" class="chip" style="cursor:pointer;font-weight:800;background:#DC2626;color:#fff;border-color:#DC2626" title="Слайд на весь экран; клик по контрольной точке открывает фото/видео — для оперативки">&#128250; Показ слайда (для оперативки)</button>
-        <button id="slideToReport" class="chip" style="cursor:pointer;font-weight:800;background:#1F3864;color:#fff;border-color:#1F3864" title="Выберите свой отчёт .pptx — слайд с фото/видео допишется в конец, ссылки будут работать">&#128206; Добавить в мой отчёт (.pptx)</button>
-        <input type="file" id="slideReportFile" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" hidden>
-        <button id="slideCopyPng" class="chip" style="cursor:pointer;font-weight:700">&#128203; Копировать слайд</button>
-        <button id="slidePng" class="chip" style="cursor:pointer;font-weight:700">&#128247; Скачать PNG</button>
-        <button id="slideRefresh" class="chip" style="cursor:pointer;font-weight:700">&#8635; Обновить превью</button>
-        <span class="note" id="slideMsg" style="margin:0;font-weight:600"></span>
-      </div>
-      <div style="background:#E5DBC0;border:1px solid rgba(60,50,30,.25);border-radius:8px;padding:6px">
-        <img id="slidePreview" alt="Превью слайда" style="width:100%;display:block;border-radius:4px">
       </div>
     </div>
   </div>
@@ -1260,10 +1264,11 @@ function refreshScoreChartsAfterAct() {
       renderCatDayPie();
       renderCatWeekScoreChart();
       renderCatMonthScoreChart();
-      refreshSlidePreview();
     } else if (typeof dirtyTabs !== 'undefined') {
       dirtyTabs.add('categories');
     }
+    if (typeof activeTab !== 'undefined' && activeTab === 'report') refreshSlidePreview();
+    else if (typeof dirtyTabs !== 'undefined') dirtyTabs.add('report');
   } catch (e) { console.error('refreshScoreChartsAfterAct', e); }
 }
 
@@ -4493,7 +4498,8 @@ Chart.defaults.font.family = "-apple-system, 'Segoe UI', Roboto, Arial, sans-ser
 const TAB_RENDERERS = {
   overview: () => { renderMonthlyChart(); renderZonesChart(); renderTopCatsChart(); renderDistChart(); },
   dynamics: () => { renderDynamicsChart(); },
-  categories: () => { renderCatFreqChart(); renderCatMonthChart(); renderCatZoneTable(); renderCatScoreTable(); renderCatCorpusTable(); renderCatDayPie(); renderCatWeekSection(); renderCatHistory(); renderCatWeekScoreChart(); renderCatMonthScoreChart(); renderSlideSection(); },
+  categories: () => { renderCatFreqChart(); renderCatMonthChart(); renderCatZoneTable(); renderCatScoreTable(); renderCatCorpusTable(); renderCatDayPie(); renderCatWeekSection(); renderCatHistory(); renderCatWeekScoreChart(); renderCatMonthScoreChart(); },
+  report: () => { renderSlideSection(); },
   schedule: () => { renderScheduleTab(); },
   checklist: () => { renderChecklistTab(); },
   sources: () => { if (typeof srcRender === 'function') srcRender(); },
