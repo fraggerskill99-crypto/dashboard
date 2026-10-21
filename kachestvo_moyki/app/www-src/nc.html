@@ -102,6 +102,13 @@
   const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const cnt = (arr) => arr.reduce((n, it) => n + it.count, 0);
 
+  // полный API вкладки «Качество мойки» (акты) — для подсчёта несоответствий по акту
+  function apiFull() {
+    try {
+      const f = window.parent !== window && window.parent.document.getElementById('f-moika');
+      return f && f.contentWindow && f.contentWindow.MOIKA_API ? f.contentWindow.MOIKA_API : null;
+    } catch (e) { return null; }
+  }
   function api() {
     try {
       const f = window.parent !== window && window.parent.document.getElementById('f-moika');
@@ -148,17 +155,27 @@
     $('chips').innerHTML = `<button class="chip${S.site === 'all' ? ' on' : ''}" data-site="all">Все участки · <b>${cnt(items)}</b></button>` +
       AREAS.map((ar) => `<button class="chip${S.site === ar ? ' on' : ''}" data-site="${ar}"${byArea[ar] ? '' : ' style="opacity:.55"'}>${areaTitle(ar)} · <b>${cnt(byArea[ar] || [])}</b></button>`).join('');
     // 5 критических контрольных точек участка за период
-    const top5 = (arr) => {
+    // 5 критических точек — ПО АКТУ: сколько раз точка отмечена несоответствием в актах за период.
+    // Фото/видео — для просмотра (клик по точке). Нет акта за период — по фото со слайдов.
+    const photoRefs = (arr) => {
       const m = {};
       (arr || []).forEach((it) => (it.pts || []).forEach((p, idx) => { if (!p) return; (m[p] = m[p] || { n: 0, refs: [] }).n++; m[p].refs.push({ date: it.date, corpus: it.corpus, idx }); }));
-      return Object.entries(m).sort((x, y) => y[1].n - x[1].n || x[0].localeCompare(y[0], 'ru')).slice(0, 5);
+      return m;
     };
+    const rng = (() => { if (!S.dates.length) return null; if (S.period === 'all') return [S.dates[S.dates.length - 1], S.dates[0]]; if (S.period.startsWith('d:')) return [S.period.slice(2), S.period.slice(2)]; return [addDays(S.dates[0], -(+S.period) + 1), S.dates[0]]; })();
+    let act = null;
+    try { const full = apiFull(); act = full && rng && full.actPoints ? full.actPoints(rng[0], rng[1]) : null; } catch (e) { act = null; }
     S.crit = {};
     $('crit').innerHTML = AREAS.map((ar) => {
-      const t = top5(byArea[ar]);
-      return `<div class="col"><h3>⚠ ${areaTitle(ar)}<span>5 критических точек · ${cnt(byArea[ar] || [])} несоотв.</span></h3>` +
-        (t.length ? '<ol>' + t.map(([p, v], i) => { S.crit[ar + '|' + p] = v.refs; return `<li><button type="button" data-crit="${esc(ar + '|' + p)}" title="${esc(p)} — показать фото"><i>${i + 1}</i><span>${esc(p)}</span><b>${v.n}</b></button></li>`; }).join('') + '</ol>'
-          : `<div class="none">${byArea[ar] ? 'Контрольные точки на слайдах не указаны' : 'За период несоответствий нет'}</div>`) + '</div>';
+      const ph = photoRefs(byArea[ar]);
+      const byAct = act && act[ar];
+      const src = byAct ? Object.entries(byAct).map(([p, n]) => [p, { n, refs: (ph[p] || { refs: [] }).refs }]) : Object.entries(ph);
+      const t = src.filter(([, v]) => v.n > 0).sort((x, y) => y[1].n - x[1].n || x[0].localeCompare(y[0], 'ru')).slice(0, 5);
+      const total = byAct ? Object.values(byAct).reduce((a, n) => a + n, 0) : cnt(byArea[ar] || []);
+      return `<div class="col"><h3>⚠ ${areaTitle(ar)}<span>5 критических точек · ${byAct ? 'по акту: ' + total + ' несоотв.' : 'по фото: ' + total}</span></h3>` +
+        (t.length ? '<ol>' + t.map(([p, v], i) => { S.crit[ar + '|' + p] = v.refs; return `<li><button type="button" data-crit="${esc(ar + '|' + p)}" title="${esc(p)} — ${byAct ? 'несоответствий по акту: ' + v.n + (v.refs.length ? ', фото/видео: ' + v.refs.length : ', фото нет') : 'показать фото'}"><i>${i + 1}</i><span>${esc(p)}${byAct && v.refs.length ? ' 📷' : ''}</span><b>${v.n}</b></button></li>`; }).join('') + '</ol>'
+          : `<div class="none">${byAct ? 'По акту несоответствий нет' : byArea[ar] ? 'Контрольные точки на слайдах не указаны' : 'За период несоответствий нет'}</div>`) +
+        (ar === 'ЗПП' && !byAct && t.length ? '<div class="none" style="margin-top:6px">в акте ЗПП — только баллы, поэтому по фото</div>' : '') + '</div>';
     }).join('');
     const siteSort = (x, y) => { const ix = SITE_ORDER.indexOf(x), iy = SITE_ORDER.indexOf(y); return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy) || x.localeCompare(y, 'ru'); };
     const shown = S.site === 'all' ? AREAS.filter((ar) => byArea[ar]) : [S.site];
@@ -223,7 +240,7 @@
   $('chips').onclick = (e) => { const b = e.target.closest('[data-site]'); if (!b) return; S.site = b.dataset.site; render(); };
   $('crit').onclick = (e) => {
     const b = e.target.closest('[data-crit]'); if (!b) return;
-    const refs = S.crit[b.dataset.crit] || []; if (!refs.length) return;
+    const refs = S.crit[b.dataset.crit] || []; if (!refs.length) { b.title = 'По этой точке фото/видео нет'; return; }
     const pt = b.dataset.crit.split('|').slice(1).join('|'), a = api();
     S.list = refs.map((r) => { let c = ''; try { c = ((a && a.entries(r.date, r.corpus)) || [])[r.idx].caption || ''; } catch (er) { /* нет подписи */ } return { date: r.date, corpus: r.corpus, idx: r.idx, caption: c || pt }; });
     $('box').hidden = false; show(0);

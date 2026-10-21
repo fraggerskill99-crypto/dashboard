@@ -6486,6 +6486,28 @@ window.MOIKA_API = {
     return Object.values(out).sort((a, b) => (a.date < b.date ? -1 : 1));
   },
   // все фото/видео из папок: дата, корпус, площадка — для вкладки «Фотофиксация по неделям»
+  // несоответствия ПО АКТАМ за период [from, to] (ГГГГ-ММ-ДД): сколько раз контрольная точка отмечена в актах.
+  // Выращивание — акт приёма мойки (контрольные точки Ф-БиС-07), Инкубатор — журнал нарушений акта (объект: элемент).
+  // ЗПП: в акте только баллы — несоответствий по точкам нет (null).
+  actPoints(from, to) {
+    const inR = (d) => d && d >= from && d <= to;
+    const vyr = {}, ink = {};
+    RECORDS_FULL.forEach((r) => {
+      if (!inR(r.date)) return;
+      const ic = getIncidentCounts(r);
+      Object.keys(ic).forEach((c) => { const nm = CATEGORIES_REF[c]; if (nm) vyr[nm] = (vyr[nm] || 0) + ic[c]; });
+    });
+    let hasInc = false;
+    Object.keys(INCUB_FILE_NC || {}).forEach((d) => {
+      if (!inR(d)) return;
+      (INCUB_FILE_NC[d] || []).forEach((it) => {
+        hasInc = true;
+        const k = [String(it.block || '').replace(/\s*·\s*\d+\s*$/, ''), it.elem].filter(Boolean).join(': ');
+        if (k) ink[k] = (ink[k] || 0) + 1;
+      });
+    });
+    return { 'Выращивание': RECORDS_FULL.some((r) => inR(r.date)) ? vyr : null, 'Инкубатор': hasInc || Object.keys(INCUB_FILE_NC || {}).some(inR) ? ink : null, 'ЗПП': null };
+  },
   allMedia() {
     const out = {};
     [DYNAMIC_MEDIA_INDEX, (typeof PPTX_INDEX !== 'undefined' ? PPTX_INDEX : {}), INCUB_MEDIA_INDEX].forEach((ix) => {
