@@ -216,6 +216,29 @@ function rolesInfo() {
   try { if (fs.readdirSync(spDir()).length) r.media.push('SharePoint'); } catch (e) { /* SharePoint не подключали */ }
   return r;
 }
+// Защита страниц приложения (CSP): скрипты — только встроенные в приложение; в интернет страницы
+// ничего отправить и ничего подгрузить не могут (кроме шрифтов Google) — даже если в Excel/презентации
+// окажется вредоносный текст. Данные — только с app:// (папки, выбранные в «Настройках»).
+const CSP = [
+  "default-src 'self' app: data: blob:",
+  "script-src 'self' app: 'unsafe-inline' 'unsafe-eval' blob:",
+  "worker-src 'self' app: blob:",
+  "style-src 'self' app: 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' app: data: https://fonts.gstatic.com",
+  "img-src 'self' app: data: blob:",
+  "media-src 'self' app: data: blob:",
+  "connect-src 'self' app: data: blob:",
+  "frame-src 'self' app:",
+  "object-src 'none'", "base-uri 'none'", "form-action 'none'",
+].join('; ');
+async function page(abs) {
+  const r = await net.fetch(pathToFileURL(abs).toString());
+  if (!/\.html?$/i.test(abs)) return r;
+  const h = new Headers(r.headers);
+  h.set('Content-Security-Policy', CSP);
+  h.set('X-Content-Type-Options', 'nosniff');
+  return new Response(r.body, { status: r.status, headers: h });
+}
 const json = (o, status) => new Response(JSON.stringify(o), { status: status || 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 
 async function handleApp(req) {
@@ -251,7 +274,7 @@ async function handleApp(req) {
     }
     const abs = inside(WWW, p.replace(/^\/+/, '') || 'index.html');
     if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) return new Response('нет страницы', { status: 404 });
-    return net.fetch(pathToFileURL(abs).toString());
+    return page(abs);
   } catch (e) {
     return new Response(String(e && e.message || e), { status: 500 });
   }

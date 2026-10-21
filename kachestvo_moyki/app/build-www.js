@@ -38,9 +38,20 @@ const pages = {
   'nok.html': '../nok_dashboard.html',
   'mb.html': '../mb_dashboard.html',
 };
+// копия SheetJS, встроенная прямо в страницу, — заменяется на версию из vendor (в сборке — 0.20.3 с официального сайта)
+const XLSX_VENDOR = read(path.join(SRC, 'vendor', 'xlsx.full.min.js'));
+const XLSX_VER = (XLSX_VENDOR.match(/version="(\d+\.\d+\.\d+)"/) || [])[1];
+if (XLSX_VER === '0.18.5') console.warn('Внимание: SheetJS 0.18.5 (известные уязвимости) — в сборке на GitHub подставляется 0.20.3');
+function swapInlineXlsx(html) {
+  const i = html.indexOf('/*! xlsx.js (C) 2013-present SheetJS');
+  if (i < 0) return html;
+  const a = html.lastIndexOf('<script>', i), b = html.indexOf('</script>', i);
+  if (a < 0 || b < 0 || i - a > 20) return html;
+  return html.slice(0, a) + script(XLSX_VENDOR) + html.slice(b + '</script>'.length);
+}
 for (const [out, src] of Object.entries(pages)) {
   let html = read(path.join(ROOT, src));
-  html = inlineVendor(html);
+  html = swapInlineXlsx(inlineVendor(html));
   if (/<script src="https?:/i.test(html)) console.warn('Внимание:', out, 'всё ещё грузит скрипты из интернета');
   fs.writeFileSync(path.join(OUT, out), inject(html, out));
 }

@@ -1713,6 +1713,8 @@ const MB_UCH_BP_RE = /Бройлерный_участок_№_?(\d+)_?$/;
 
 // ===== Обнаружения NOK из журнала МБ: корпус определяется по «Корпус / Помещение» + «Участок» =====
 let MB_NOK_ROWS = null, MB_AKT_RECORDS = null;
+// текст из файлов (Свод, акт) — без символов разметки HTML: «<», «>», кавычек и «&»
+const mbSafe = (v) => String(v == null ? '' : v).replace(/[<>"'`&]/g, ' ').replace(/\s+/g, ' ').trim();
 function mbKorpOf(korpRaw, uchRaw){
   const m = korpRaw.match(/^корпус\s*№?\s*(.+)$/i);
   if (!m) return null;
@@ -1855,7 +1857,8 @@ function applyMBRow(pred, podr, study, tochka, korpRaw, uchRaw, date, nok, start
     const o = (((window.MB_PT_STATS[pp] = window.MB_PT_STATS[pp] || {})[ww] = window.MB_PT_STATS[pp][ww] || {})[uu] = window.MB_PT_STATS[pp][ww][uu] || {});
     const x = (o[pa] = o[pa] || {t: 0, n: 0}); x.t++; if (nok === 'NOK') x.n++;
   }
-  if (isSwab && nok === 'NOK' && MB_NOK_ROWS) MB_NOK_ROWS.push({korp, uchRaw, date, study, tochka, subgrp: subgrp || ''});
+  // текст из Свода попадает в страницу — без символов разметки (защита от вредоносного содержимого файла)
+  if (isSwab && nok === 'NOK' && MB_NOK_ROWS) MB_NOK_ROWS.push({korp: mbSafe(korp), uchRaw: mbSafe(uchRaw), date, study: mbSafe(study), tochka: mbSafe(tochka), subgrp: mbSafe(subgrp || '')});
   const wk = isoWeekOfDate(date);
   const statsObj = isSwab ? swabStats : waterStats;
   const weeklyObj = isSwab ? swabWeekly : waterWeekly;
@@ -2292,7 +2295,7 @@ async function dirCheck(manual){
   try { perm = await DIR.handle.queryPermission({mode: 'read'}); } catch (e) {}
   if (perm !== 'granted'){
     allow.style.display = '';
-    st.innerHTML = `📁 <b>${DIR.handle.name}</b> · браузер просит подтвердить доступ — нажмите <b>«Разрешить доступ к папке»</b> (один раз за открытие).`;
+    st.innerHTML = `📁 <b>${mbSafe(DIR.handle.name)}</b> · браузер просит подтвердить доступ — нажмите <b>«Разрешить доступ к папке»</b> (один раз за открытие).`;
     return;
   }
   allow.style.display = 'none';
@@ -2301,10 +2304,10 @@ async function dirCheck(manual){
     const {mb, akt, count} = await dirPick(DIR.handle);
     const key = f => f ? `${f.name}|${f.size}|${f.lastModified}` : null;
     const done = [];
-    if (mb && key(mb) !== DIR.seen.mb){ st.innerHTML = `⏳ Читаю журнал МБ «${mb.name}» — большой файл, займёт несколько секунд…`; await new Promise(r => setTimeout(r, 50)); await processMBFile(mb); DIR.seen.mb = key(mb); done.push('журнал МБ'); }
+    if (mb && key(mb) !== DIR.seen.mb){ st.innerHTML = `⏳ Читаю журнал МБ «${mbSafe(mb.name)}» — большой файл, займёт несколько секунд…`; await new Promise(r => setTimeout(r, 50)); await processMBFile(mb); DIR.seen.mb = key(mb); done.push('журнал МБ'); }
     if (akt && key(akt) !== DIR.seen.akt){ await processAktFile(akt); DIR.seen.akt = key(akt); done.push('акт мойки'); }
-    const fd = f => f ? `<b>${f.name}</b> <span style="color:#64748b">(${new Date(f.lastModified).toLocaleString('ru-RU', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})</span>` : '<span style="color:#dc2626">не найден</span>';
-    st.innerHTML = `📁 <b>${DIR.handle.name}</b> · ⟳ автообновление включено · проверено в ${dirTime()}${done.length ? ` · <b style="color:#16a34a">обновлено: ${done.join(', ')}</b>` : ''}<br>Свод МБ: ${fd(mb)}${akt ? ' · Акт мойки: ' + fd(akt) : ''}` +
+    const fd = f => f ? `<b>${mbSafe(f.name)}</b> <span style="color:#64748b">(${new Date(f.lastModified).toLocaleString('ru-RU', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})</span>` : '<span style="color:#dc2626">не найден</span>';
+    st.innerHTML = `📁 <b>${mbSafe(DIR.handle.name)}</b> · ⟳ автообновление включено · проверено в ${dirTime()}${done.length ? ` · <b style="color:#16a34a">обновлено: ${done.join(', ')}</b>` : ''}<br>Свод МБ: ${fd(mb)}${akt ? ' · Акт мойки: ' + fd(akt) : ''}` +
       (!mb ? '<br><span style="color:#dc2626">В папке нет файла Свода (.xlsx/.csv)</span>' : '');
   } catch (e){
     st.innerHTML = `<span style="color:#dc2626">Папка недоступна: ${e.message}</span>`;

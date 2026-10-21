@@ -1260,6 +1260,8 @@ function parseIncubArchive(wb, since) {
 
 // Подпись точки на диаграмме несоответствий: у Выращивания — категория Ф-БиС-07,
 // у Инкубатория — «Объект / Блок: Элемент» из акта (ключ начинается с «inc:»).
+// текст из файлов (слайды, акты) в разметке страницы — экранируется (защита от вредоносного содержимого файла)
+function hEsc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function cpCatName(key) {
   const k = String(key);
   if (k.startsWith('inc:')) return k.slice(4);
@@ -1957,8 +1959,8 @@ function drawDayPieBlock(o) {
           const name = cpCatName(cNum);
           const label = cats[cNum] > 1 ? `${name} (\u00d7${cats[cNum]})` : name;
           const st = 'display:inline-block;background:#f1f5f9;border:1px solid var(--border);border-radius:6px;padding:3px 9px;margin:2px 5px 2px 0;font-size:12px;color:#334155';
-          return o.noMedia ? `<span style="${st}">${label}</span>`
-            : `<span class="cp-chip" data-cp-date="${o.day}" data-cp-corpus="${c}" data-cp-cat="${cNum}" title="Открыть фото/видео по этой точке" style="${st}">${label}</span>`;
+          return o.noMedia ? `<span style="${st}">${hEsc(label)}</span>`
+            : `<span class="cp-chip" data-cp-date="${hEsc(o.day)}" data-cp-corpus="${hEsc(c)}" data-cp-cat="${hEsc(cNum)}" title="Открыть фото/видео по этой точке" style="${st}">${hEsc(label)}</span>`;
         }).join('');
       return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;line-height:1.7">
         <span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;background:${o.color(c)};margin-top:6px"></span>
@@ -4465,13 +4467,13 @@ function renderChecklistTab() {
 
   const catNums = Object.keys(CATEGORIES_REF).map(Number);
   let html = '<table class="cl"><thead><tr><th class="rowlabel">Контрольная точка</th>';
-  corpusRecs.forEach((r) => { html += `<th>${r.corpus}</th>`; });
+  corpusRecs.forEach((r) => { html += `<th>${hEsc(r.corpus)}</th>`; });
   html += '<th>С замечанием</th></tr><tr><td class="rowlabel">Дата / балл</td>';
   corpusRecs.forEach((r) => {
     const mkey = mediaKey(r.date, r.corpus);
     const mediaEntries = DYNAMIC_MEDIA_INDEX[mkey] || MEDIA_MANIFEST[mkey];
     const mediaCount = mediaEntries ? mediaEntries.length : 0;
-    const camHtml = mediaCount ? ` <button class="cam-badge" onclick="openMediaViewer('${r.date}','${r.corpus}')" title="Фото/видео (${mediaCount})">&#128247; ${mediaCount}</button>` : '';
+    const camHtml = mediaCount ? ` <button class="cam-badge" onclick="openMediaViewer(${hEsc(JSON.stringify(r.date))},${hEsc(JSON.stringify(r.corpus))})" title="Фото/видео (${mediaCount})">&#128247; ${mediaCount}</button>` : '';
     html += `<td class="datehdr">${fmtDate(r.date)}<br>балл: ${r.score}${camHtml}</td>`;
   });
   html += '<td></td></tr></thead><tbody>';
@@ -5204,11 +5206,11 @@ function paintCatDayThumbs() {
     if (!thumbs) { slot.innerHTML = '<span class="cp-thumbs-loading">&#128247; загружаю фото…</span>'; return; }
     if (!thumbs.length) { slot.innerHTML = '<span class="cp-thumbs-note">&#128247; фото/видео не удалось прочитать</span>'; return; }
     // у каждой контрольной точки — свои фото/видео; фото, точку которых по подписи не определить, — отдельно
-    const btn = (t) => `<button type="button" class="cp-thumb" data-date="${date}" data-corpus="${corpus}" data-idx="${t.idx}" title="${(t.caption || corpus).replace(/"/g, '&quot;')}"><img src="${t.url}" alt="">${t.video ? '<span class="pl">&#9654;</span>' : ''}</button>`;
+    const btn = (t) => `<button type="button" class="cp-thumb" data-date="${hEsc(date)}" data-corpus="${hEsc(corpus)}" data-idx="${t.idx}" title="${hEsc(t.caption || corpus)}"><img src="${t.url}" alt="">${t.video ? '<span class="pl">&#9654;</span>' : ''}</button>`;
     const groups = {};
     thumbs.forEach((t) => { const c = entryCat(entries[t.idx]) || ''; (groups[c] = groups[c] || []).push(t); });
     const order = Object.keys(groups).sort((a, b) => (a === '' ? 1 : b === '' ? -1 : cpCatName(a).localeCompare(cpCatName(b), 'ru')));
-    slot.innerHTML = '<span class="cp-pts">' + order.map((c) => `<span class="cp-pt"><span class="cp-pt-name">${c ? cpCatName(c) : 'Точка не указана на слайде'}</span><span class="cp-thumbs">${groups[c].map(btn).join('')}</span></span>`).join('') + '</span>';
+    slot.innerHTML = '<span class="cp-pts">' + order.map((c) => `<span class="cp-pt"><span class="cp-pt-name">${c ? hEsc(cpCatName(c)) : 'Точка не указана на слайде'}</span><span class="cp-thumbs">${groups[c].map(btn).join('')}</span></span>`).join('') + '</span>';
   });
 }
 let _thumbRefreshTimer = null;
@@ -5837,7 +5839,7 @@ async function openCpViewer(date, corpus, opt) {
   const th = MEDIA_THUMBS[key] || [];
   strip.innerHTML = list.length > 1 ? list.map((x, i) => {
     const t = th.find((q) => q.idx === x.idx);
-    return `<button type="button" data-i="${i}" title="${(x.e.caption || '').replace(/"/g, '&quot;')}">${t ? `<img src="${t.url}" alt="">` : ''}</button>`;
+    return `<button type="button" data-i="${i}" title="${hEsc(x.e.caption || '')}">${t ? `<img src="${t.url}" alt="">` : ''}</button>`;
   }).join('') : '';
   strip.style.display = list.length > 1 ? '' : 'none';
   let start = 0;

@@ -29,6 +29,17 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: SheetJS 0.20.3 с официального сайта (в 0.18.5 — уязвимости при чтении чужих Excel)
+        shell: bash
+        working-directory: kachestvo_moyki/app
+        run: |
+          rm -rf .sheetjs && mkdir .sheetjs
+          curl -fsSL --retry 3 https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz -o .sheetjs/xlsx.tgz
+          (cd .sheetjs && tar -xzf xlsx.tgz package/dist/xlsx.full.min.js)
+          grep -q 'version="0.20.3"' .sheetjs/package/dist/xlsx.full.min.js || { echo 'не та версия SheetJS'; exit 1; }
+          cp .sheetjs/package/dist/xlsx.full.min.js www-src/vendor/xlsx.full.min.js
+          rm -rf .sheetjs
+
       - name: Android-оболочка (Capacitor)
         env:
           APP_VERSION: 1.2.${{ github.run_number }}
@@ -115,6 +126,17 @@ jobs:
 
       - run: npm ci
 
+      - name: SheetJS 0.20.3 с официального сайта (в 0.18.5 — уязвимости при чтении чужих Excel)
+        shell: bash
+        working-directory: kachestvo_moyki/app
+        run: |
+          rm -rf .sheetjs && mkdir .sheetjs
+          curl -fsSL --retry 3 https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz -o .sheetjs/xlsx.tgz
+          (cd .sheetjs && tar -xzf xlsx.tgz package/dist/xlsx.full.min.js)
+          grep -q 'version="0.20.3"' .sheetjs/package/dist/xlsx.full.min.js || { echo 'не та версия SheetJS'; exit 1; }
+          cp .sheetjs/package/dist/xlsx.full.min.js www-src/vendor/xlsx.full.min.js
+          rm -rf .sheetjs
+
       - name: Сборка установщика и переносной версии
         run: |
           npm pkg set version=1.2.${{ github.run_number }}
@@ -149,6 +171,9 @@ jobs:
             gh release delete "$t" --cleanup-tag -y || true
           done
           gh release delete kachestvo-moyki-app --cleanup-tag -y || true
-          gh release create kachestvo-moyki-app kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe ukpf_dashboard.html kachestvo_moyki.html nok_dashboard.html moyka_i_mb.html \
+          # контрольные суммы: по ним видно, что скачанный файл — ровно тот, что собран здесь (не подменён)
+          sha256sum kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe ukpf_dashboard.html > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release create kachestvo-moyki-app kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe ukpf_dashboard.html kachestvo_moyki.html nok_dashboard.html moyka_i_mb.html SHA256SUMS.txt \
             --target "$GITHUB_SHA" --title "Качество мойки, NOK и Мойка-МБ — УКПФ" \
-            --notes "Телефон Android: kachestvo-moyki.apk — скачать, открыть, разрешить установку из этого источника. Компьютер Windows: kachestvo-moyki-setup.exe — установщик с ярлыком на рабочем столе; kachestvo-moyki-portable.exe — запуск без установки. В приложении три вкладки: Качество мойки, NOK-дашборд, Мойка и МБ (обнаружения МБ по корпусу вместе с фото/видео мойки в динамике). На ПК: меню SharePoint → «Подключить папку по ссылке» — фото/видео, презентации, акты и Свод МБ скачиваются сами в «Документы\\Качество мойки\\Данные». Без установки (Chrome/Edge): kachestvo_moyki.html, nok_dashboard.html, moyka_i_mb.html. На телефоне файлы загружаются кнопками, папок с фото/видео нет. Сборка ${GITHUB_SHA::7}."
+            --notes "Телефон Android: kachestvo-moyki.apk. Компьютер Windows: kachestvo-moyki-setup.exe (установщик) или kachestvo-moyki-portable.exe (без установки). Веб-версия для Chrome/Edge: ukpf_dashboard.html. Вкладки: Качество мойки, NOK-дашборд, Мойка и МБ, Фотофиксация по неделям, Несоответствие по площадкам. Проверка подлинности: SHA-256 каждого файла — в SHA256SUMS.txt (Windows: certutil -hashfile файл SHA256). Скачивайте только отсюда. Сборка ${GITHUB_SHA::7}."
