@@ -12,7 +12,7 @@ const OUT = path.join(ROOT, 'preview');
 execFileSync(process.execPath, [path.join(ROOT, 'build-www.js'), '--out', OUT], { stdio: 'inherit', env: process.env });
 
 // управляющие символы (внутри строк встроенных библиотек) публикация не принимает — пишем их как \xHH
-for (const f of ['moika.html', 'nok.html', 'mb.html', 'week.html']) {
+for (const f of ['moika.html', 'nok.html', 'mb.html', 'week.html', 'nc.html']) {
   const p = path.join(OUT, f);
   const src = fs.readFileSync(p, 'utf8');
   // и символ замены U+FFFD (таблицы кодировок): в скриптах — \ufffd, в тексте страницы — &#xFFFD;

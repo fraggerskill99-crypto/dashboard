@@ -14,7 +14,7 @@ const OUT = path.join(ROOT, 'dist-web', 'ukpf_dashboard.html');
 execFileSync(process.execPath, [path.join(ROOT, 'build-www.js'), '--out', TMP], { stdio: 'inherit', env: process.env });
 
 let html = fs.readFileSync(path.join(TMP, 'index.html'), 'utf8');
-const PAGES = { moika: 'moika.html', nok: 'nok.html', mb: 'mb.html', week: 'week.html' };
+const PAGES = { moika: 'moika.html', nok: 'nok.html', mb: 'mb.html', week: 'week.html', nc: 'nc.html' };
 // вкладки: вместо адреса — имя страницы (её текст — в <script id="pg-…"> ниже)
 for (const [k, file] of Object.entries(PAGES)) {
   const re = new RegExp(`<iframe id="f-${k}" (?:src|data-src)="${file.replace('.', '\\.')}"`);

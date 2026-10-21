@@ -152,7 +152,7 @@
   window.APP_FS = {
     mode: 'web',
     group: (names, title) => groupOf(names, title, async () => (await folders()).filter((f) => names.includes(f.name)).map((f) => [f.name, f.handle])),
-    async roles() { const r = { acts: [], media: [], svod: [] }; (await folders()).forEach((f) => { if (r[f.role]) r[f.role].push(f.name); }); return r; },
+    async roles() { const r = { acts: [], media: [], svod: [], nc: [] }; (await folders()).forEach((f) => { if (r[f.role]) r[f.role].push(f.name); }); return r; },
     async chosen() {
       const out = {}, fs = await files();
       for (const [k, h] of Object.entries(fs)) {

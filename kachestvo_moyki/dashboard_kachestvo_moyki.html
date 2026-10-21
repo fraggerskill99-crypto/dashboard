@@ -5238,7 +5238,8 @@ function refreshCatDayThumbs() {
 var PPTX_INDEX = {};   // "дата|корпус" -> [{caption, cat, files:[{kind, filename, pptx, zip, poster}]}]
 var PPTX_FILES = {};   // путь в папке -> FileSystemFileHandle
 var PPTX_SKIPPED = 0;
-const PPTX_CACHE_KEY = 'pptxMediaIndex:v14';   // v14: зал Инкубатория — из заголовка слайда, если в подписи его нет
+const PPTX_CACHE_KEY = 'pptxMediaIndex:v15';   // v15: поле «Дата» у несоответствия
+// v14:   // v14: зал Инкубатория — из заголовка слайда, если в подписи его нет
 // v13:   // v13: заголовок слайда — не подпись фото
 // v12:   // v12: дата — с самого слайда (у фото — ближайшая)
 // v11:   // v11: таблицы и подписанные поля слайда, разбор по слайдам   // v9: своя подпись у каждого фото   // v8: точка — словарём актов   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
@@ -5429,6 +5430,8 @@ const FIELD_LABELS = [
   ['hall', 'зал[а-яё]*|помещени[а-яё]*|цех[а-яё]*'],
   ['point', 'контрольн[а-яё]*\\s+точк[а-яё]*|точк[а-яё]*\\s+контрол[а-яё]*|к\\.?\\s?т\\.?|объект[а-яё]*\\s+контрол[а-яё]*'],
   ['nc', 'несоответстви[а-яё]*|замечани[а-яё]*|нарушени[а-яё]*|описани[а-яё]*(?:\\s+несоответстви[а-яё]*)?'],
+  // дата несоответствия — у самого несоответствия («Дата: 19.10.2026»); важнее даты слайда/недели/файла
+  ['date', 'дат[аыуе]|дата\\s+(?:выявлени|обнаружени|проверк|фиксаци)[а-яё]*|число'],
 ];
 const FIELD_ANY = FIELD_LABELS.map(([, re]) => re).join('|');
 const FIELD_RE = new RegExp('(?<![а-яёa-z0-9])(' + FIELD_ANY + ')(?:\\s*№)?\\s*[:\\-–—]\\s*', 'gi');
@@ -5563,7 +5566,7 @@ async function parsePresentation(file, path, opt) {
       const own = it.capB && fsrc.find((x) => x.b === it.capB);
       if (own) Object.assign(f, own.f);
       const at = it.b || it.capB;
-      ['corpus', 'hall', 'point', 'nc'].forEach((k) => {
+      ['corpus', 'hall', 'point', 'nc', 'date'].forEach((k) => {
         if (f[k]) return;
         let best = null, bestD = Infinity;
         fsrc.forEach((x) => {
@@ -5651,7 +5654,8 @@ async function parsePresentation(file, path, opt) {
         const same = info.rows.find((r) => r.place === row.place && r.point === row.point && r.nc === row.nc && r.why === row.why && r.date === row.date);
         if (same) same.n++; else info.rows.push(row);
       };
-      const date = it.date || curDate;
+      // дата: «Дата:» у несоответствия → дата рядом с фото на слайде → дата слайда
+      const date = (F.date && dateFromText(F.date, yearHint, true)) || it.date || curDate;
       if (date !== curDate) row.date = date;
       if (!date) { skipped++; noDate++; pushRow({ why: 'нет даты' }); return; }
       if (!corpus) { skipped++; noCorpus++; pushRow({ why: 'не найден корпус' }); return; }
@@ -5728,10 +5732,11 @@ async function scanPresentations(root, onProgress) {
 const _ZIP_CACHE = [];
 var INCUB_PPTX_FILES = {};   // путь в папке Инкубатория -> FileSystemFileHandle
 async function pptxZip(path, incub) {
-  const ck = (incub ? 'i:' : '') + path;
+  // incub: true — папка Инкубатория, 'nc' — папки вкладки «Несоответствие по площадкам»
+  const ck = (incub === 'nc' ? 'n:' : incub ? 'i:' : '') + path;
   const hit = _ZIP_CACHE.find((z) => z.path === ck);
   if (hit) return hit.zip;
-  const h = (incub ? INCUB_PPTX_FILES : PPTX_FILES)[path]; if (!h) throw new Error('нет файла ' + path);
+  const h = (incub === 'nc' ? NC_PPTX_FILES : incub ? INCUB_PPTX_FILES : PPTX_FILES)[path]; if (!h) throw new Error('нет файла ' + path);
   const zip = await JSZip.loadAsync(await h.getFile());
   _ZIP_CACHE.unshift({ path: ck, zip }); if (_ZIP_CACHE.length > 2) _ZIP_CACHE.pop();
   return zip;
@@ -5741,7 +5746,7 @@ const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', g
 async function getMediaBlob(date, corpus, f) {
   if (f.handle) return f.handle.getFile();
   if (f.pptx) {
-    const zip = await pptxZip(f.pptx, !!f.incubDir);
+    const zip = await pptxZip(f.pptx, f.nc ? 'nc' : !!f.incubDir);
     const ab = await zip.file(f.zip).async('arraybuffer');
     return new Blob([ab], { type: MIME_BY_EXT[(f.zip.split('.').pop() || '').toLowerCase()] || '' });
   }
@@ -6175,7 +6180,7 @@ async function scanIncubMediaFolder(root, onProgress) {
 }
 // Презентации Инкубатория — тот же разбор, что у выращивания, но место на слайде — зал
 // («зал вывода», «выводной зал», «сортировка»…); не нашёлся — зал из пути к файлу, иначе «прочее».
-const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v4';   // v3: дата — с самого слайда   // v2: без зала — только из папки Инкубатория
+const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v5';   // v3: дата — с самого слайда   // v2: без зала — только из папки Инкубатория
 var INCUB_PPTX_REPORT = [];
 function findIncubHall(text) {
   const h = INCUB_HALLS.find((x) => x.re.test(String(text || '')));
@@ -6403,7 +6408,92 @@ window.__keepOnlyAkt = (name) => {
 // ДЛЯ ВКЛАДКИ «МОЙКА И МБ»: фото/видео и баллы мойки по корпусу.
 // Корпус сравнивается без дефисов и пробелов: «А-1» = «А1», «БП-13-7» = «БП13-7».
 // ============================================================
+// ============================================================
+// ВКЛАДКА «НЕСООТВЕТСТВИЕ ПО ПЛОЩАДКАМ»: свои папки с презентациями (указываются в «⚙ Настройках»).
+// Слайды читаются тем же разбором: дата несоответствия, площадка/корпус/зал, контрольная точка, несоответствие.
+// Данные хранятся отдельно — на «Качество мойки» и другие вкладки не влияют.
+// ============================================================
+var NC_INDEX = {}, NC_PPTX_FILES = {}, NC_REPORT = [], NC_THUMBS = {}, NC_ROOT = null;
+const NC_CACHE_KEY = 'ncPptxIndex:v1';
+async function scanNcFolder(root, onProgress) {
+  const index = {}, files = {}, report = [];
+  let cache = {};
+  try { cache = JSON.parse(localStorage.getItem(NC_CACHE_KEY) || '{}') || {}; } catch (e) {}
+  const newCache = {};
+  let list = [];
+  if (root) { try { list = await collectPptx(root, '', 0, []); } catch (e) { console.warn('nc list', e); } }
+  list.sort((a, b) => a.path.localeCompare(b.path, 'ru'));
+  for (let i = 0; i < list.length; i++) {
+    const { path, handle } = list[i];
+    if (list[i].old) { report.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
+    files[path] = handle;
+    try {
+      const f = await handle.getFile();
+      const sig = f.size + ':' + f.lastModified;
+      let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
+      if (!res) { onProgress && onProgress(i + 1, list.length, path); res = Object.assign({ sig }, await parsePresentation(f, path, pptxAreaOpt(path))); }
+      newCache[path] = res;
+      res.entries.forEach(({ key, entry }) => {
+        const e = Object.assign({}, entry, { files: entry.files.map((x) => Object.assign({}, x, { nc: true })) });
+        (index[key] = index[key] || []).push(e);
+      });
+      report.push({ path, n: res.entries.length, noDate: res.noDate || 0, noCorpus: res.noCorpus || 0, slides: res.slides, days: res.days || [], slideInfo: res.slideInfo || [] });
+    } catch (e) {
+      console.warn('nc pptx', path, e);
+      report.push({ path, err: /NotFound|NotReadable/i.test(e.name || '') ? 'файл не открылся (если он в OneDrive — «Всегда хранить на этом устройстве»)' : 'не удалось прочитать: ' + (e.message || e) });
+    }
+  }
+  try { localStorage.setItem(NC_CACHE_KEY, JSON.stringify(newCache)); } catch (e) {}
+  NC_INDEX = index; NC_PPTX_FILES = files; NC_REPORT = report; NC_THUMBS = {}; NC_ROOT = root || null;
+  return { files: list.length, items: Object.values(index).reduce((a, v) => a + v.length, 0) };
+}
+function ncAreaOf(corpus) { return isIncubKey(corpus) ? 'Инкубатор' : corpus === ZPP_KEY ? 'ЗПП' : 'Выращивание'; }
+// контрольная точка — со слайда: выращивание — точка Ф-БиС-07 (как в «Качестве мойки»), Инкубатор и ЗПП — как написано
+function ncPointOf(e, corpus) {
+  if (ncAreaOf(corpus) !== 'Выращивание') {
+    const pt = (e.point && e.point.trim()) || incPointOf(e.caption);
+    return pt ? pt.charAt(0).toUpperCase() + pt.slice(1) : null;
+  }
+  if (e.cat === undefined) e.cat = cpOfCaption(e.caption);
+  return e.cat ? cpCatName(e.cat) : (e.point || null);
+}
+const NC_API = {
+  ready: () => !!NC_ROOT,
+  scan: (root, onProgress) => scanNcFolder(root, onProgress),
+  report: () => NC_REPORT,
+  items() {
+    return Object.keys(NC_INDEX).map((k) => {
+      const i = k.indexOf('|'), corpus = k.slice(i + 1), es = NC_INDEX[k];
+      const area = ncAreaOf(corpus);
+      let site = area === 'Выращивание' ? corpus : area;
+      if (area === 'Выращивание') { try { site = zoneAndUchastok(normalizeCorpus(corpus))[0] || corpus; } catch (e) { /* корпус в непривычном виде */ } }
+      return { date: k.slice(0, i), corpus, site, area, pts: es.map((e) => ncPointOf(e, corpus)), count: es.length };
+    });
+  },
+  entries(date, corpus) {
+    return (NC_INDEX[mediaKey(date, corpus)] || []).map((e) => ({ caption: e.caption || '', point: e.point || '', nc: e.nc || '', pt: ncPointOf(e, corpus), video: e.files.some((f) => f.kind === 'video') }));
+  },
+  async thumbs(date, corpus) {
+    const key = mediaKey(date, corpus);
+    if (NC_THUMBS[key]) return NC_THUMBS[key];
+    NC_THUMBS[key] = (async () => {
+      const out = [], es = NC_INDEX[key] || [];
+      for (let idx = 0; idx < es.length; idx++) {
+        try { const cv = await entryPreview(date, corpus, es[idx], 600); if (cv) out.push({ url: cv.toDataURL('image/jpeg', 0.88), video: es[idx].files.some((f) => f.kind === 'video'), caption: es[idx].caption || '', idx }); } catch (e) { /* файл недоступен */ }
+      }
+      return out;
+    })();
+    return NC_THUMBS[key];
+  },
+  async media(date, corpus, idx) {
+    const e = (NC_INDEX[mediaKey(date, corpus)] || [])[idx];
+    if (!e) return null;
+    const f = e.files.find((x) => x.kind === 'video') || e.files.find((x) => x.kind === 'photo');
+    return { blob: await getMediaBlob(date, corpus, f), video: f.kind === 'video', caption: e.caption || '' };
+  },
+};
 window.MOIKA_API = {
+  nc: NC_API,
   norm: (c) => normCorpusCode(String(c || '')).replace(/-/g, ''),
   ready: () => !!(MEDIA_DIR_HANDLE || INCUB_MEDIA_DIR),
   // только то, что реально лежит в папках (вшитые ссылки без файлов не показываем)
@@ -6446,7 +6536,7 @@ window.MOIKA_API = {
     return Object.values(out);
   },
   async thumbs(date, corpus) { return (await loadThumbsFor(date, corpus)) || []; },
-  entries(date, corpus) { return (mediaEntriesFor(mediaKey(date, corpus)) || []).map((e) => ({ caption: e.caption || '', video: e.files.some((f) => f.kind === 'video') })); },
+  entries(date, corpus) { return (mediaEntriesFor(mediaKey(date, corpus)) || []).map((e) => ({ caption: e.caption || '', point: e.point || '', nc: e.nc || '', video: e.files.some((f) => f.kind === 'video') })); },
   async media(date, corpus, idx) {
     const e = (mediaEntriesFor(mediaKey(date, corpus)) || [])[idx];
     if (!e) return null;

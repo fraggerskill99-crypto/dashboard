@@ -61,6 +61,7 @@
   <button data-tab="nok" title="Ctrl+2">🧫 NOK-дашборд</button>
   <button data-tab="mb" title="Ctrl+3">🔬 Мойка и МБ</button>
   <button data-tab="week" title="Ctrl+4">📷 Фотофиксация по неделям</button>
+  <button data-tab="nc" title="Ctrl+5">📍 Несоответствие по площадкам</button>
   <span class="sp"></span>
   <span class="hint" id="dataHint"></span>
   <span class="hint" id="autoSt" title="Данные обновляются сами: файлы и папки проверяются каждую минуту и при возврате на вкладку"></span>
@@ -71,6 +72,7 @@
   <iframe id="f-nok" data-src="nok.html" title="NOK-дашборд" hidden></iframe>
   <iframe id="f-mb" data-src="mb.html" title="Мойка и МБ" hidden></iframe>
   <iframe id="f-week" data-src="week.html" title="Фотофиксация по неделям" hidden></iframe>
+  <iframe id="f-nc" data-src="nc.html" title="Несоответствие по площадкам" hidden></iframe>
 </main>
 <div id="toast" hidden></div>
 <button type="button" id="permBtn" hidden title="Браузер спрашивает разрешение на выбранные файлы один раз за запуск">🔓 Разрешить доступ к файлам</button>
@@ -106,7 +108,7 @@
     return false;
   }
   const frame = (t) => document.getElementById('f-' + t);
-  const TABS = ['moika', 'nok', 'mb', 'week'];
+  const TABS = ['moika', 'nok', 'mb', 'week', 'nc'];
   let current = 'moika';
 
   function show(t) {
@@ -120,7 +122,7 @@
   }
   document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) show(b.dataset.tab); });
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && /^[1-4]$/.test(e.key)) { e.preventDefault(); show(TABS[+e.key - 1]); }
+    if ((e.ctrlKey || e.metaKey) && /^[1-5]$/.test(e.key)) { e.preventDefault(); show(TABS[+e.key - 1]); }
   });
 
   const toastEl = document.getElementById('toast');
@@ -144,7 +146,7 @@
   const applied = {};   // выбранные в «Настройках» файлы: что уже прочитано (путь|время|размер)
   // файл читает сама вкладка — тогда он «свой» для её библиотек
   const srcFileIn = (win, f) => win.APP_FS.readChosen(f);
-  let mediaDone = false;
+  let mediaDone = false, ncDone = null;
   // force — перечитать всё; opts.media === false — фото/видео не пересканировать (проверка раз в 2 минуты)
   async function attachData(force, opts) {
     if (!live) return;
@@ -159,7 +161,7 @@
       // каждой вкладке — только свои папки; файлы, выбранные в «Настройках», важнее автопоиска
       const roles = await w.APP_FS.roles();
       const chosen = await w.APP_FS.chosen();
-      const all = roles.acts.concat(roles.media, roles.svod);
+      const all = roles.acts.concat(roles.media, roles.svod, roles.nc || []);
       document.getElementById('dataHint').textContent = all.length || Object.keys(chosen).length ? '📁 ' + all.concat(Object.values(chosen).map((f) => f.name)).join(' · ') : '';
       w.__APP_ACTS_SEPARATE = true;   // акты не ищем в папках с фото
       if (roles.media.length && (force || opts.media !== false || !mediaDone)) {
@@ -201,6 +203,14 @@
       }
       const wk = frame('week');
       if (started(wk)) try { wk.contentWindow.postMessage('app:media', '*'); } catch (e) {}
+      // «Несоответствие по площадкам» — свои папки (роль nc), читаются отдельно от «Качества мойки»
+      const ncKey = (roles.nc || []).join('|');
+      if (w.MOIKA_API && w.MOIKA_API.nc && (force || opts.media !== false || ncKey !== ncDone)) {
+        ncDone = ncKey;
+        try { await w.MOIKA_API.nc.scan(roles.nc && roles.nc.length ? w.APP_FS.group(roles.nc, 'Несоответствие по площадкам') : null); } catch (e) { console.warn('nc', e); }
+        const ncf = frame('nc');
+        if (started(ncf)) try { ncf.contentWindow.postMessage('app:nc', '*'); } catch (e) {}
+      }
       const nok = frame('nok');
       if (started(nok)) try { nok.contentWindow.__appDataChanged && nok.contentWindow.__appDataChanged(); } catch (e) {}
     })().finally(() => {
@@ -218,7 +228,7 @@
   // ---------- веб-дашборд: файлы и папки из «⚙ Настроек» хранит браузер (IndexedDB) ----------
   const WEBCFG = isWeb ? (() => {
     const KINDS = { akt: 'Акт приёма мойки (выращивание)', incub: 'Акт Инкубатория', zpp: 'Акт ЗПП', schedule: 'График ПР/Р', svod: 'Свод МБ (NOK, Мойка и МБ)' };
-    const ROLE_TITLE = { acts: 'акты', media: 'фото/видео и презентации', svod: 'Свод МБ' };
+    const ROLE_TITLE = { acts: 'акты', media: 'фото/видео и презентации', svod: 'Свод МБ', nc: 'несоответствие по площадкам' };
     const idb = () => new Promise((res, rej) => {
       const r = indexedDB.open('ukpf-web-sources', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('kv');
@@ -303,7 +313,7 @@
           const files = (await kvGet('files')) || {}; delete files[p.kind]; await kvSet('files', files);
           attachData(true);
         } else if (cmd === 'add-folder') {
-          const role = ['acts', 'media', 'svod'].includes(p.role) ? p.role : 'media';
+          const role = ['acts', 'media', 'svod', 'nc'].includes(p.role) ? p.role : 'media';
           const h = await window.showDirectoryPicker({ id: 'ukpf-' + role, mode: 'read' });
           const folders = (await kvGet('folders')) || [];
           let same = false;
@@ -347,7 +357,7 @@
     const hhmm = (d) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const autoSt = (t) => { document.getElementById('autoSt').textContent = t; };
     async function folderSig() {
-      const folders = ((await kvGet('folders')) || []).filter((f) => f.role === 'media');
+      const folders = ((await kvGet('folders')) || []).filter((f) => f.role === 'media' || f.role === 'nc');
       const parts = [];
       let n = 0;
       async function walk(dir, pre, depth) {
@@ -431,9 +441,9 @@
           ` · точка: ${w.point ? '«' + esc(w.point) + '»' : '<i>не указана</i>'}` + (w.nc ? ' · ' + esc(w.nc) : '') +
           ` · фото/видео: ${w.n}${w.why ? ' — не взято: ' + w.why : ''}</small>`).join('')).join('') + '</details>';
       };
-      const pptxReport = () => {
+      const pptxReport = (which) => {
         let rep = [];
-        try { rep = (frame('moika').contentWindow.PPTX_REPORT || []).slice(); } catch (e) { /* вкладка ещё грузится */ }
+        try { const mw = frame('moika').contentWindow; rep = (which === 'nc' ? mw.MOIKA_API.nc.report() : mw.PPTX_REPORT || []).slice(); } catch (e) { /* вкладка ещё грузится */ }
         if (!rep.length) return '';
         const area = (p) => (/инкуб/i.test(p) ? 'Инкубатор' : /(^|[^а-яё])зпп([^а-яё]|$)/i.test(p) ? 'ЗПП' : 'Выращивание');
         return '<details class="cfg-rep"><summary>Прочитано из презентаций: ' + rep.length + ' файл(ов), фото/видео — ' + rep.reduce((n, r) => n + (r.n || 0), 0) + '</summary>' +
@@ -460,8 +470,14 @@
         state.folders.filter((m) => m.role === 'media').map((m) => folderRow(m)).join('') +
         `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="media">+ Папка с презентациями${state.noSharePoint ? ' (синхронизированная SharePoint)' : ''}</button></div>` +
         pptxReport() +
+        // отдельная вкладка «Несоответствие по площадкам» — свои папки с презентациями
+        '<div class="cfg-sec">Несоответствие по площадкам — папки с презентациями</div>' +
+        '<p class="cfg-hint">Папки с презентациями (.pptx), где на слайдах прописаны несоответствие и дата (а также площадка/корпус или зал, контрольная точка). Читаются только для вкладки «📍 Несоответствие по площадкам», включая подпапки; новые и изменённые презентации подтягиваются сами.</p>' +
+        state.folders.filter((m) => m.role === 'nc').map((m) => folderRow(m)).join('') +
+        `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="nc">+ Папка с презентациями несоответствий</button></div>` +
+        pptxReport('nc') +
         '<div class="cfg-sec">Папки актов и Свода</div>' +
-        (state.folders.filter((m) => m.role !== 'media').map((m) => folderRow(m)).join('') || '<div class="cfg-row"><span class="val auto">Папок пока нет.</span></div>') +
+        (state.folders.filter((m) => m.role !== 'media' && m.role !== 'nc').map((m) => folderRow(m)).join('') || '<div class="cfg-row"><span class="val auto">Папок пока нет.</span></div>') +
         `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="acts">+ Папка с актами</button>
           <button type="button" data-cmd="add-folder" data-role="svod">+ Папка со Сводом</button></div>`;
       $('cfgSt').textContent = state.lastRefresh ? 'Обновлено в ' + new Date(state.lastRefresh).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';

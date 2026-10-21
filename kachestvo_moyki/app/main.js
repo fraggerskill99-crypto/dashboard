@@ -60,7 +60,7 @@ const ONEDRIVE_AUTO = [
   { name: 'Несоответствия (OneDrive)', role: 'media', rel: path.join('Рабочий стол', 'Несоответствие еженедельно') },
   { name: 'СВОД МБ (OneDrive)', role: 'svod', rel: path.join('Рабочий стол', 'BI_Business-Local Labs - СВОД') },
 ];
-const ROLE_TITLE = { acts: 'акты', media: 'фото/видео и презентации', svod: 'Свод МБ' };
+const ROLE_TITLE = { acts: 'акты', media: 'фото/видео и презентации', svod: 'Свод МБ', nc: 'несоответствие по площадкам' };
 // роль папки: из настроек; у подключённых раньше — по имени
 function roleOf(m) {
   if (m.role) return m.role;
@@ -211,8 +211,8 @@ function latestSvod() {
 }
 // какие папки на что: для вкладок
 function rolesInfo() {
-  const r = { acts: [], media: [], svod: [] };
-  mounts().forEach((m) => r[roleOf(m)].push(m.name));
+  const r = { acts: [], media: [], svod: [], nc: [] };
+  mounts().forEach((m) => (r[roleOf(m)] || r.media).push(m.name));
   try { if (fs.readdirSync(spDir()).length) r.media.push('SharePoint'); } catch (e) { /* SharePoint не подключали */ }
   return r;
 }
@@ -314,7 +314,7 @@ async function handleCfg(cmd, q) {
     return sourcesState();
   }
   if (cmd === 'add-folder') {
-    const role = ['acts', 'media', 'svod'].includes(q.get('role')) ? q.get('role') : 'media';
+    const role = ['acts', 'media', 'svod', 'nc'].includes(q.get('role')) ? q.get('role') : 'media';
     const r = await dialog.showOpenDialog(win, { title: 'Папка: ' + ROLE_TITLE[role], properties: ['openDirectory'], defaultPath: oneDriveBases()[0] });
     if (!r.canceled && r.filePaths[0]) {
       const c = foldersConfig(), abs = r.filePaths[0];
@@ -751,6 +751,7 @@ function buildMenu() {
         { label: 'NOK-дашборд', accelerator: 'CmdOrCtrl+2', click: () => showTab('nok') },
         { label: 'Мойка и МБ', accelerator: 'CmdOrCtrl+3', click: () => showTab('mb') },
         { label: 'Фотофиксация по неделям', accelerator: 'CmdOrCtrl+4', click: () => showTab('week') },
+        { label: 'Несоответствие по площадкам', accelerator: 'CmdOrCtrl+5', click: () => showTab('nc') },
         { type: 'separator' },
         { label: 'Крупнее', accelerator: 'CmdOrCtrl+=', click: () => zoomBy(0.1) },
         { label: 'Крупнее', accelerator: 'CmdOrCtrl+Plus', visible: false, click: () => zoomBy(0.1) },

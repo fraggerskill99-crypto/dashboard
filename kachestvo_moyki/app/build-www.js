@@ -45,6 +45,7 @@ for (const [out, src] of Object.entries(pages)) {
   fs.writeFileSync(path.join(OUT, out), inject(html, out));
 }
 fs.copyFileSync(path.join(SRC, 'week.html'), path.join(OUT, 'week.html'));
+fs.copyFileSync(path.join(SRC, 'nc.html'), path.join(OUT, 'nc.html'));
 // номер версии в строке вкладок: APP_VERSION (сборка Android) или версия из package.json
 const version = process.env.APP_VERSION || JSON.parse(read(path.join(ROOT, 'package.json'))).version;
 fs.writeFileSync(path.join(OUT, 'index.html'), read(path.join(SRC, 'index.html')).replace('{{VERSION}}', version));
