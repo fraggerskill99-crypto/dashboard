@@ -5178,7 +5178,8 @@ function refreshCatDayThumbs() {
 var PPTX_INDEX = {};   // "дата|корпус" -> [{caption, cat, files:[{kind, filename, pptx, zip, poster}]}]
 var PPTX_FILES = {};   // путь в папке -> FileSystemFileHandle
 var PPTX_SKIPPED = 0;
-const PPTX_CACHE_KEY = 'pptxMediaIndex:v11';   // v11: таблицы и подписанные поля слайда, разбор по слайдам   // v9: своя подпись у каждого фото   // v8: точка — словарём актов   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
+const PPTX_CACHE_KEY = 'pptxMediaIndex:v12';   // v12: дата — с самого слайда (у фото — ближайшая)
+// v11:   // v11: таблицы и подписанные поля слайда, разбор по слайдам   // v9: своя подпись у каждого фото   // v8: точка — словарём актов   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
 // v5: слайды Инкубатория (залы) из общей папки
 // Папка SharePoint с презентациями несоответствий разложена по участкам: «Инкубатор», «Выращивание», «ЗПП».
 // Участок берём из пути к презентации: в «Инкубаторе» корпусов нет — только залы, в «ЗПП» — своя площадка.
@@ -5313,17 +5314,27 @@ function findCorpus(text) {
   return firstDash;
 }
 const MONTH_RE = { 'янв': 1, 'фев': 2, 'мар': 3, 'апр': 4, 'мая': 5, 'май': 5, 'июн': 6, 'июл': 7, 'авг': 8, 'сен': 9, 'окт': 10, 'ноя': 11, 'дек': 12 };
+// все даты в тексте по порядку (неверные совпадения пропускаем, а не бросаем поиск:
+// раньше «19-25.10.2026» давало «нет даты», и фото уходили на дату из имени файла)
+function datesInText(t, yearHint, allowShort) {
+  const out = [];
+  if (!t) return out;
+  const add = (at, y, mo, d) => {
+    if (y && y < 100) y += 2000;
+    if (!y || mo < 1 || mo > 12 || d < 1 || d > 31 || y < 2020 || y > 2100) return;
+    out.push({ at, d: `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}` });
+  };
+  for (const m of t.matchAll(/(20\d{2})[-_.](\d{1,2})[-_.](\d{1,2})(?!\d)/g)) add(m.index, +m[1], +m[2], +m[3]);
+  // «19-25.10.2026» (период) — первый день
+  for (const m of t.matchAll(/(?<![\d.])(\d{1,2})\s?[-–—]\s?(\d{1,2})\s?\.\s?(\d{1,2})\s?\.\s?(\d{4}|\d{2})(?!\d)/g)) add(m.index, +m[4], +m[3], +m[1]);
+  for (const m of t.matchAll(/(?<![\d.])(\d{1,2})\s?[._\/,-]\s?(\d{1,2})\s?[._\/,-]\s?(\d{4}|\d{2})(?!\d)/g)) add(m.index, +m[3], +m[2], +m[1]);
+  for (const m of t.matchAll(/(?<!\d)(\d{1,2})\s+(янв|фев|мар|апр|ма[яй]|июн|июл|авг|сен|окт|ноя|дек)[а-я]*\.?\s*(20\d{2})?/gi)) add(m.index, m[3] ? +m[3] : yearHint, MONTH_RE[m[2].toLowerCase()], +m[1]);
+  if (allowShort && yearHint) for (const m of t.matchAll(/(?<![\d.,])(\d{1,2})\.(\d{1,2})(?![\d.,])/g)) add(m.index, yearHint, +m[2], +m[1]);
+  return out.sort((a, b) => a.at - b.at);
+}
 function dateFromText(t, yearHint, allowShort) {
-  if (!t) return null;
-  let m = t.match(/(20\d{2})[-_.](\d{1,2})[-_.](\d{1,2})/);
-  let y, mo, d;
-  if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; }
-  else if ((m = t.match(/(?<!\d)(\d{1,2})\s?[._\/,-]\s?(\d{1,2})\s?[._\/,-]\s?(\d{4}|\d{2})(?!\d)/))) { d = +m[1]; mo = +m[2]; y = +m[3]; if (y < 100) y += 2000; }
-  else if ((m = t.match(/(?<!\d)(\d{1,2})\s+(янв|фев|мар|апр|ма[яй]|июн|июл|авг|сен|окт|ноя|дек)[а-я]*\.?\s*(20\d{2})?/i))) { d = +m[1]; mo = MONTH_RE[m[2].toLowerCase()]; y = m[3] ? +m[3] : yearHint; }
-  else if (allowShort && yearHint && (m = t.match(/(?<![\d.,])(\d{1,2})\.(\d{1,2})(?![\d.,])/))) { d = +m[1]; mo = +m[2]; y = yearHint; }
-  else return null;
-  if (!y || mo < 1 || mo > 12 || d < 1 || d > 31 || y < 2020 || y > 2100) return null;
-  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const ds = datesInText(t, yearHint, allowShort);
+  return ds.length ? ds[0].d : null;
 }
 const xmlText = (x) => x.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 function relsMap(xml, base) {
@@ -5509,12 +5520,34 @@ async function parsePresentation(file, path, opt) {
       });
       if (best) it.capCorpus = findPlace(best.t);
     });
-    slides.push({ texts, items, n: slides.length + 1 });
+    // надписи с датой на слайде: полная дата — в любой надписи, «19.10» без года — только в короткой надписи без корпуса
+    const dboxes = tboxes.map((q) => {
+      let ds = datesInText(q.t, yearHint);
+      if (!ds.length && q.t.length <= 40 && !findPlace(q.t)) ds = datesInText(q.t, yearHint, true);
+      return ds.length ? { d: ds[0].d, b: q.b } : null;
+    }).filter(Boolean);
+    // дата у каждого фото — та, что ближе к нему на слайде (на слайде может быть несколько дат)
+    if (new Set(dboxes.map((x) => x.d)).size > 1) items.forEach((it) => {
+      const at = it.b || it.capB; if (!at) return;
+      let best = null, bestD = Infinity;
+      dboxes.forEach((x) => {
+        if (!x.b) return;
+        const cx = x.b.x + x.b.w / 2, cy = x.b.y + x.b.h / 2;
+        const dx = Math.max(0, at.x - cx, cx - (at.x + at.w)), dy = Math.max(0, at.y - cy, cy - (at.y + at.h));
+        const d = dx * 3 + dy;
+        if (d < bestD) { bestD = d; best = x; }
+      });
+      if (best) it.date = best.d;
+    });
+    // дата слайда — верхняя надпись с датой (заголовок)
+    const top = dboxes.slice().sort((a, b) => (a.b ? a.b.y : 1e15) - (b.b ? b.b.y : 1e15))[0];
+    slides.push({ texts, items, n: slides.length + 1, date: top ? top.d : null });
   }
   // картинки, которые стоят на многих слайдах, — логотипы/оформление, не фиксация
   // (одинаковая картинка на 3+ слайдах или совсем маленькая иконка)
   const isDecor = (it) => it.small || imgUse[it.sig] > 2;
-  // дата: имя файла → папки (с конца пути) → заголовки слайдов
+  // дата: со слайда (у фото — ближайшая к нему); слайд без даты — дата предыдущего слайда,
+  // и только если ни на одном слайде до него даты нет — из имени файла/папки
   const segs = path.split('/');
   let curDate = null;
   for (let i = segs.length - 1; i >= 0 && !curDate; i--) curDate = dateFromText(segs[i].replace(/\.[a-z]+$/i, ''), yearHint, true);
@@ -5524,8 +5557,7 @@ async function parsePresentation(file, path, opt) {
   slides.forEach((sl) => {
     const all = sl.texts.join(' · ');
     // «06.10 Качество мойки» без года — только в заголовке (первый текст без корпуса), чтобы «1.5 м» в подписи не стало датой
-    const d = dateFromText(all, yearHint) || (sl.texts[0] && !findPlace(sl.texts[0]) ? dateFromText(sl.texts[0], yearHint, true) : null);
-    if (d) curDate = d;
+    if (sl.date) curDate = sl.date;
     // если на слайде у фото есть свои подписи — картинки без подписи (логотип, уголок) не берём
     const anyCap = sl.items.some((it) => it.cap);
     const items = sl.items.filter((it) => (it.video || !isDecor(it)) && (!anyCap || it.cap || it.video));
@@ -5545,22 +5577,27 @@ async function parsePresentation(file, path, opt) {
       const row = { place: corpus || '', point: F.point || '', nc: F.nc || '', n: 1 };
       const pushRow = (extra) => {
         Object.assign(row, extra);
-        const same = info.rows.find((r) => r.place === row.place && r.point === row.point && r.nc === row.nc && r.why === row.why);
+        const same = info.rows.find((r) => r.place === row.place && r.point === row.point && r.nc === row.nc && r.why === row.why && r.date === row.date);
         if (same) same.n++; else info.rows.push(row);
       };
-      if (!curDate) { skipped++; noDate++; pushRow({ why: 'нет даты' }); return; }
+      const date = it.date || curDate;
+      if (date !== curDate) row.date = date;
+      if (!date) { skipped++; noDate++; pushRow({ why: 'нет даты' }); return; }
       if (!corpus) { skipped++; noCorpus++; pushRow({ why: 'не найден корпус' }); return; }
-      corpSeen[curDate] = corpSeen[curDate] || {}; corpSeen[curDate][corpus] = 1;
+      corpSeen[date] = corpSeen[date] || {}; corpSeen[date][corpus] = 1;
       // подпись фото: «Точка — несоответствие» из полей слайда, иначе надпись у фото
       const fromFields = [F.point, F.nc].filter(Boolean).join(' — ');
-      const caption = (fromFields || it.cap || sl.texts.find((t) => findPlace(t) === corpus) || all).slice(0, 300);
+      // дата в подписи уже учтена — из текста подписи её убираем, чтобы она не стала «точкой»
+      const dropDate = (t) => (t ? String(t).replace(/(?<!\d)\d{1,2}\s?[._\/-]\s?\d{1,2}\s?[._\/-]\s?(?:\d{4}|\d{2})(?!\d)\s*(?:г\.?)?/g, ' ').replace(/\s+/g, ' ').replace(/^[\s,.;:—–-]+/, '').trim() : t);
+      const caption = (fromFields || dropDate(it.cap) || sl.texts.find((t) => findPlace(t) === corpus) || all).slice(0, 300);
       let cat = null;
       if (!opt.noCat && !isIncubKey(corpus)) {
         const num = F.point && F.point.match(/^(?:[ПпPp]\s?[-–—.№]?\s?)?(\d{1,2})(?!\d)/);
         cat = (num && CATEGORIES_REF[+num[1]] ? String(+num[1]) : null) || (F.point && cpOfCaption(F.point)) || cpOfCaption(caption);
       }
       if (!row.point && cat) row.point = 'П-' + cat + ' ' + CATEGORIES_REF[cat];
-      if (!row.nc && !fromFields) row.nc = (it.cap || '').slice(0, 160);
+      if (!row.point && isIncubKey(corpus)) row.point = incPointOf(caption) || '';
+      if (!row.nc && !fromFields) row.nc = (dropDate(it.cap) || '').slice(0, 160);
       pushRow({});
       const files = [];
       if (it.video) files.push({ kind: 'video', filename: it.video.split('/').pop(), pptx: path, zip: it.video });
@@ -5569,7 +5606,7 @@ async function parsePresentation(file, path, opt) {
       const entry = { caption, cat, files };
       if (F.point) entry.point = F.point;
       if (F.nc) entry.nc = F.nc;
-      out.push({ key: curDate + '|' + corpus, entry });
+      out.push({ key: date + '|' + corpus, entry });
     });
   });
   const days = Object.keys(corpSeen).sort().map((d) => fmtDate(d) + ': ' + Object.keys(corpSeen[d]).join(', '));
@@ -6067,7 +6104,7 @@ async function scanIncubMediaFolder(root, onProgress) {
 }
 // Презентации Инкубатория — тот же разбор, что у выращивания, но место на слайде — зал
 // («зал вывода», «выводной зал», «сортировка»…); не нашёлся — зал из пути к файлу, иначе «прочее».
-const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v2';   // v2: без зала — только из папки Инкубатория
+const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v3';   // v3: дата — с самого слайда   // v2: без зала — только из папки Инкубатория
 var INCUB_PPTX_REPORT = [];
 function findIncubHall(text) {
   const h = INCUB_HALLS.find((x) => x.re.test(String(text || '')));

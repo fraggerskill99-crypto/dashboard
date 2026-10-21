@@ -382,7 +382,7 @@
         if (!si.length) return '';
         const d = (x) => (x ? x.split('-').reverse().join('.') : 'без даты');
         return `<details class="cfg-slides"><summary>Разбор по слайдам (${si.length})</summary>` + si.map((s) => s.rows.map((w) =>
-          `<small${w.why ? ' class="bad"' : ''}>Слайд ${s.n} · ${d(s.date)} → <b>${esc(String(w.place || '—').replace(/^Инкубатор: /, ''))}</b>` +
+          `<small${w.why ? ' class="bad"' : ''}>Слайд ${s.n} · ${d(w.date || s.date)} → <b>${esc(String(w.place || '—').replace(/^Инкубатор: /, ''))}</b>` +
           ` · точка: ${w.point ? '«' + esc(w.point) + '»' : '<i>не указана</i>'}` + (w.nc ? ' · ' + esc(w.nc) : '') +
           ` · фото/видео: ${w.n}${w.why ? ' — не взято: ' + w.why : ''}</small>`).join('')).join('') + '</details>';
       };
