@@ -23,6 +23,8 @@
   /* неприметная кнопка настроек — левый нижний угол */
   #cfgBtn { position: fixed; left: max(10px, env(safe-area-inset-left, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); z-index: 9; border: 1px solid var(--line); background: rgba(255,255,255,.75); color: var(--muted); font-size: 11.5px; padding: 4px 9px; border-radius: 7px; cursor: pointer; opacity: .55; }
   #cfgBtn:hover, #cfgBtn:focus-visible { opacity: 1; color: var(--navy); }
+  #permBtn { position: fixed; left: max(110px, calc(env(safe-area-inset-left, 0px) + 100px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); z-index: 9; border: none; background: #b45309; color: #fff; font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  #permBtn[hidden] { display: none; }
   #cfg { position: fixed; inset: 0; z-index: 20; background: rgba(15,23,42,.45); display: flex; align-items: flex-end; justify-content: flex-start; padding: 16px; }
   #cfg[hidden] { display: none; }
   .cfg-in { width: min(720px, 100%); max-height: calc(100% - 20px); overflow: auto; background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); padding: 16px 18px; font-size: 13px; color: #1e293b; }
@@ -64,11 +66,12 @@
   <iframe id="f-week" data-src="week.html" title="Фотофиксация по неделям" hidden></iframe>
 </main>
 <div id="toast" hidden></div>
+<button type="button" id="permBtn" hidden title="Браузер спрашивает разрешение на выбранные файлы один раз за запуск">🔓 Разрешить доступ к файлам</button>
 <button type="button" id="cfgBtn" hidden title="Откуда брать акты, Свод, фото и презентации">⚙ Настройки</button>
 <div id="cfg" hidden>
   <div class="cfg-in" role="dialog" aria-labelledby="cfgT">
     <div class="cfg-hd"><b id="cfgT">Настройки — откуда брать данные</b><button type="button" id="cfgX" title="Закрыть (Esc)">×</button></div>
-    <p class="cfg-note">Выберите нужные файлы и папки. Что не выбрано — ищется само (папки OneDrive). Изменённые файлы подхватываются сами; «Обновить сейчас» — перечитать всё сразу.</p>
+    <p class="cfg-note">Выберите нужные файлы и папки. Что не выбрано — ищется само в папках ниже (самый свежий файл). Изменённые файлы подхватываются сами; «Обновить сейчас» — перечитать всё сразу.</p>
     <div id="cfgBody"></div>
     <div class="cfg-ft"><span id="cfgSt"></span><button type="button" id="cfgRefresh" class="cfg-main">⟳ Обновить сейчас</button></div>
   </div>
@@ -79,6 +82,22 @@
 (function () {
   const TAB_KEY = 'appActiveTab';
   const isApp = location.protocol === 'app:';
+  // веб-дашборд одним файлом: страницы вкладок лежат внутри файла (base64), данные — из «⚙ Настроек» браузера
+  const isWeb = !isApp && !!window.__WEB_COMBINED;
+  const live = isApp || isWeb;
+  const started = (f) => !!(f.getAttribute('src') || f.hasAttribute('srcdoc'));
+  function startFrame(f) {
+    if (started(f)) return false;
+    if (f.dataset.src) { f.setAttribute('src', f.dataset.src); return true; }
+    const pg = document.getElementById('pg-' + f.id.slice(2));
+    if (pg) {
+      const bin = atob(pg.textContent.trim()), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      f.srcdoc = new TextDecoder().decode(bytes);
+      return true;
+    }
+    return false;
+  }
   const frame = (t) => document.getElementById('f-' + t);
   const TABS = ['moika', 'nok', 'mb', 'week'];
   let current = 'moika';
@@ -89,8 +108,7 @@
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     TABS.forEach((k) => { frame(k).hidden = k !== t; });
     const f = frame(t);
-    if (!f.getAttribute('src') && f.dataset.src) f.setAttribute('src', f.dataset.src);   // загружаем вкладку при первом открытии
-    else try { f.contentWindow.postMessage('app:shown', '*'); } catch (e) {}
+    if (!startFrame(f)) try { f.contentWindow.postMessage('app:shown', '*'); } catch (e) {}   // вкладка грузится при первом открытии
     try { localStorage.setItem(TAB_KEY, t); } catch (e) {}
   }
   document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) show(b.dataset.tab); });
@@ -111,19 +129,19 @@
 
   // Папка «Данные» приложения (туда скачивается SharePoint) → во все вкладки
   const loaded = (f) => new Promise((res) => {
-    if (f.getAttribute('src') && f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentWindow.APP_FS) return res(true);
-    if (!f.getAttribute('src')) return res(false);
+    if (started(f) && f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentWindow.APP_FS) return res(true);
+    if (!started(f)) return res(false);
     f.addEventListener('load', () => setTimeout(() => res(true), 1500), { once: true });
   });
   let attachBusy = null, attachAgain = false;
   const applied = {};   // выбранные в «Настройках» файлы: что уже прочитано (путь|время|размер)
-  async function srcFileIn(win, f) {
-    const r = await fetch('/data/__src/' + f.kind + '/' + encodeURIComponent(f.name));
-    if (!r.ok) throw new Error('файл недоступен: ' + f.path);
-    return new win.File([await r.arrayBuffer()], f.name, { lastModified: f.mtime });
-  }
-  async function attachData(force) {
-    if (!isApp) return;
+  // файл читает сама вкладка — тогда он «свой» для её библиотек
+  const srcFileIn = (win, f) => win.APP_FS.readChosen(f);
+  let mediaDone = false;
+  // force — перечитать всё; opts.media === false — фото/видео не пересканировать (проверка раз в 2 минуты)
+  async function attachData(force, opts) {
+    if (!live) return;
+    opts = opts || {};
     if (attachBusy) { attachAgain = attachAgain || !!force; return attachBusy; }
     attachBusy = (async () => {
       const m = frame('moika');
@@ -133,13 +151,12 @@
       if (force) Object.keys(applied).forEach((k) => { delete applied[k]; });
       // каждой вкладке — только свои папки; файлы, выбранные в «Настройках», важнее автопоиска
       const roles = await w.APP_FS.roles();
-      const st = await (await fetch('/cfg/state')).json();
-      const chosen = {};
-      Object.entries(st.files).forEach(([k, v]) => { if (v.chosen) chosen[k] = Object.assign({ kind: k }, v.chosen); });
+      const chosen = await w.APP_FS.chosen();
       const all = roles.acts.concat(roles.media, roles.svod);
       document.getElementById('dataHint').textContent = all.length || Object.keys(chosen).length ? '📁 ' + all.concat(Object.values(chosen).map((f) => f.name)).join(' · ') : '';
       w.__APP_ACTS_SEPARATE = true;   // акты не ищем в папках с фото
-      if (roles.media.length) {
+      if (roles.media.length && (force || opts.media !== false || !mediaDone)) {
+        mediaDone = true;
         const media = w.APP_FS.group(roles.media, 'Фото/видео');
         try { if (w.__useMediaHandle) await w.__useMediaHandle(media, false); } catch (e) { console.warn('moika media', e); }
         try { if (w.useIncubMediaHandle) await w.useIncubMediaHandle(media, false); } catch (e) { console.warn('moika incub', e); }
@@ -161,7 +178,7 @@
       }
       // Мойка и МБ: выбранные Свод/акт — напрямую, остальное — из папок
       const mb = frame('mb');
-      if (mb.getAttribute('src') && await loaded(mb)) {
+      if (started(mb) && await loaded(mb)) {
         const x = mb.contentWindow;
         try {
           const dirs = (chosen.svod ? [] : roles.svod).concat(chosen.akt ? [] : roles.acts);
@@ -176,9 +193,9 @@
         } catch (e) { console.warn('mb', e); }
       }
       const wk = frame('week');
-      if (wk.getAttribute('src')) try { wk.contentWindow.postMessage('app:media', '*'); } catch (e) {}
+      if (started(wk)) try { wk.contentWindow.postMessage('app:media', '*'); } catch (e) {}
       const nok = frame('nok');
-      if (nok.getAttribute('src')) try { nok.contentWindow.__appDataChanged && nok.contentWindow.__appDataChanged(); } catch (e) {}
+      if (started(nok)) try { nok.contentWindow.__appDataChanged && nok.contentWindow.__appDataChanged(); } catch (e) {}
     })().finally(() => {
       attachBusy = null;
       if (attachAgain) { const f = attachAgain; attachAgain = false; attachData(f === true); }
@@ -186,13 +203,143 @@
     return attachBusy;
   }
   // вкладка «Мойка и МБ» открылась впервые — тоже даём ей папку
-  frame('mb').addEventListener('load', () => { if (isApp) setTimeout(attachData, 1500); });
+  frame('mb').addEventListener('load', () => { if (live) setTimeout(attachData, 1500); });
 
 
   // ---------- «⚙ Настройки» (только в приложении для ПК) ----------
+
+  // ---------- веб-дашборд: файлы и папки из «⚙ Настроек» хранит браузер (IndexedDB) ----------
+  const WEBCFG = isWeb ? (() => {
+    const KINDS = { akt: 'Акт приёма мойки (выращивание)', incub: 'Акт Инкубатория', zpp: 'Акт ЗПП', schedule: 'График ПР/Р', svod: 'Свод МБ (NOK, Мойка и МБ)' };
+    const ROLE_TITLE = { acts: 'акты', media: 'фото/видео и презентации', svod: 'Свод МБ' };
+    const idb = () => new Promise((res, rej) => {
+      const r = indexedDB.open('ukpf-web-sources', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+    const kvGet = async (k) => { const db = await idb(); return new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); };
+    const kvSet = async (k, v) => { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); };
+    const can = async (h) => { try { return (await h.queryPermission({ mode: 'read' })) === 'granted'; } catch (e) { return false; } };
+    // как «Качество мойки» разбирает акты по имени файла
+    function actKind(name) {
+      const n = name.toLowerCase().replace(/ё/g, 'е');
+      if (/(^|[^а-я])свод(?![а-я])|журнал|микроб|(^|[^а-я])мб([^а-я]|$)|nok/.test(n)) return null;
+      if (/инкуб/.test(n)) return 'incub';
+      if (/зпп/.test(n)) return 'zpp';
+      if (/график|пр[\s._-]*р|санразрыв/.test(n)) return 'schedule';
+      if (/акт|мойк|при[её]м/.test(n)) return 'akt';
+      return null;
+    }
+    let lastRefresh = null;
+    async function newestIn(handle, test) {
+      let best = null;
+      for await (const h of handle.values()) {
+        if (h.kind !== 'file' || h.name.startsWith('~$') || !test(h.name)) continue;
+        const f = await h.getFile();
+        if (!best || f.lastModified > best.mtime) best = { name: f.name, mtime: f.lastModified };
+      }
+      return best;
+    }
+    async function state() {
+      const files = (await kvGet('files')) || {}, folders = (await kvGet('folders')) || [];
+      let needPerm = false;
+      // что найдётся само: самый свежий файл каждого вида в самих папках актов / папке Свода
+      const auto = {};
+      for (const f of folders) {
+        if (!(await can(f.handle))) { needPerm = true; continue; }
+        if (f.role === 'acts') {
+          for (const k of ['akt', 'incub', 'zpp', 'schedule']) {
+            const b = await newestIn(f.handle, (n) => /\.(xlsx|xlsm)$/i.test(n) && actKind(n) === k);
+            if (b && (!auto[k] || b.mtime > auto[k].mtime)) auto[k] = Object.assign({ where: f.name }, b);
+          }
+        } else if (f.role === 'svod') {
+          const b = await newestIn(f.handle, (n) => /\.xlsx$/i.test(n));
+          if (b && (!auto.svod || b.mtime > auto.svod.mtime)) auto.svod = Object.assign({ where: f.name }, b);
+        }
+      }
+      const out = {};
+      for (const k of Object.keys(KINDS)) {
+        const h = files[k];
+        let chosen = null, missing = false;
+        if (h) {
+          if (await can(h)) { try { const f = await h.getFile(); chosen = { name: f.name, path: 'выбран вручную', mtime: f.lastModified }; } catch (e) { missing = true; } }
+          else { needPerm = true; chosen = { name: h.name, path: 'нужно разрешить доступ — кнопка «🔓» внизу', mtime: 0 }; }
+        }
+        out[k] = { title: KINDS[k], chosen, chosenMissing: missing, chosenPath: h ? h.name : null, auto: h ? null : auto[k] || null };
+      }
+      const fl = [];
+      for (const f of folders) fl.push({ name: f.name, path: (await can(f.handle)) ? 'папка «' + f.handle.name + '»' : 'нужно разрешить доступ — кнопка «🔓» внизу', role: f.role, roleTitle: ROLE_TITLE[f.role], ok: true });
+      permBtn(needPerm);
+      return { files: out, folders: fl, sharepoint: [], noSharePoint: true, lastRefresh, needPerm };
+    }
+    async function allHandles() {
+      const files = (await kvGet('files')) || {}, folders = (await kvGet('folders')) || [];
+      return Object.values(files).filter(Boolean).concat(folders.map((f) => f.handle));
+    }
+    // Chrome спрашивает разрешение на выбранные файлы один раз за запуск (или «Разрешать при каждом посещении»)
+    async function requestAll() {
+      let ok = true;
+      for (const h of await allHandles()) {
+        try { if ((await h.queryPermission({ mode: 'read' })) !== 'granted' && (await h.requestPermission({ mode: 'read' })) !== 'granted') ok = false; } catch (e) { ok = false; }
+      }
+      permBtn(!ok);
+      return ok;
+    }
+    async function run(cmd, p) {
+      try {
+        if (cmd === 'pick-file') {
+          const [h] = await window.showOpenFilePicker({ id: 'ukpf-' + p.kind, types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx', '.xlsm'], 'text/csv': ['.csv'] } }] });
+          const files = (await kvGet('files')) || {}; files[p.kind] = h; await kvSet('files', files);
+          attachData(true);
+        } else if (cmd === 'clear-file') {
+          const files = (await kvGet('files')) || {}; delete files[p.kind]; await kvSet('files', files);
+          attachData(true);
+        } else if (cmd === 'add-folder') {
+          const role = ['acts', 'media', 'svod'].includes(p.role) ? p.role : 'media';
+          const h = await window.showDirectoryPicker({ id: 'ukpf-' + role, mode: 'read' });
+          const folders = (await kvGet('folders')) || [];
+          let same = false;
+          for (const f of folders) if (await f.handle.isSameEntry(h)) same = true;
+          if (!same) {
+            let name = h.name || 'Папка';
+            while (folders.some((f) => f.name === name)) name += ' 2';
+            folders.push({ name, role, handle: h });
+            await kvSet('folders', folders);
+          }
+          attachData(true);
+        } else if (cmd === 'remove-folder') {
+          await kvSet('folders', ((await kvGet('folders')) || []).filter((f) => f.name !== p.name));
+          attachData(true);
+        } else if (cmd === 'refresh') {
+          await requestAll();
+          lastRefresh = new Date().toISOString();
+          await attachData(true);
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') toast('Не получилось: ' + e.message, 'err');
+      }
+      return state();
+    }
+    const pb = document.getElementById('permBtn');
+    function permBtn(need) { pb.hidden = !need; }
+    pb.onclick = async () => { if (await requestAll()) { toast('Доступ разрешён — данные подтягиваются.', 'ok'); attachData(true); } };
+    async function start() {
+      const hs = await allHandles();
+      if (!hs.length) { setTimeout(() => toast('Откройте «⚙ Настройки» внизу слева и выберите акты, Свод и папки с фото — дальше всё подтягивается само.'), 2500); return; }
+      let need = false;
+      for (const h of hs) if (!(await can(h))) need = true;
+      permBtn(need);
+      if (need) toast('Нажмите «🔓 Разрешить доступ» внизу слева — браузер спрашивает один раз за запуск.');
+      // выбранные файлы проверяются раз в 2 минуты: пересохранили — данные обновятся сами
+      setInterval(() => { if (!document.hidden) attachData(false, { media: false }); }, 120000);
+    }
+    return { run, start };
+  })() : null;
+
+  let openSettings = () => {};
   // в предварительном просмотре — та же панель на примере (без выбора файлов)
-  const demo = !isApp && window.__APP_PREVIEW;
-  if (isApp || demo) {
+  const demo = !live && window.__APP_PREVIEW;
+  if (live || demo) {
     const $ = (id) => document.getElementById(id);
     const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
     const when = (ms) => (ms ? new Date(ms).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
@@ -203,6 +350,7 @@
         if (cmd !== 'state') toast(cmd === 'refresh' ? 'В приложении: перечитает выбранные файлы и папки и докачает SharePoint.' : 'В приложении здесь откроется окно выбора файла или папки на компьютере.', 'ok');
         state = window.__APP_PREVIEW; render(); return;
       }
+      if (isWeb) { state = await WEBCFG.run(cmd, params || {}); render(); return; }
       const q = new URLSearchParams(params || {}).toString();
       state = await (await fetch('/cfg/' + cmd + (q ? '?' + q : ''))).json();
       render();
@@ -228,12 +376,13 @@
         `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="media">+ Папка с фото/видео и презентациями</button>
           <button type="button" data-cmd="add-folder" data-role="acts">+ Папка с актами</button>
           <button type="button" data-cmd="add-folder" data-role="svod">+ Папка со Сводом</button></div>` +
-        '<div class="cfg-sec">SharePoint</div>' +
+        (state.noSharePoint ? '' : '<div class="cfg-sec">SharePoint</div>') +
         (state.sharepoint.length ? state.sharepoint.map((l) => `<div class="cfg-row"><span class="lbl">${esc(l.name)}</span><span class="val"><small>${esc(l.link)}</small>${l.lastSync ? 'обновлено ' + when(Date.parse(l.lastSync)) : '<span class="auto">ещё не скачивалась</span>'}</span></div>`).join('') : '') +
-        '<div class="cfg-add"><button type="button" data-cmd="sharepoint">+ Подключить папку SharePoint по ссылке</button></div>';
+        (state.noSharePoint ? '' : '<div class="cfg-add"><button type="button" data-cmd="sharepoint">+ Подключить папку SharePoint по ссылке</button></div>');
       $('cfgSt').textContent = state.lastRefresh ? 'Обновлено в ' + new Date(state.lastRefresh).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
     }
-    $('cfgBtn').onclick = () => { $('cfg').hidden = false; cfg('state'); };
+    openSettings = () => { $('cfg').hidden = false; cfg('state'); };
+    $('cfgBtn').onclick = openSettings;
     $('cfgX').onclick = () => { $('cfg').hidden = true; };
     $('cfg').addEventListener('click', (e) => {
       if (e.target.id === 'cfg') { $('cfg').hidden = true; return; }
@@ -247,12 +396,14 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('cfg').hidden) $('cfg').hidden = true; });
   }
 
-  window.APP = { show, toast, dataChanged: attachData, active: () => current, frame };
+  window.APP = { show, toast, dataChanged: attachData, active: () => current, frame, openSettings: () => openSettings() };
 
   let start = 'moika';
   try { start = localStorage.getItem(TAB_KEY) || 'moika'; } catch (e) {}
+  if (isWeb) startFrame(frame('moika'));   // «Качество мойки» нужна всем вкладкам (фото, баллы)
   show(start);
-  if (isApp) frame('moika').addEventListener('load', () => setTimeout(attachData, 2500), { once: true });
+  if (live) frame('moika').addEventListener('load', () => setTimeout(attachData, 2500), { once: true });
+  if (isWeb) WEBCFG.start();
 })();
 </script>
 </body>
