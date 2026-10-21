@@ -5697,8 +5697,19 @@ async function collectPptx(dir, prefix, depth, list) {
   }
   return list;
 }
+// подпись файла (размер:дата) — без чтения файла, если папка её уже знает (приложение для ПК);
+// сам файл читается, только когда презентацию нужно разобрать заново
+async function pptxSig(handle) {
+  if (handle.__meta && handle.__meta.size != null) return { sig: handle.__meta.size + ':' + handle.__meta.lastModified, file: null };
+  const f = await handle.getFile();
+  return { sig: f.size + ':' + f.lastModified, file: f };
+}
 async function scanPresentations(root, onProgress) {
-  PPTX_INDEX = {}; PPTX_FILES = {}; PPTX_SKIPPED = 0; PPTX_REPORT = []; _KNOWN_CORP = null;
+  // новый список собирается отдельно и заменяет старый целиком в конце: пока идёт чтение (долго при многих
+  // презентациях), уже показанные фото открываются по старому списку — раньше он очищался, и фото не открывалось
+  const index = {}, files = {}, report = [];
+  let skipped = 0;
+  _KNOWN_CORP = null;
   let cache = {};
   try { cache = JSON.parse(localStorage.getItem(PPTX_CACHE_KEY) || '{}') || {}; } catch (e) {}
   const newCache = {};
@@ -5707,26 +5718,27 @@ async function scanPresentations(root, onProgress) {
   list.sort((a, b) => a.path.localeCompare(b.path, 'ru'));
   for (let i = 0; i < list.length; i++) {
     const { path, handle } = list[i];
-    if (list[i].old) { PPTX_REPORT.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
-    PPTX_FILES[path] = handle;
+    if (list[i].old) { report.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
+    files[path] = handle;
     try {
-      const f = await handle.getFile();
-      const sig = f.size + ':' + f.lastModified;
+      const ps = await pptxSig(handle), sig = ps.sig;
       let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
       if (!res) {
         onProgress && onProgress(i + 1, list.length, path);
-        res = Object.assign({ sig }, await parsePresentation(f, path, pptxAreaOpt(path)));
+        res = Object.assign({ sig }, await parsePresentation(ps.file || await handle.getFile(), path, pptxAreaOpt(path)));
       }
       newCache[path] = res;
-      res.entries.forEach(({ key, entry }) => { (PPTX_INDEX[key] = PPTX_INDEX[key] || []).push(entry); });
-      PPTX_SKIPPED += res.skipped || 0;
-      PPTX_REPORT.push({ path, n: res.entries.length, noDate: res.noDate || 0, noCorpus: res.noCorpus || 0, slides: res.slides, days: res.days || [], slideInfo: res.slideInfo || [] });
+      res.entries.forEach(({ key, entry }) => { (index[key] = index[key] || []).push(entry); });
+      skipped += res.skipped || 0;
+      report.push({ path, n: res.entries.length, noDate: res.noDate || 0, noCorpus: res.noCorpus || 0, slides: res.slides, days: res.days || [], slideInfo: res.slideInfo || [] });
     } catch (e) {
       console.warn('pptx', path, e);
-      PPTX_REPORT.push({ path, err: /NotFound|NotReadable/i.test(e.name || '') ? 'файл не открылся (если он в OneDrive/облаке — сделайте «Всегда хранить на этом устройстве»)' : (/zip|central directory|signature/i.test(e.message || '') ? 'файл повреждён или защищён паролем — откройте в PowerPoint и сохраните заново как .pptx (без пароля)' : 'не удалось прочитать: ' + (e.message || e)) });
+      report.push({ path, err: /NotFound|NotReadable/i.test(e.name || '') ? 'файл не открылся (если он в OneDrive/облаке — сделайте «Всегда хранить на этом устройстве»)' : (/zip|central directory|signature/i.test(e.message || '') ? 'файл повреждён или защищён паролем — откройте в PowerPoint и сохраните заново как .pptx (без пароля)' : 'не удалось прочитать: ' + (e.message || e)) });
     }
   }
   try { localStorage.setItem(PPTX_CACHE_KEY, JSON.stringify(newCache)); } catch (e) {}
+  PPTX_INDEX = index; PPTX_FILES = files; PPTX_SKIPPED = skipped; PPTX_REPORT = report;
+  _ZIP_CACHE.length = 0;   // презентации могли измениться — открытые копии больше не годятся
   renderPptxReport();
   return { files: list.length, keys: Object.keys(PPTX_INDEX).length, items: Object.values(PPTX_INDEX).reduce((a, v) => a + v.length, 0) };
 }
@@ -6189,7 +6201,8 @@ function findIncubHall(text) {
   return h ? h.key : null;
 }
 async function scanIncubPresentations(root, onProgress) {
-  INCUB_PPTX_FILES = {}; INCUB_PPTX_REPORT = [];
+  // как у презентаций выращивания: старый список файлов действует, пока новый не готов
+  const files = {}, report = [];
   const index = {};
   let cache = {};
   try { cache = JSON.parse(localStorage.getItem(INCUB_PPTX_CACHE_KEY) || '{}') || {}; } catch (e) {}
@@ -6200,27 +6213,29 @@ async function scanIncubPresentations(root, onProgress) {
   let items = 0;
   for (let i = 0; i < list.length; i++) {
     const { path, handle } = list[i];
-    if (list[i].old) { INCUB_PPTX_REPORT.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
-    INCUB_PPTX_FILES[path] = handle;
+    if (list[i].old) { report.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
+    files[path] = handle;
     try {
-      const f = await handle.getFile();
-      const sig = f.size + ':' + f.lastModified;
+      const ps = await pptxSig(handle), sig = ps.sig;
       let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
       if (!res) {
         onProgress && onProgress(i + 1, list.length, path);
+        const f = ps.file || await handle.getFile();
         // слайд без зала — в «прочее», только если презентация из папки Инкубатория
         const fallback = findIncubHall(path) || (/инкуб/i.test(root.name + '/' + path) ? INCUB_OTHER.key : undefined);
         res = Object.assign({ sig }, await parsePresentation(f, path, { find: findIncubHall, fallback, noCat: true }));
       }
       newCache[path] = res;
       res.entries.forEach(({ key, entry }) => { entry.files.forEach((f) => { f.incubDir = true; }); (index[key] = index[key] || []).push(entry); items++; });
-      INCUB_PPTX_REPORT.push({ path, n: res.entries.length, noDate: res.noDate || 0, days: res.days || [] });
+      report.push({ path, n: res.entries.length, noDate: res.noDate || 0, days: res.days || [] });
     } catch (e) {
       console.warn('incub pptx', path, e);
-      INCUB_PPTX_REPORT.push({ path, err: /NotFound|NotReadable/i.test(e.name || '') ? 'файл не открылся (если он в OneDrive — «Всегда хранить на этом устройстве»)' : 'не удалось прочитать: ' + e.message });
+      report.push({ path, err: /NotFound|NotReadable/i.test(e.name || '') ? 'файл не открылся (если он в OneDrive — «Всегда хранить на этом устройстве»)' : 'не удалось прочитать: ' + e.message });
     }
   }
   try { localStorage.setItem(INCUB_PPTX_CACHE_KEY, JSON.stringify(newCache)); } catch (e) {}
+  INCUB_PPTX_FILES = files; INCUB_PPTX_REPORT = report;
+  _ZIP_CACHE.length = 0;
   renderIncubPptxReport();
   return { index, files: list.length, items };
 }
@@ -6430,10 +6445,9 @@ async function scanNcFolder(root, onProgress) {
     if (list[i].old) { report.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
     files[path] = handle;
     try {
-      const f = await handle.getFile();
-      const sig = f.size + ':' + f.lastModified;
+      const ps = await pptxSig(handle), sig = ps.sig;
       let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
-      if (!res) { onProgress && onProgress(i + 1, list.length, path); res = Object.assign({ sig }, await parsePresentation(f, path, pptxAreaOpt(path))); }
+      if (!res) { onProgress && onProgress(i + 1, list.length, path); res = Object.assign({ sig }, await parsePresentation(ps.file || await handle.getFile(), path, pptxAreaOpt(path))); }
       newCache[path] = res;
       res.entries.forEach(({ key, entry }) => {
         const e = Object.assign({}, entry, { files: entry.files.map((x) => Object.assign({}, x, { nc: true })) });
@@ -6489,7 +6503,7 @@ const NC_API = {
   },
   async media(date, corpus, idx) {
     const e = (NC_INDEX[mediaKey(date, corpus)] || [])[idx];
-    if (!e) return null;
+    if (!e) throw new Error('файл не найден — данные только что обновились, откройте фото ещё раз');
     const f = e.files.find((x) => x.kind === 'video') || e.files.find((x) => x.kind === 'photo');
     return { blob: await getMediaBlob(date, corpus, f), video: f.kind === 'video', caption: e.caption || '' };
   },
@@ -6541,7 +6555,7 @@ window.MOIKA_API = {
   entries(date, corpus) { return (mediaEntriesFor(mediaKey(date, corpus)) || []).map((e) => ({ caption: e.caption || '', point: e.point || '', nc: e.nc || '', video: e.files.some((f) => f.kind === 'video') })); },
   async media(date, corpus, idx) {
     const e = (mediaEntriesFor(mediaKey(date, corpus)) || [])[idx];
-    if (!e) return null;
+    if (!e) throw new Error('файл не найден — данные только что обновились, откройте фото ещё раз');
     const f = e.files.find((x) => x.kind === 'video') || e.files.find((x) => x.kind === 'photo');
     return { blob: await getMediaBlob(date, corpus, f), video: f.kind === 'video', caption: e.caption || '' };
   },

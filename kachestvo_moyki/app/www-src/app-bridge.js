@@ -87,6 +87,8 @@
     function fileHandle(rel, e) {
       return {
         kind: 'file', name: e.name, _rel: rel,
+        // размер и дата — из списка папки: чтобы понять, изменился ли файл, его не нужно скачивать целиком
+        __meta: { size: e.size, lastModified: e.mtime },
         queryPermission: granted, requestPermission: granted,
         isSameEntry: async (o) => !!o && o._rel === rel,
         async getFile() {
