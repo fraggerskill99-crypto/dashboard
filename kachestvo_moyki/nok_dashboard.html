@@ -664,7 +664,7 @@ self.onmessage = function(e){
       const sheetTagMatch = /<sheet[^>]*r:id="([^"]+)"[^>]*\/>/.exec(wbXml) || /<sheet[^>]*r:id="([^"]+)"/.exec(wbXml);
       if(sheetTagMatch){
         const rid = sheetTagMatch[1];
-        const relRe = new RegExp('<Relationship[^>]*Id="'+rid+'"[^>]*Target="([^"]+)"');
+        const relRe = new RegExp('<Relationship[^>]*Id="'+rid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')+'"[^>]*Target="([^"]+)"');
         const relMatch = relRe.exec(relsXml);
         if(relMatch){
           let target = relMatch[1].replace(/^\.?\//,'');
@@ -765,25 +765,27 @@ self.onmessage = function(e){
       }
       return (d && !isNaN(d.getTime())) ? d : null;
     }
+    // словари по значениям из Свода — без прототипа: «constructor», «__proto__» в ячейке не ломают разбор
+    const N0 = () => Object.create(null);
     function addTo(map, fac, wk, r, cats, oknok, locSuffix, sampleWeek){
-      if(!map[fac]) map[fac] = {};
-      if(!map[fac][wk]) map[fac][wk] = {total:0, ok:0, nok:0, cats:{}};
+      if(!map[fac]) map[fac] = N0();
+      if(!map[fac][wk]) map[fac][wk] = {total:0, ok:0, nok:0, cats:N0()};
       const bucket = map[fac][wk];
       bucket.total++;
       if(oknok==='OK') bucket.ok++; else if(oknok==='NOK') bucket.nok++;
       // смывы по участкам и корпусам — для листа «По объектам»
       const pu = cleanLoc(r.uchastok) || '(без участка)', pk = cleanLoc(r.korpus) || '(без корпуса)';
-      const pl = (bucket.places = bucket.places || {}), pu2 = (pl[pu] = pl[pu] || {});
+      const pl = (bucket.places = bucket.places || N0()), pu2 = (pl[pu] = pl[pu] || N0());
       const pe = (pu2[pk] = pu2[pk] || {total:0, ok:0, nok:0});
       pe.total++; if(oknok==='OK') pe.ok++; else if(oknok==='NOK') pe.nok++;
       if(sampleWeek){
-        const fw = (bucket.fromWeeks = bucket.fromWeeks || {});
+        const fw = (bucket.fromWeeks = bucket.fromWeeks || N0());
         const e = (fw[sampleWeek] = fw[sampleWeek] || {total:0, nok:0});
         e.total++; if(oknok==='NOK') e.nok++;
       }
       for(let ci=0; ci<cats.length; ci++){
         const cn = cats[ci];
-        if(!bucket.cats[cn]) bucket.cats[cn] = {total:0, ok:0, nok:0, nokMap:{}};
+        if(!bucket.cats[cn]) bucket.cats[cn] = {total:0, ok:0, nok:0, nokMap:N0()};
         const c = bucket.cats[cn];
         c.total++;
         if(oknok==='OK') c.ok++;
@@ -1484,7 +1486,24 @@ async function browserSetup(){
 }
 
 /* ---------- перенос недель из старого дашборда / копии ---------- */
-function cleanWeeks(map){ const out = {}; Object.keys(map || {}).forEach(f => { out[f] = {}; Object.keys(map[f] || {}).forEach(wk => { const y = +wk.slice(0, 4); if(y >= 2000 && y <= 2100) out[f][wk] = map[f][wk]; }); }); return out; }
+// перенос недель из файла: только «ГГГГ-Wнн», только числа в счётчиках, текст — без разметки HTML
+const safeTxt = v => String(v == null ? '' : v).replace(/[<>"'`&]/g, ' ');
+// вся неделя целиком: строки — без разметки, числа — только конечные, ключи «__proto__»/«constructor» отбрасываются
+function deepClean(v, depth){
+  if(depth > 8) return null;
+  if(typeof v === 'string') return safeTxt(v);
+  if(typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  if(typeof v === 'boolean' || v === null) return v;
+  if(Array.isArray(v)) return v.slice(0, 100000).map(x => deepClean(x, depth + 1));
+  if(typeof v === 'object'){
+    const o = {};
+    Object.keys(v).forEach(k => { if(k === '__proto__' || k === 'constructor' || k === 'prototype') return; o[safeTxt(k)] = deepClean(v[k], depth + 1); });
+    return o;
+  }
+  return null;
+}
+function cleanBucket(b){ return b && typeof b === 'object' && !Array.isArray(b) ? deepClean(b, 0) : null; }
+function cleanWeeks(map){ const out = {}; Object.keys(map || {}).forEach(f => { const fs = safeTxt(f); out[fs] = {}; Object.keys(map[f] || {}).forEach(wk => { const y = +wk.slice(0, 4); if(/^\d{4}-W\d{2}$/.test(wk) && y >= 2000 && y <= 2100){ const b = cleanBucket(map[f][wk]); if(b) out[fs][wk] = b; } }); }); return out; }
 function extractData(text){
   const t = text.trim();
   if(t.startsWith('{')) return JSON.parse(t);

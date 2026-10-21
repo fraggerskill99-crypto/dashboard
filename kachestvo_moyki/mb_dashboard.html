@@ -182,7 +182,6 @@ body{background:#f1f5f9;font-family:"Segoe UI",Arial,sans-serif;font-size:13px;c
 .cl-tools .note{font-size:11px;color:#94a3b8}
 .cl-dyn-t{font-size:12px;font-weight:800;color:#1e293b;margin:4px 0 6px}
 </style>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 </head>
 <body>
 
@@ -1653,9 +1652,10 @@ async function processAktFile(file){
     const rows = XLSX.utils.sheet_to_json(ws, {header:1, range:7, defval:null});
     const records = [];
     rows.forEach(row => {
-      const korpRaw = row[0], date = row[3], score = row[4];
-      if (!korpRaw || !(date instanceof Date)) return;
-      records.push({ compact: normalizeAktKorp(korpRaw), date, score });
+      const korpRaw = row[0], date = row[3], score = Number(row[4]);
+      // балл — только число (текст в ячейке не попадает в страницу и не ломает средние)
+      if (!korpRaw || !(date instanceof Date) || !Number.isFinite(score)) return;
+      records.push({ compact: mbSafe(normalizeAktKorp(korpRaw)), date, score });
     });
     if (!records.length) throw new Error(`в «${file.name}» на листе «${sheetName}» нет строк «корпус + дата + балл» (дата должна быть датой Excel)`);
     MB_AKT_RECORDS = records; // точные даты моек — для «балл мойки перед обнаружением»
@@ -1910,7 +1910,7 @@ function processMBFileCSV(file){
       if (!dateStr) return;
       const ok = applyMBRow(
         String(row[hm.pred]||''), String(row[hm.podr]||''), row[hm.study], String(row[hm.tochka]||''),
-        String(row[hm.korp]||''), String(row[hm.uch]||''), new Date(dateStr), row[hm.nok],
+        String(row[hm.korp]||''), String(row[hm.uch]||''), mbDateFromText(dateStr), row[hm.nok],
         start2026, swabStats, swabWeekly, waterStats, waterWeekly, ensure, hm.subgrp >= 0 ? String(row[hm.subgrp]||'') : ''
       );
       if (ok) matched++;
@@ -1994,6 +1994,17 @@ function decodeInChunks(bytes, boundary, maxCharsPerPiece, onPiece){
   }
   if(carry) onPiece(carry, 1);
 }
+// дата из текста ячейки: «17.03.2026», «17.03.2026 10:30», «2026-03-17» — день.месяц, как в русских файлах
+// (new Date('05.03.2026') читает как 3 мая, а '17.03.2026' — вообще не понимает)
+function mbDateFromText(v){
+  if (v instanceof Date) return v;
+  const t = String(v == null ? '' : v).trim();
+  let m = t.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0));
+  m = t.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
+  return new Date(NaN);
+}
 function excelSerialToDateMB(n){ return new Date(Date.UTC(1899,11,30) + Math.round(n*86400000)); }
 
 const MB_XLSX_TARGET_HEADERS = {
@@ -2071,7 +2082,7 @@ function processMBFileXlsx(file){
           if(rawDate !== undefined && rawDate !== ''){
             const num = Number(rawDate);
             if(!isNaN(num) && String(rawDate).indexOf('-')===-1 && String(rawDate).indexOf(':')===-1) date = excelSerialToDateMB(num);
-            else { const p = new Date(rawDate); date = isNaN(p.getTime()) ? null : p; }
+            else { const p = mbDateFromText(rawDate); date = isNaN(p.getTime()) ? null : p; }
           }
           const ok = applyMBRow(
             rec.pred||'', rec.podr||'', rec.study||'', rec.tochka||'', rec.korp||'', rec.uch||'',
@@ -2557,7 +2568,7 @@ document.getElementById('clphB').addEventListener('click', e => {
 // Esc: сначала закрывается просмотр фото, следующим нажатием — окно корпуса (слушаем раньше просмотра — capture)
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('mbphBox').hidden && !document.getElementById('clphBox').hidden) clphClose(); }, true);
 // обновить при открытии вкладки (приложение присылает «app:shown») и после нового журнала МБ
-window.addEventListener('message', e => { if (e.data === 'app:shown' || e.data === 'app:media') mbphRender(); });
+window.addEventListener('message', e => { if (e.source !== window.parent) return; if (e.data === 'app:shown' || e.data === 'app:media') mbphRender(); });
 const _mbphRefresh = mbRefreshNokViews;
 mbRefreshNokViews = function(){ const r = _mbphRefresh.apply(this, arguments); try { mbphRender(); } catch (e) { console.warn(e); } return r; };
 mbphRender();

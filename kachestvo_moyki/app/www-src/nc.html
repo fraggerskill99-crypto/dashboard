@@ -91,7 +91,7 @@
 // Вкладка «Несоответствие по площадкам»: свои папки с презентациями (MOIKA_API.nc вкладки «Качество мойки») — по датам.
 (function () {
   const $ = (id) => document.getElementById(id);
-  const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const SITE_ORDER = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'БП12', 'БП13', 'БП14', 'Инкубатор', 'ЗПП'];
   const AREAS = ['Выращивание', 'Инкубатор', 'ЗПП'];
   const areaTitle = (a) => (a === 'Инкубатор' ? 'Инкубаторий' : a);
@@ -117,7 +117,7 @@
     const last = S.dates[0];
     const opts = [['7', 'Последние 7 дней'], ['14', 'Последние 14 дней'], ['30', 'Последние 30 дней'], ['all', 'Все даты']]
       .map(([v, t]) => `<option value="${v}">${t}${last && v !== 'all' ? ' (по ' + dmy(last) + ')' : ''}</option>`).join('') +
-      (S.dates.length ? '<optgroup label="Отдельная дата">' + S.dates.map((d) => `<option value="d:${d}">${dmy(d)} — ${byDate[d]} несоотв.</option>`).join('') + '</optgroup>' : '');
+      (S.dates.length ? '<optgroup label="Отдельная дата">' + S.dates.map((d) => `<option value="d:${esc(d)}">${esc(dmy(d))} — ${byDate[d]} несоотв.</option>`).join('') + '</optgroup>' : '');
     $('psel').innerHTML = opts;
     if (![...$('psel').options].some((o) => o.value === S.period)) S.period = '7';
     $('psel').value = S.period;
@@ -170,10 +170,10 @@
       return `<div class="area">Несоответствия — ${areaTitle(ar)}<span>${cnt(arr)} несоотв.</span></div>` +
         (arr.length ? Object.keys(byDate).sort().reverse().map((d) => {
           const day = byDate[d].sort((x, y) => siteSort(x.site, y.site) || x.corpus.localeCompare(y.corpus, 'ru', { numeric: true }));
-          return `<div class="date-h">${dmy(d)}<span>${cnt(day)} несоотв.</span></div><div class="site">` + day.map((it) => {
+          return `<div class="date-h">${esc(dmy(d))}<span>${cnt(day)} несоотв.</span></div><div class="site">` + day.map((it) => {
             const ents = (a && a.entries(it.date, it.corpus)) || [];
             const place = it.corpus.replace(/^Инкубатор: /, '');
-            return `<div class="corp"><b>${esc(place)}${ar === 'Выращивание' ? `<br><small style="font-weight:500;color:var(--muted)">${esc(siteName(it.site))}</small>` : ''}</b><div class="cards" data-date="${it.date}" data-corpus="${esc(it.corpus)}">` +
+            return `<div class="corp"><b>${esc(place)}${ar === 'Выращивание' ? `<br><small style="font-weight:500;color:var(--muted)">${esc(siteName(it.site))}</small>` : ''}</b><div class="cards" data-date="${esc(it.date)}" data-corpus="${esc(it.corpus)}">` +
               ents.map((e, idx) => {
                 let pt = (it.pts || [])[idx];
                 const cap = String(e.caption || '');
@@ -181,7 +181,7 @@
                 const lead = e.point || pt || '';
                 const nc = e.nc || (lead && cap.toLowerCase().startsWith(lead.toLowerCase()) ? cap.slice(lead.length).replace(/^[\s—–:,-]+/, '') : cap);
                 return `<div class="card"><button type="button" data-idx="${idx}" title="${esc(cap)}"><span class="wait">📷 загружаю…</span></button>` +
-                  `<div class="tx"><b>${esc(pt || 'Точка не указана')}</b>${nc ? esc(nc) : ''}<small>📅 ${dmy(it.date)}</small></div></div>`;
+                  `<div class="tx"><b>${esc(pt || 'Точка не указана')}</b>${nc ? esc(nc) : ''}<small>📅 ${esc(dmy(it.date))}</small></div></div>`;
               }).join('') + `</div></div>`;
           }).join('') + '</div>';
         }).join('') : '<div class="empty">За период несоответствий нет.</div>');
@@ -242,7 +242,7 @@
     if ($('box').hidden) return;
     if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') show(S.i - 1); else if (e.key === 'ArrowRight') show(S.i + 1);
   });
-  window.addEventListener('message', (e) => { if (e.data === 'app:shown' || e.data === 'app:nc') load(); });
+  window.addEventListener('message', (e) => { if (e.source !== window.parent) return; if (e.data === 'app:shown' || e.data === 'app:nc') load(); });
   load();
 })();
 </script>

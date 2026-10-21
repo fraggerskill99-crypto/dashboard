@@ -154,8 +154,9 @@
     if (started(f) && f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentWindow.APP_FS) return res(true);
     if (!started(f)) return res(false);
     f.addEventListener('load', () => setTimeout(() => res(true), 1500), { once: true });
+    setTimeout(() => res(!!(f.contentWindow && f.contentWindow.APP_FS)), 30000);   // не ждать вечно
   });
-  let attachBusy = null, attachAgain = false;
+  let attachBusy = null, attachAgain = null;   // запрос, пришедший во время работы, — выполнить после (с force и media)
   const applied = {};   // выбранные в «Настройках» файлы: что уже прочитано (путь|время|размер)
   // файл читает сама вкладка — тогда он «свой» для её библиотек
   const srcFileIn = (win, f) => win.APP_FS.readChosen(f);
@@ -164,7 +165,10 @@
   async function attachData(force, opts) {
     if (!live) return;
     opts = opts || {};
-    if (attachBusy) { attachAgain = attachAgain || !!force; return attachBusy; }
+    if (attachBusy) {
+      attachAgain = { force: !!(force || (attachAgain && attachAgain.force)), media: opts.media !== false || !!(attachAgain && attachAgain.media) };
+      return attachBusy;
+    }
     attachBusy = (async () => {
       const m = frame('moika');
       if (!(await loaded(m))) return;
@@ -228,7 +232,7 @@
       if (started(nok)) try { nok.contentWindow.__appDataChanged && nok.contentWindow.__appDataChanged(); } catch (e) {}
     })().finally(() => {
       attachBusy = null;
-      if (attachAgain) { const f = attachAgain; attachAgain = false; attachData(f === true); }
+      if (attachAgain) { const a = attachAgain; attachAgain = null; attachData(a.force, { media: a.media }); }
     });
     return attachBusy;
   }
@@ -416,7 +420,7 @@
   const demo = !live && window.__APP_PREVIEW;
   if (live || demo) {
     const $ = (id) => document.getElementById(id);
-    const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     const when = (ms) => (ms ? new Date(ms).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
     $('cfgBtn').hidden = false;
     let state = null;

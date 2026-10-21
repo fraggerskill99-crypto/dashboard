@@ -41,7 +41,8 @@ const pages = {
 // копия SheetJS, встроенная прямо в страницу, — заменяется на версию из vendor (в сборке — 0.20.3 с официального сайта)
 const XLSX_VENDOR = read(path.join(SRC, 'vendor', 'xlsx.full.min.js'));
 const XLSX_VER = (XLSX_VENDOR.match(/version="(\d+\.\d+\.\d+)"/) || [])[1];
-if (XLSX_VER === '0.18.5') console.warn('Внимание: SheetJS 0.18.5 (известные уязвимости) — в сборке на GitHub подставляется 0.20.3');
+// старые SheetJS (< 0.20.2) — известные уязвимости при чтении чужих Excel: такая сборка не делается
+if (!XLSX_VER || XLSX_VER.split('.').map(Number).reduce((a, n) => a * 1000 + n, 0) < 20002) { console.error('SheetJS ' + XLSX_VER + ' — нужна 0.20.3 (www-src/vendor/xlsx.full.min.js)'); process.exit(1); }
 function swapInlineXlsx(html) {
   const i = html.indexOf('/*! xlsx.js (C) 2013-present SheetJS');
   if (i < 0) return html;
@@ -52,6 +53,7 @@ function swapInlineXlsx(html) {
 for (const [out, src] of Object.entries(pages)) {
   let html = read(path.join(ROOT, src));
   html = swapInlineXlsx(inlineVendor(html));
+  if (/version="0\.1[0-9]\.\d+"[^]{0,400}?SheetJS|xlsx\.js \(C\)[^]{0,300}version="0\.1/.test(html) || (html.includes('2013-present SheetJS') && !html.includes('version="' + XLSX_VER + '"'))) { console.error(out + ': осталась старая копия SheetJS'); process.exit(1); }
   if (/<script src="https?:/i.test(html)) console.warn('Внимание:', out, 'всё ещё грузит скрипты из интернета');
   fs.writeFileSync(path.join(OUT, out), inject(html, out));
 }
