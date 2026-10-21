@@ -68,20 +68,27 @@ function roleOf(m) {
   if (/^УКПФ/i.test(m.name)) return 'acts';
   return 'media';
 }
+// настройки — JSON в папке приложения: чтение устойчиво к повреждённому файлу, запись — через временный файл
+function readJson(file) {
+  try { const c = JSON.parse(fs.readFileSync(file, 'utf8')); return c && typeof c === 'object' && !Array.isArray(c) ? c : {}; } catch (e) { return {}; }
+}
+function writeJson(file, c) {
+  try { const tmp = file + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(c, null, 2)); fs.renameSync(tmp, file); } catch (e) { /* не критично */ }
+}
 const foldersFile = () => path.join(app.getPath('userData'), 'folders.json');
 function foldersConfig() {
-  let c = {};
-  try { c = JSON.parse(fs.readFileSync(foldersFile(), 'utf8')); } catch (e) { /* ещё нет */ }
-  if (!Array.isArray(c.mounts)) c.mounts = [];
+  const c = readJson(foldersFile());
+  c.mounts = (Array.isArray(c.mounts) ? c.mounts : []).filter((m) => m && typeof m.name === 'string' && typeof m.path === 'string');
   return c;
 }
-function saveFolders(c) { try { fs.writeFileSync(foldersFile(), JSON.stringify(c, null, 2)); } catch (e) { /* не критично */ } }
+function saveFolders(c) { writeJson(foldersFile(), c); }
 function oneDriveBases() {
   const home = app.getPath('home');
   const bases = [process.env.OneDriveCommercial, process.env.OneDrive].filter(Boolean);
   try { fs.readdirSync(home).filter((n) => /^OneDrive/i.test(n)).forEach((n) => bases.push(path.join(home, n))); } catch (e) { /* нет домашней папки */ }
   return [...new Set(bases)];
 }
+const RESERVED_MOUNT = (n) => n === 'SharePoint' || n === '__src';
 const sameName = (a, b) => a.toLowerCase().replace(/ё/g, 'е').trim() === b.toLowerCase().replace(/ё/g, 'е').trim();
 function findOneDrive(relPath) {
   const bases = oneDriveBases();
@@ -155,20 +162,29 @@ const mounts = () => foldersConfig().mounts.filter((m) => { try { return fs.stat
 
 // ---------- адрес app://app/ : страницы приложения и папка «Данные» ----------
 function inside(root, rel) {
+  root = path.resolve(root);
   const abs = path.resolve(root, rel);
-  return abs === root || abs.startsWith(root + path.sep) ? abs : null;
+  const base = root.endsWith(path.sep) ? root : root + path.sep;   // корень диска (D:\\) уже с разделителем
+  if (!(abs === root || abs.startsWith(base))) return null;
+  // ярлык/символическая ссылка внутри папки не должна выводить за её пределы
+  try {
+    const realRoot = fs.realpathSync(root), real = fs.realpathSync(abs);
+    const rb = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+    if (!(real === realRoot || real.startsWith(rb))) return null;
+  } catch (e) { /* файла ещё нет — проверки по пути достаточно */ }
+  return abs;
 }
 // путь внутри «Данных»: первая папка может быть подключённой папкой компьютера
 // ---------- файлы, выбранные в «Настройках» (важнее автопоиска) ----------
 const SRC_KINDS = { akt: 'Акт приёма мойки (выращивание)', incub: 'Акт Инкубатория', zpp: 'Акт ЗПП', schedule: 'График ПР/Р', svod: 'Свод МБ (NOK, Мойка и МБ)' };
 const sourcesFile = () => path.join(app.getPath('userData'), 'sources.json');
 function sourcesConfig() {
-  let c = {};
-  try { c = JSON.parse(fs.readFileSync(sourcesFile(), 'utf8')); } catch (e) { /* ещё нет */ }
-  if (!c.files || typeof c.files !== 'object') c.files = {};
+  const c = readJson(sourcesFile());
+  if (!c.files || typeof c.files !== 'object' || Array.isArray(c.files)) c.files = {};
+  Object.keys(c.files).forEach((k) => { if (typeof c.files[k] !== 'string') delete c.files[k]; });
   return c;
 }
-function saveSources(c) { try { fs.writeFileSync(sourcesFile(), JSON.stringify(c, null, 2)); } catch (e) { /* не критично */ } }
+function saveSources(c) { writeJson(sourcesFile(), c); }
 function fileInfo(abs) {
   try { const st = fs.statSync(abs); return st.isFile() ? { path: abs, name: path.basename(abs), mtime: Math.round(st.mtimeMs), size: st.size } : null; } catch (e) { return null; }
 }
@@ -242,9 +258,9 @@ async function page(abs) {
 const json = (o, status) => new Response(JSON.stringify(o), { status: status || 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 
 async function handleApp(req) {
-  const u = new URL(req.url);
-  const p = decodeURIComponent(u.pathname);
   try {
+    const u = new URL(req.url);
+    const p = decodeURIComponent(u.pathname);
     if (p === '/data-roles') return json(rolesInfo());
     if (p.startsWith('/cfg/')) return json(await handleCfg(p.slice(5), u.searchParams));
     if (p === '/data-info') {
@@ -270,13 +286,19 @@ async function handleApp(req) {
     if (p.startsWith('/data/')) {
       const abs = dataPath(p.slice('/data/'.length));
       if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) return new Response('нет файла', { status: 404 });
-      return net.fetch(pathToFileURL(abs).toString());
+      // файлы из папок — только данные: html/svg из папки не выполняются как страница приложения
+      const r = await net.fetch(pathToFileURL(abs).toString());
+      const h = new Headers(r.headers);
+      h.set('Content-Security-Policy', "sandbox; default-src 'none'");
+      h.set('X-Content-Type-Options', 'nosniff');
+      if (/\.(html?|xhtml|svg|xml|js|mjs)$/i.test(abs)) h.set('Content-Type', 'application/octet-stream');
+      return new Response(r.body, { status: r.status, headers: h });
     }
     const abs = inside(WWW, p.replace(/^\/+/, '') || 'index.html');
     if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) return new Response('нет страницы', { status: 404 });
     return page(abs);
   } catch (e) {
-    return new Response(String(e && e.message || e), { status: 500 });
+    return new Response(String(e && e.message || e), { status: /URI/.test(String(e && e.name)) ? 400 : 500 });
   }
 }
 
@@ -428,7 +450,7 @@ async function manageFolders() {
     if (pick.canceled || !pick.filePaths[0]) return;
     const abs = pick.filePaths[0];
     let name = path.basename(abs) || 'Папка';
-    while (c.mounts.some((m) => m.name === name) || name === 'SharePoint') name += ' 2';
+    while (c.mounts.some((m) => m.name === name) || RESERVED_MOUNT(name)) name += ' 2';
     const rr = await dialog.showMessageBox(win, { type: 'question', title: 'Что в этой папке?', message: `Что брать из папки «${name}»?`, noLink: true,
       buttons: ['Акты (выращивание, Инкубаторий, ЗПП)', 'Фото/видео и презентации', 'Свод МБ'], defaultId: 1, cancelId: 1 });
     const role = ['acts', 'media', 'svod'][rr.response];
@@ -449,13 +471,14 @@ const DEFAULT_SP_LINK = process.env.KM_SP_LINK || 'https://aitas.sharepoint.com/
 const SP_SYNC_EVERY = 30 * 60 * 1000;
 const spFile = () => path.join(app.getPath('userData'), 'sharepoint.json');
 function spConfig() {
-  let c = {};
-  try { c = JSON.parse(fs.readFileSync(spFile(), 'utf8')); } catch (e) { /* ещё нет */ }
+  const c = readJson(spFile());
   if (!Array.isArray(c.links)) c.links = c.link ? [{ link: c.link, site: c.site, folderPath: c.folderPath }] : [];
+  // только ссылки SharePoint (https://….sharepoint.com/…)
+  c.links = c.links.filter((l) => l && sp.isSpLink(l.link));
   delete c.link; delete c.site; delete c.folderPath; delete c.localDir;
   return c;
 }
-function saveSpConfig(c) { try { fs.writeFileSync(spFile(), JSON.stringify(c, null, 2)); } catch (e) { /* не критично */ } }
+function saveSpConfig(c) { writeJson(spFile(), c); }
 const spName = (l) => decodeURIComponent((l.folderPath || '').split('/').pop() || '') || 'Папка';
 let spBusy = false;
 let spLoginDeclined = false;   // окно входа закрыли — до перезапуска сами его не открываем
@@ -519,14 +542,14 @@ async function syncSharePoint({ interactive, askLink } = {}) {
     interactive = true;
     toast('SharePoint: подключаю папку УКПФ. Войдите рабочей учётной записью Microsoft — дальше данные будут подтягиваться сами.');
   }
+  spBusy = true;   // сразу: пока открыт диалог ссылки, таймер не запустит вторую синхронизацию
   if (askLink || !cfg.links.length) {
-    if (!interactive) return;
+    if (!interactive) { spBusy = false; return; }
     const link = await askSpLink(cfg.links.length ? '' : DEFAULT_SP_LINK);
-    if (!link) return;
+    if (!link || !sp.isSpLink(link)) { spBusy = false; if (link) toast('Это не ссылка SharePoint (нужно https://….sharepoint.com/…).', 'err'); return; }
     if (!cfg.links.some((l) => l.link === link)) cfg.links.push({ link });
     saveSpConfig(cfg);
   }
-  spBusy = true;
   let files = 0, bytes = 0;
   const errors = [];
   try {
@@ -573,13 +596,8 @@ async function manageSpLinks() {
 }
 
 async function spLogout() {
-  const ses = session.defaultSession;
-  for (const c of await ses.cookies.get({})) {
-    if (/sharepoint\.com|microsoftonline\.com|live\.com|microsoft\.com/i.test(c.domain)) {
-      const url = (c.secure ? 'https://' : 'http://') + c.domain.replace(/^\./, '') + c.path;
-      await ses.cookies.remove(url, c.name).catch(() => {});
-    }
-  }
+  // вход Microsoft хранится отдельно от страниц приложения — стираем это хранилище целиком
+  await sp.spSession().clearStorageData().catch(() => {});
   const cfg = spConfig();
   cfg.links.forEach((l) => { delete l.site; delete l.folderPath; });
   saveSpConfig(cfg);
@@ -677,8 +695,13 @@ async function dataReport() {
 function start() {
   protocol.handle('app', handleApp);
   const ses = session.defaultSession;
-  ses.setPermissionRequestHandler((wc, permission, callback) => callback(ALLOWED_PERMISSIONS.has(permission)));
-  ses.setPermissionCheckHandler((wc, permission) => ALLOWED_PERMISSIONS.has(permission));
+  // разрешения — только страницам самого приложения (app://app), не чужим сайтам
+  const fromApp = (u) => /^app:\/\/app(\/|$)/i.test(String(u || ''));
+  ses.setPermissionRequestHandler((wc, permission, callback, details) => callback(ALLOWED_PERMISSIONS.has(permission) && fromApp((details && details.requestingUrl) || (wc && wc.getURL()))));
+  ses.setPermissionCheckHandler((wc, permission, origin) => ALLOWED_PERMISSIONS.has(permission) && fromApp(origin));
+  // хранилище входа SharePoint: никаких разрешений
+  sp.spSession().setPermissionRequestHandler((wc, permission, callback) => callback(false));
+  sp.spSession().setPermissionCheckHandler(() => false);
   ses.on('will-download', (e, item) => {
     try { fs.mkdirSync(exportsDir(), { recursive: true }); } catch (err) { /* диалог всё равно откроется */ }
     item.setSaveDialogOptions({ title: 'Сохранить файл', defaultPath: path.join(exportsDir(), item.getFilename()) });
@@ -700,7 +723,7 @@ function createWindow() {
     icon: path.join(__dirname, 'build', 'icon.png'),
     backgroundColor: '#f4f6fa',
     show: false,
-    webPreferences: { contextIsolation: true, sandbox: true, spellcheck: false },
+    webPreferences: { contextIsolation: true, sandbox: true, spellcheck: false, devTools: !app.isPackaged },
   });
   if (st.maximized) win.maximize();
   win.once('ready-to-show', () => win.show());
@@ -715,17 +738,29 @@ function createWindow() {
   win.on('close', saveWindowState);
 
   // ссылки на сайты — в обычном браузере, а не внутри приложения
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/i.test(url)) shell.openExternal(url);
-    return { action: 'deny' };
-  });
+  // чужой сайт не открывается внутри приложения; во внешнем браузере — сразу только SharePoint/Microsoft/GitHub, остальное — по подтверждению
+  win.webContents.setWindowOpenHandler(({ url }) => { openOutside(url); return { action: 'deny' }; });
   win.webContents.on('will-frame-navigate', (e) => {
-    if (/^https?:/i.test(e.url)) { e.preventDefault(); shell.openExternal(e.url); }
+    if (/^app:\/\/app\//i.test(e.url) || /^(about:|blob:|data:)/i.test(e.url)) return;
+    e.preventDefault();
+    openOutside(e.url);
   });
 
   win.loadURL('app://app/index.html');
 }
 
+const TRUSTED_EXT = /(^|\.)(sharepoint\.com|microsoft\.com|office\.com|github\.com|aitas\.kz)$/i;
+async function openOutside(url) {
+  let u;
+  try { u = new URL(url); } catch (e) { return; }
+  if (!/^https?:$/.test(u.protocol)) return;
+  if (!TRUSTED_EXT.test(u.hostname)) {
+    const r = await dialog.showMessageBox(win, { type: 'question', buttons: ['Открыть', 'Отмена'], defaultId: 1, cancelId: 1, noLink: true,
+      title: 'Внешняя ссылка', message: 'Открыть сайт в браузере?', detail: u.origin + u.pathname });
+    if (r.response !== 0) return;
+  }
+  shell.openExternal(u.toString());
+}
 function zoomBy(delta) {
   if (!win) return;
   const z = Math.min(2, Math.max(0.5, win.webContents.getZoomFactor() + delta));
@@ -814,7 +849,7 @@ function buildMenu() {
         },
         { label: 'Проверка данных (что найдено в папках)…', accelerator: 'F1', click: dataReport },
         { type: 'separator' },
-        { label: 'Инструменты разработчика', accelerator: 'CmdOrCtrl+Shift+I', click: () => win && win.webContents.toggleDevTools() },
+        ...(app.isPackaged ? [] : [{ label: 'Инструменты разработчика', accelerator: 'CmdOrCtrl+Shift+I', click: () => win && win.webContents.toggleDevTools() }]),
       ],
     },
   ]);

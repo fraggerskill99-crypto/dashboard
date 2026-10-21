@@ -1,14 +1,17 @@
 name: Приложение «Качество мойки» (+ NOK, Мойка и МБ) — Android и Windows
 
+# выпуск для пользователей собирается только из рабочей ветки приложения (не из любых других веток)
 on:
   push:
+    branches: [claude/gifted-gates-hpkkqw]
     paths:
       - 'kachestvo_moyki/**'
       - '.github/workflows/build-windows-app.yml'
   workflow_dispatch:
 
+# по умолчанию — только чтение; право на запись (выпуск) — только у шага выпуска
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: kachestvo-moyki-app
@@ -19,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -36,7 +41,8 @@ jobs:
           rm -rf .sheetjs && mkdir .sheetjs
           curl -fsSL --retry 3 https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz -o .sheetjs/xlsx.tgz
           (cd .sheetjs && tar -xzf xlsx.tgz package/dist/xlsx.full.min.js)
-          grep -q 'version="0.20.3"' .sheetjs/package/dist/xlsx.full.min.js || { echo 'не та версия SheetJS'; exit 1; }
+          # файл сверяется по SHA-256: подменённый или изменённый не пройдёт
+          echo "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41  .sheetjs/package/dist/xlsx.full.min.js" | sha256sum -c - || { echo 'SheetJS: контрольная сумма не совпала'; exit 1; }
           cp .sheetjs/package/dist/xlsx.full.min.js www-src/vendor/xlsx.full.min.js
           rm -rf .sheetjs
 
@@ -47,8 +53,9 @@ jobs:
           # вкладки (Качество мойки, NOK, Мойка и МБ) + перехват «скачать» → окно «Поделиться»
           node kachestvo_moyki/app/build-www.js --android --out shell/www
           cd shell
-          npm init -y >/dev/null
-          npm install --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/filesystem@7 @capacitor/share@7
+          # точные версии Capacitor из package-lock.json (с контрольными суммами пакетов)
+          cp ../kachestvo_moyki/app/android/shell/package.json ../kachestvo_moyki/app/android/shell/package-lock.json .
+          npm ci --no-audit --no-fund
           cat > capacitor.config.json <<'JSON'
           {
             "appId": "kz.ukpf.kachestvomoyki",
@@ -69,27 +76,49 @@ jobs:
           sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.2.${{ github.run_number }}\"/" android/app/build.gradle
           grep -E 'versionCode|versionName' android/app/build.gradle
 
-      - name: Сборка APK
+      - name: Сборка APK (release — без режима отладки)
         working-directory: shell/android
+        env:
+          # свой секретный ключ подписи можно задать в Settings → Secrets → Actions:
+          # ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD, ANDROID_CERT_SHA256.
+          # Без них — прежний ключ (из репозитория): установленные приложения обновляются поверх.
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          CERT_SHA256: ${{ secrets.ANDROID_CERT_SHA256 }}
         run: |
           chmod +x gradlew
-          # постоянный ключ подписи: новая сборка ставится поверх установленной, данные остаются
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            KS="$RUNNER_TEMP/release.keystore"; ALIAS="$KS_ALIAS"; SP="$KS_PASS"; KP="$KEY_PASS"; FP="$CERT_SHA256"
+          else
+            KS="$GITHUB_WORKSPACE/kachestvo_moyki/app/android/debug.keystore"; ALIAS=androiddebugkey; SP=android; KP=android
+            FP="3F:14:A9:81:14:47:68:F7:F0:78:BA:CE:F0:3A:12:E1:9F:E6:CC:E1:B6:68:DE:D9:EF:69:5D:0A:D5:EC:E0:C1"
+          fi
           cat >> app/build.gradle <<GRADLE
           android {
               signingConfigs {
-                  debug {
-                      storeFile file("$GITHUB_WORKSPACE/kachestvo_moyki/app/android/debug.keystore")
-                      storePassword "android"
-                      keyAlias "androiddebugkey"
-                      keyPassword "android"
+                  ukpf {
+                      storeFile file("$KS")
+                      storePassword "$SP"
+                      keyAlias "$ALIAS"
+                      keyPassword "$KP"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.ukpf
+                      debuggable false
+                      minifyEnabled false
                   }
               }
           }
           GRADLE
-          ./gradlew assembleDebug --no-daemon -q
-          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/kachestvo-moyki.apk"
-          # проверка: APK подписан постоянным ключом
-          "$JAVA_HOME/bin/keytool" -printcert -jarfile "$GITHUB_WORKSPACE/kachestvo-moyki.apk" | grep -q 'UKPF Kachestvo Moyki' || { echo 'APK подписан не тем ключом'; exit 1; }
+          ./gradlew assembleRelease --no-daemon -q
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/kachestvo-moyki.apk"
+          # проверка подписи по отпечатку сертификата SHA-256 (не по имени)
+          "$JAVA_HOME/bin/keytool" -printcert -jarfile "$GITHUB_WORKSPACE/kachestvo-moyki.apk" | tr -d ' ' | grep -qi "SHA256:$FP" || { echo 'APK подписан не тем ключом'; exit 1; }
           # отдельные файлы дашбордов — открыть в Chrome/Edge без установки
           node "$GITHUB_WORKSPACE/kachestvo_moyki/app/build-www.js" --out "$GITHUB_WORKSPACE/web"
           cp "$GITHUB_WORKSPACE/web/moika.html" "$GITHUB_WORKSPACE/kachestvo_moyki.html"
@@ -117,6 +146,8 @@ jobs:
         working-directory: kachestvo_moyki/app
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -133,7 +164,8 @@ jobs:
           rm -rf .sheetjs && mkdir .sheetjs
           curl -fsSL --retry 3 https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz -o .sheetjs/xlsx.tgz
           (cd .sheetjs && tar -xzf xlsx.tgz package/dist/xlsx.full.min.js)
-          grep -q 'version="0.20.3"' .sheetjs/package/dist/xlsx.full.min.js || { echo 'не та версия SheetJS'; exit 1; }
+          # файл сверяется по SHA-256: подменённый или изменённый не пройдёт
+          echo "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41  .sheetjs/package/dist/xlsx.full.min.js" | sha256sum -c - || { echo 'SheetJS: контрольная сумма не совпала'; exit 1; }
           cp .sheetjs/package/dist/xlsx.full.min.js www-src/vendor/xlsx.full.min.js
           rm -rf .sheetjs
 
@@ -155,6 +187,11 @@ jobs:
   release:
     needs: [android, windows]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/claude/gifted-gates-hpkkqw'
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -170,10 +207,24 @@ jobs:
           for t in $(gh release list --limit 100 --json tagName -q '.[].tagName' | grep '^app-build-' || true); do
             gh release delete "$t" --cleanup-tag -y || true
           done
-          gh release delete kachestvo-moyki-app --cleanup-tag -y || true
           # контрольные суммы: по ним видно, что скачанный файл — ровно тот, что собран здесь (не подменён)
-          sha256sum kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe ukpf_dashboard.html > SHA256SUMS.txt
+          sha256sum kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe ukpf_dashboard.html kachestvo_moyki.html nok_dashboard.html moyka_i_mb.html > SHA256SUMS.txt
           cat SHA256SUMS.txt
-          gh release create kachestvo-moyki-app kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe ukpf_dashboard.html kachestvo_moyki.html nok_dashboard.html moyka_i_mb.html SHA256SUMS.txt \
-            --target "$GITHUB_SHA" --title "Качество мойки, NOK и Мойка-МБ — УКПФ" \
-            --notes "Телефон Android: kachestvo-moyki.apk. Компьютер Windows: kachestvo-moyki-setup.exe (установщик) или kachestvo-moyki-portable.exe (без установки). Веб-версия для Chrome/Edge: ukpf_dashboard.html. Вкладки: Качество мойки, NOK-дашборд, Мойка и МБ, Фотофиксация по неделям, Несоответствие по площадкам. Проверка подлинности: SHA-256 каждого файла — в SHA256SUMS.txt (Windows: certutil -hashfile файл SHA256). Скачивайте только отсюда. Сборка ${GITHUB_SHA::7}."
+          FILES="kachestvo-moyki.apk kachestvo-moyki-setup.exe kachestvo-moyki-portable.exe ukpf_dashboard.html kachestvo_moyki.html nok_dashboard.html moyka_i_mb.html SHA256SUMS.txt"
+          NOTES="Телефон Android: kachestvo-moyki.apk. Компьютер Windows: kachestvo-moyki-setup.exe (установщик) или kachestvo-moyki-portable.exe (без установки). Веб-версия для Chrome/Edge: ukpf_dashboard.html. Вкладки: Качество мойки, NOK-дашборд, Мойка и МБ, Фотофиксация по неделям, Несоответствие по площадкам. Проверка подлинности: SHA-256 каждого файла — в SHA256SUMS.txt (Windows: certutil -hashfile файл SHA256); происхождение сборки — gh attestation verify файл -R ${GITHUB_REPOSITORY}. Скачивайте только отсюда. Сборка ${GITHUB_SHA::7}."
+          # выпуск не удаляется: файлы заменяются на месте — ссылки работают всё время обновления
+          if gh release view kachestvo-moyki-app >/dev/null 2>&1; then
+            gh release upload kachestvo-moyki-app $FILES --clobber
+            gh release edit kachestvo-moyki-app --title "Качество мойки, NOK и Мойка-МБ — УКПФ" --notes "$NOTES"
+          else
+            gh release create kachestvo-moyki-app $FILES --target "$GITHUB_SHA" --title "Качество мойки, NOK и Мойка-МБ — УКПФ" --notes "$NOTES"
+          fi
+
+      # подтверждение происхождения: файлы собраны этим процессом GitHub Actions из этого репозитория
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            kachestvo-moyki.apk
+            kachestvo-moyki-setup.exe
+            kachestvo-moyki-portable.exe
+            ukpf_dashboard.html
