@@ -509,11 +509,12 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Месячный средний балл &mdash; Инкубаторий, ЗПП, Выращивание &mdash; УКПФ</h2>
-      <p class="note">Текущий месяц &mdash; средний балл с 1-го числа по сегодня (в подписи, например, «окт (1–21)») &middot; норма &ge; 8 (пунктир) &middot; ЗПП коридор 3&ndash;5 &middot; план 10 (серый). Выращивание &mdash; средний балл акта приёма мойки; Инкубатор и ЗПП &mdash; средний из дневных баллов (акт/ручной ввод в «Истории»).</p>
+      <p class="note">Текущий месяц &mdash; средний балл с 1-го числа по сегодня (в подписи, например, «Октябрь (1–21)») &middot; пунктир цвета объекта &mdash; линия тренда &middot; норма &ge; 8 (пунктир) &middot; ЗПП коридор 3&ndash;5 &middot; план 10 (серый). Выращивание &mdash; средний балл акта приёма мойки; Инкубатор и ЗПП &mdash; средний из дневных баллов (акт/ручной ввод в «Истории»).</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 4px;font-size:12px;color:#6b7a99">
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block"></span>Выращивание факт</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#7c3aed;display:inline-block"></span>Инкубатор факт</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#0891b2;display:inline-block"></span>ЗПП факт</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;border-top:2px dashed #dc2626;display:inline-block"></span><span style="width:22px;border-top:2px dashed #7c3aed;display:inline-block"></span><span style="width:22px;border-top:2px dashed #0891b2;display:inline-block"></span>Тренд (по каждому объекту)</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;border-top:2px dashed rgba(220,38,38,0.5);display:inline-block"></span>Норма 8</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;border-top:2px dashed rgba(34,197,94,0.6);display:inline-block"></span>ЗПП коридор 5</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;border-top:2px dashed rgba(34,197,94,0.35);display:inline-block"></span>ЗПП коридор 3</span>
@@ -2523,7 +2524,7 @@ function buildQualitySlide(pptx, D) {
           { name: 'ЗПП 5', labels, values: band(5) }, { name: 'ЗПП 3', labels, values: band(3) }],
         options: { chartColors: ['94A3B8', 'E88A8A', '6CC08A', '9ED3AF'], lineSize: 1, lineDash: 'dash', lineDataSymbol: 'none', showValue: false } },
       // каждая линия — отдельная группа, чтобы у подписей был свой цвет (как на дашборде)
-      // линии тренда (только недели) — пунктиром цвета объекта, без подписей
+      // линии тренда — пунктиром цвета объекта, без подписей
       ...(S.trend ? [['Тренд Выращивание', S.trend.vyr, RED], ['Тренд Инкубаторий', S.trend.ink, PUR], ['Тренд ЗПП', S.trend.zpp, TEAL]]
         .filter(([, v]) => v.some((x) => x != null)).map(([name, vals, col]) => ({
           type: pptx.ChartType.line, data: [{ name, labels, values: clean(vals) }],
@@ -2548,7 +2549,7 @@ function buildQualitySlide(pptx, D) {
   if (W) tripleChart(W, x1, yBot, colW, botH, 'Еженедельный средний балл — Инкубаторий, ЗПП, Выращивание — УКПФ',
     'Средний балл приёмки мойки за 14 недель · пунктир — тренд объекта · норма ≥ 8 · ЗПП 3–5 · план 10', true);
   if (M) tripleChart(M, x2, yBot, colW, botH, 'Месячный средний балл — Инкубаторий, ЗПП, Выращивание — УКПФ',
-    'Средний балл приёмки мойки по месяцам · текущий — с 1-го числа по сегодня · норма ≥ 8 · ЗПП 3–5 · план 10', false);
+    'Средний балл приёмки мойки по месяцам · текущий — с 1-го числа по сегодня · пунктир — тренд объекта · норма ≥ 8 · ЗПП 3–5 · план 10', false);
   return pptx;
 }
 
@@ -3414,7 +3415,7 @@ function computeTripleSeries(period) {
     ink: keys.map((k) => mean(buckets[k].ink)),
     zpp: keys.map((k) => mean(buckets[k].zpp)),
   };
-  if (period === 'week') S.trend = { vyr: trendLine(S.vyr), ink: trendLine(S.ink), zpp: trendLine(S.zpp) };
+  S.trend = { vyr: trendLine(S.vyr), ink: trendLine(S.ink), zpp: trendLine(S.zpp) };
   return S;
 }
 
@@ -3519,8 +3520,8 @@ CHART_EXPORT_HEADERS.catweekscore = {
 };
 CHART_EXPORT_HEADERS.catmonthscore = {
   title: 'Месячный средний балл — Инкубаторий, ЗПП, Выращивание — УКПФ',
-  sub: 'Средний балл приёмки мойки по месяцам · текущий месяц — с 1-го числа по сегодня · норма ≥ 8 (пунктир) · ЗПП коридор 3–5 · план 10 (серый)',
-  legend: TRIPLE_LEGEND,
+  sub: 'Средний балл приёмки мойки по месяцам · текущий месяц — с 1-го числа по сегодня · тренд по каждому объекту · норма ≥ 8 · ЗПП 3–5 · план 10',
+  legend: TRIPLE_LEGEND.slice(0, 3).concat([{ dot: false, color: '#475569', label: 'Тренд (пунктир цвета объекта)' }], TRIPLE_LEGEND.slice(3)),
 };
 
 function renderCatWeekScoreChart() {
