@@ -32,6 +32,20 @@
   .th img { height: 100%; width: auto; display: block; }
   .th .pl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 26px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
   .th .wait { font-size: 12px; color: #94a3b8; padding-top: 4px; }
+  /* критические точки недели: по 5 на участок */
+  .crit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .crit .col { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+  .crit h3 { margin: 0 0 8px; font-size: 13.5px; color: var(--navy); display: flex; gap: 8px; align-items: baseline; }
+  .crit h3 span { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+  .crit ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .crit li button { width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; border: 1px solid #fde2e2; background: #fff7f7; border-radius: 8px; padding: 6px 9px; cursor: pointer; text-align: left; font: inherit; font-size: 12.5px; color: #1e293b; }
+  .crit li button:hover { border-color: #f87171; }
+  .crit li i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: #dc2626; color: #fff; font-weight: 800; font-size: 11.5px; display: flex; align-items: center; justify-content: center; }
+  .crit li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .crit li b { color: #b91c1c; font-size: 12.5px; }
+  .crit .none { color: var(--muted); font-size: 12.5px; }
+  .area { margin: 18px 0 8px; font-size: 16px; color: var(--navy); font-weight: 800; display: flex; gap: 10px; align-items: baseline; border-bottom: 2px solid var(--navy); padding-bottom: 4px; }
+  .area span { font-size: 12.5px; color: var(--muted); font-weight: 500; }
   .empty { background: #fff; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 22px; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
   .box { position: fixed; inset: 0; background: rgba(15,23,42,.9); z-index: 10; display: flex; align-items: center; justify-content: center; padding: 2vh 2vw; }
   .box[hidden] { display: none; }
@@ -43,13 +57,14 @@
   .box .st img, .box .st video { max-width: 100%; max-height: 100%; border-radius: 8px; background: #000; }
   .box .nv { position: absolute; top: 50%; transform: translateY(-50%); border: none; background: rgba(255,255,255,.85); width: 46px; height: 46px; border-radius: 50%; font-size: 28px; cursor: pointer; }
   .box .nv.p { left: 10px; } .box .nv.n { right: 10px; }
+  @media (max-width: 900px) { .crit { grid-template-columns: 1fr; } }
   @media (max-width: 700px) { .wrap { padding: 12px; } .corp { flex-direction: column; gap: 4px; } .corp > b { flex: none; } .wk { min-width: 0; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>📷 Фотофиксация по неделям — по площадкам</h1>
-  <p class="sub">Все фото и видео фиксации мойки из папок (OneDrive, SharePoint, презентации несоответствий) — за выбранную неделю, по площадкам, корпусам и дням. Клик по фото — на весь экран, стрелками — дальше.</p>
+  <h1>📷 Фотофиксация по неделям — Выращивание, Инкубатор, ЗПП</h1>
+  <p class="sub">Несоответствия за выбранную неделю — отдельно по Выращиванию, Инкубатору и ЗПП. Сверху — 5 критических контрольных точек каждого участка (больше всего фото/видео несоответствий за неделю); клик по точке — её фото. Ниже — по площадкам, корпусам/залам и дням. Клик по фото — на весь экран, стрелками — дальше.</p>
   <div class="bar">
     <button id="prev" title="Неделя раньше">← неделя раньше</button>
     <div class="wk" id="wk">—</div>
@@ -58,6 +73,7 @@
     <button id="reload" title="Перечитать фото/видео">⟳ Обновить</button>
   </div>
   <div class="chips" id="chips"></div>
+  <div class="crit" id="crit"></div>
   <div id="list"></div>
 </div>
 <div class="box" id="box" hidden><div class="in"><div class="hd"><b id="boxT"></b><span id="boxN"></span><button type="button" id="boxX" title="Закрыть (Esc)">×</button></div><div class="st" id="boxS"></div><button type="button" class="nv p" id="boxP">‹</button><button type="button" class="nv n" id="boxNx">›</button></div></div>
@@ -68,6 +84,9 @@
   const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const SITE_ORDER = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'БП12', 'БП13', 'БП14', 'Инкубатор', 'ЗПП'];
   const siteName = (s) => (s === 'Инкубатор' ? 'Инкубаторий' : s === 'ЗПП' ? 'ЗПП' : /^БП\d+$/.test(s) ? 'Площадка ' + s.replace(/^БП/, 'БП-') : /^[А-ЯЁ]$/.test(s) ? 'Площадка ' + s : s);
+  const AREAS = ['Выращивание', 'Инкубатор', 'ЗПП'];
+  const areaTitle = (a) => (a === 'Инкубатор' ? 'Инкубаторий' : a);
+  const areaOf = (it) => it.area || (it.site === 'Инкубатор' ? 'Инкубатор' : it.site === 'ЗПП' ? 'ЗПП' : 'Выращивание');
   const S = { weeks: [], wi: -1, site: 'all', items: [], list: [], i: 0, url: null, gen: 0 };
 
   function api() {
@@ -109,7 +128,7 @@
     const a = api(), w = S.weeks[S.wi];
     $('prev').disabled = S.wi <= 0; $('next').disabled = S.wi < 0 || S.wi >= S.weeks.length - 1;
     if (!w) {
-      $('wk').textContent = '—'; $('chips').innerHTML = '';
+      $('wk').textContent = '—'; $('chips').innerHTML = ''; $('crit').innerHTML = '';
       $('list').innerHTML = `<div class="empty">${a ? (a.ready()
         ? 'В подключённых папках пока нет фото/видео фиксации. Они появятся сами, как только окажутся в папках OneDrive/SharePoint (папки по дням «ГГГГ-ММ-ДД\\Корпус» или презентации несоответствий).'
         : typeof window.showDirectoryPicker === 'function' ? 'Папки с фото/видео ещё подключаются…' : 'На телефоне нет доступа к папкам с фото/видео — фотофиксация смотрится в приложении для ПК.')
@@ -119,33 +138,53 @@
     $('wk').textContent = wLabel(w.wk);
     $('wsel').value = w.wk.key;
     const items = S.items.filter((it) => it.week === w.wk.key);
-    const bySite = {};
-    items.forEach((it) => { (bySite[it.site] = bySite[it.site] || []).push(it); });
-    const sites = Object.keys(bySite).sort((x, y) => {
-      const ix = SITE_ORDER.indexOf(x), iy = SITE_ORDER.indexOf(y);
-      return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy) || x.localeCompare(y, 'ru');
-    });
-    if (S.site !== 'all' && !bySite[S.site]) S.site = 'all';
     const cnt = (arr) => arr.reduce((n, it) => n + it.count, 0);
-    // кнопки всех площадок, где фото есть хоть в какую-то неделю: нет в этой — клик откроет последнюю неделю с ней
-    const allSites = [...new Set(S.items.map((it) => it.site))].sort((x, y) => {
+    const byArea = {};
+    items.forEach((it) => { (byArea[areaOf(it)] = byArea[areaOf(it)] || []).push(it); });
+    // S.site — выбранный участок («all» — все три)
+    if (S.site !== 'all' && !AREAS.includes(S.site)) S.site = 'all';
+    const hasAny = (ar) => S.items.some((it) => areaOf(it) === ar);
+    $('chips').innerHTML = `<button class="chip${S.site === 'all' ? ' on' : ''}" data-site="all">Все участки · <b>${cnt(items)}</b></button>` +
+      AREAS.filter((ar) => byArea[ar] || hasAny(ar)).map((ar) => byArea[ar]
+        ? `<button class="chip${S.site === ar ? ' on' : ''}" data-site="${ar}">${areaTitle(ar)} · <b>${cnt(byArea[ar])}</b></button>`
+        : `<button class="chip" data-site="${ar}" data-jump="1" style="opacity:.55" title="В этой неделе нет — открыть последнюю неделю с фото">${areaTitle(ar)} · 0</button>`).join('');
+    // 5 критических контрольных точек участка за неделю: больше всего фото/видео несоответствий
+    const top5 = (arr) => {
+      const m = {};
+      (arr || []).forEach((it) => (it.pts || []).forEach((p, idx) => { if (!p) return; (m[p] = m[p] || { n: 0, refs: [] }).n++; m[p].refs.push({ date: it.date, corpus: it.corpus, idx }); }));
+      return Object.entries(m).sort((x, y) => y[1].n - x[1].n || x[0].localeCompare(y[0], 'ru')).slice(0, 5);
+    };
+    S.crit = {};
+    $('crit').innerHTML = AREAS.map((ar) => {
+      const t = top5(byArea[ar]);
+      const noPt = (byArea[ar] || []).reduce((n, it) => n + (it.pts || []).filter((p) => !p).length, 0);
+      return `<div class="col"><h3>⚠ ${areaTitle(ar)}<span>5 критических точек · ${cnt(byArea[ar] || [])} фото/видео</span></h3>` +
+        (t.length ? '<ol>' + t.map(([p, v], i) => { S.crit[ar + '|' + p] = v.refs; return `<li><button type="button" data-crit="${esc(ar + '|' + p)}" title="${esc(p)} — показать фото"><i>${i + 1}</i><span>${esc(p)}</span><b>${v.n}</b></button></li>`; }).join('') + '</ol>'
+          : `<div class="none">${byArea[ar] ? 'Контрольные точки на слайдах не указаны' : 'За эту неделю несоответствий нет'}</div>`) +
+        (t.length && noPt ? `<div class="none" style="margin-top:6px">без указанной точки: ${noPt}</div>` : '') + '</div>';
+    }).join('');
+    const siteSort = (x, y) => {
       const ix = SITE_ORDER.indexOf(x), iy = SITE_ORDER.indexOf(y);
       return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy) || x.localeCompare(y, 'ru');
-    });
-    $('chips').innerHTML = `<button class="chip${S.site === 'all' ? ' on' : ''}" data-site="all">Все площадки · <b>${cnt(items)}</b></button>` +
-      allSites.map((s) => bySite[s]
-        ? `<button class="chip${S.site === s ? ' on' : ''}" data-site="${esc(s)}">${esc(siteName(s))} · <b>${cnt(bySite[s])}</b></button>`
-        : `<button class="chip" data-site="${esc(s)}" data-jump="1" style="opacity:.55" title="В этой неделе нет — открыть последнюю неделю с фото">${esc(siteName(s))} · 0</button>`).join('');
-    const shown = S.site === 'all' ? sites : [S.site];
-    $('list').innerHTML = shown.map((s) => {
+    };
+    const siteBlock = (s, arr) => {
       const byCorp = {};
-      bySite[s].forEach((it) => { (byCorp[it.corpus] = byCorp[it.corpus] || []).push(it); });
+      arr.forEach((it) => { (byCorp[it.corpus] = byCorp[it.corpus] || []).push(it); });
       const corps = Object.keys(byCorp).sort((x, y) => x.localeCompare(y, 'ru', { numeric: true }));
-      return `<div class="site"><h2>${esc(siteName(s))}<span>${corps.length} корп. · ${cnt(bySite[s])} фото/видео</span></h2>` +
+      const unit = s === 'Инкубатор' ? 'зал.' : s === 'ЗПП' ? 'уч.' : 'корп.';
+      return `<div class="site"><h2>${esc(siteName(s))}<span>${corps.length} ${unit} · ${cnt(arr)} фото/видео</span></h2>` +
         corps.map((c) => `<div class="corp"><b>${esc(c.replace(/^Инкубатор: /, ''))}</b><div class="days">` +
           byCorp[c].sort((x, y) => (x.date < y.date ? -1 : 1)).map((it) =>
             `<div class="day"><i>${dmy(it.date)}</i><div class="th" data-date="${it.date}" data-corpus="${esc(it.corpus)}"><span class="wait">📷 ${it.count} — загружаю…</span></div></div>`).join('') +
           `</div></div>`).join('') + `</div>`;
+    };
+    const shown = S.site === 'all' ? AREAS.filter((ar) => byArea[ar]) : [S.site];
+    $('list').innerHTML = shown.map((ar) => {
+      const arr = byArea[ar] || [];
+      const bySite = {};
+      arr.forEach((it) => { (bySite[it.site] = bySite[it.site] || []).push(it); });
+      return `<div class="area">Несоответствия — ${areaTitle(ar)}<span>${cnt(arr)} фото/видео</span></div>` +
+        (arr.length ? Object.keys(bySite).sort(siteSort).map((s) => siteBlock(s, bySite[s])).join('') : '<div class="empty">За эту неделю несоответствий нет.</div>');
     }).join('');
     // миниатюры — по очереди, чтобы не читать сразу десятки видео
     (async () => {
@@ -185,7 +224,7 @@
     const b = e.target.closest('[data-site]'); if (!b) return;
     S.site = b.dataset.site;
     if (b.dataset.jump) {   // площадки нет в этой неделе — к последней неделе, где она есть
-      for (let i = S.weeks.length - 1; i >= 0; i--) if (S.items.some((it) => it.site === S.site && it.week === S.weeks[i].wk.key)) { S.wi = i; break; }
+      for (let i = S.weeks.length - 1; i >= 0; i--) if (S.items.some((it) => areaOf(it) === S.site && it.week === S.weeks[i].wk.key)) { S.wi = i; break; }
     }
     render();
   };
@@ -195,6 +234,17 @@
     S.list = all.map((x) => ({ date: x.parentNode.dataset.date, corpus: x.parentNode.dataset.corpus, idx: +x.dataset.idx, caption: x.title }));
     $('box').hidden = false;
     show(all.indexOf(b));
+  };
+  // критическая точка → все её фото/видео за неделю
+  $('crit').onclick = (e) => {
+    const b = e.target.closest('[data-crit]'); if (!b) return;
+    const refs = (S.crit || {})[b.dataset.crit] || [];
+    if (!refs.length) return;
+    const pt = b.dataset.crit.split('|').slice(1).join('|');
+    const a = api();
+    S.list = refs.map((r) => { let c = ''; try { c = ((a && a.entries(r.date, r.corpus)) || [])[r.idx].caption || ''; } catch (er) { /* нет подписи */ } return { date: r.date, corpus: r.corpus, idx: r.idx, caption: pt + (c && c !== pt ? ' — ' + c : '') }; });
+    $('box').hidden = false;
+    show(0);
   };
   $('boxX').onclick = close;
   $('boxP').onclick = () => show(S.i - 1);

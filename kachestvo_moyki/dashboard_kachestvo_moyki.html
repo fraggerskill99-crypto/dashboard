@@ -6361,7 +6361,15 @@ window.MOIKA_API = {
         if (isIncubKey(corpus)) site = 'Инкубатор';
         else if (corpus === ZPP_KEY) site = 'ЗПП';
         else { try { site = zoneAndUchastok(normalizeCorpus(corpus))[0] || corpus; } catch (e) { /* корпус в непривычном виде */ } }
-        out[k] = { date: k.slice(0, i), corpus, site, count: es.length, video: es.filter((e) => e.files.some((f) => f.kind === 'video')).length };
+        // участок и контрольная точка каждого фото — для «Фотофиксации по неделям» (критические точки недели)
+        const area = isIncubKey(corpus) ? 'Инкубатор' : corpus === ZPP_KEY ? 'ЗПП' : 'Выращивание';
+        const pts = es.map((e) => {
+          let c = null;
+          try { c = entryCat(e); } catch (er) { /* подпись в непривычном виде */ }
+          if (c) return cpCatName(c);
+          return e.point || (area !== 'Выращивание' ? incPointOf(e.caption) : null) || null;
+        });
+        out[k] = { date: k.slice(0, i), corpus, site, area, pts, count: es.length, video: es.filter((e) => e.files.some((f) => f.kind === 'video')).length };
       });
     });
     return Object.values(out);
