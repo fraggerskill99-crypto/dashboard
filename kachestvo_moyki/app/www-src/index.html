@@ -44,6 +44,9 @@
   .cfg-hint { margin: 0 0 6px; padding: 8px 10px; border-radius: 8px; background: #fff7e6; color: #6b4a00; font-size: 12.5px; line-height: 1.5; }
   .cfg-rep { margin-top: 10px; font-size: 12.5px; }
   .cfg-rep summary { cursor: pointer; font-weight: 600; color: var(--navy); }
+  .cfg-slides { margin-top: 4px; }
+  .cfg-slides summary { font-weight: 400; color: var(--navy); cursor: pointer; }
+  .cfg-slides small { display: block; padding: 2px 0; border-top: 1px dashed #e2e8f0; }
   .cfg-ft { position: sticky; bottom: -16px; display: flex; align-items: center; gap: 10px; margin: 16px -18px -16px; padding: 12px 18px 16px; border-top: 1px solid var(--line); background: #fff; }
   .cfg-ft span { color: var(--muted); font-size: 12px; flex: 1; }
   .cfg-main { border: none; background: var(--navy); color: #fff; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
@@ -373,6 +376,16 @@
       const folderRow = (m) => `<div class="cfg-row"><span class="lbl">${esc(m.roleTitle)}</span><span class="val"><b>${esc(m.name)}</b><small${m.ok ? '' : ' class="bad"'}>${esc(m.path)}${m.ok ? '' : ' — не найдена'}</small></span>
           <button type="button" class="x" data-cmd="remove-folder" data-name="${esc(m.name)}" title="Не брать из этой папки">✕</button></div>`;
       // что прочитано из презентаций: фото/видео и даты по участкам (из вкладки «Качество мойки»)
+      // разбор по слайдам: «Слайд 5 · 12.10 → Г5-4 · Система поения · остатки корма · фото 2»
+      const slidesRep = (r) => {
+        const si = r.slideInfo || [];
+        if (!si.length) return '';
+        const d = (x) => (x ? x.split('-').reverse().join('.') : 'без даты');
+        return `<details class="cfg-slides"><summary>Разбор по слайдам (${si.length})</summary>` + si.map((s) => s.rows.map((w) =>
+          `<small${w.why ? ' class="bad"' : ''}>Слайд ${s.n} · ${d(s.date)} → <b>${esc(String(w.place || '—').replace(/^Инкубатор: /, ''))}</b>` +
+          ` · точка: ${w.point ? '«' + esc(w.point) + '»' : '<i>не указана</i>'}` + (w.nc ? ' · ' + esc(w.nc) : '') +
+          ` · фото/видео: ${w.n}${w.why ? ' — не взято: ' + w.why : ''}</small>`).join('')).join('') + '</details>';
+      };
       const pptxReport = () => {
         let rep = [];
         try { rep = (frame('moika').contentWindow.PPTX_REPORT || []).slice(); } catch (e) { /* вкладка ещё грузится */ }
@@ -381,7 +394,7 @@
         return '<details class="cfg-rep"><summary>Прочитано из презентаций: ' + rep.length + ' файл(ов), фото/видео — ' + rep.reduce((n, r) => n + (r.n || 0), 0) + '</summary>' +
           rep.map((r) => `<div class="cfg-row"><span class="lbl">${area(r.path)}</span><span class="val"><b>${esc(r.path.split('/').pop())}</b>` +
             (r.err ? `<small class="bad">${esc(r.err)}</small>` : `<small>фото/видео: ${r.n || 0}${r.noDate ? ' · <span class="bad">без даты: ' + r.noDate + '</span>' : ''}${r.noCorpus ? ' · без корпуса: ' + r.noCorpus : ''}</small>` +
-              (r.days && r.days.length ? `<small>${esc(r.days.join(' | ').replace(/Инкубатор: /g, ''))}</small>` : '')) + '</span></div>').join('') + '</details>';
+              (r.days && r.days.length ? `<small>${esc(r.days.join(' | ').replace(/Инкубатор: /g, ''))}</small>` : '') + slidesRep(r)) + '</span></div>').join('') + '</details>';
       };
       $('cfgBody').innerHTML =
         '<div class="cfg-sec">Акты</div>' + ['akt', 'incub', 'zpp', 'schedule'].map(fileRow).join('') +

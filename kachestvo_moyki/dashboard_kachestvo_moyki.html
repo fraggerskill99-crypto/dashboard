@@ -5178,7 +5178,7 @@ function refreshCatDayThumbs() {
 var PPTX_INDEX = {};   // "дата|корпус" -> [{caption, cat, files:[{kind, filename, pptx, zip, poster}]}]
 var PPTX_FILES = {};   // путь в папке -> FileSystemFileHandle
 var PPTX_SKIPPED = 0;
-const PPTX_CACHE_KEY = 'pptxMediaIndex:v10';   // v9: своя подпись у каждого фото   // v8: точка — словарём актов   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
+const PPTX_CACHE_KEY = 'pptxMediaIndex:v11';   // v11: таблицы и подписанные поля слайда, разбор по слайдам   // v9: своя подпись у каждого фото   // v8: точка — словарём актов   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
 // v5: слайды Инкубатория (залы) из общей папки
 // Папка SharePoint с презентациями несоответствий разложена по участкам: «Инкубатор», «Выращивание», «ЗПП».
 // Участок берём из пути к презентации: в «Инкубаторе» корпусов нет — только залы, в «ЗПП» — своя площадка.
@@ -5217,7 +5217,8 @@ function cpOfCaption(text) {
   if (!text) return null;
   const kp = text.match(CP_P_RE);
   if (kp && CATEGORIES_REF[+kp[1]]) return String(+kp[1]);
-  const t = text.replace(/^\s*(БП|[А-ЯЁA-Z])\s?\d{0,2}\s?[-–—]?\s?\d{0,2}/, ' ');
+  // корпус в начале подписи («Г5-2 …», «В11 …») убираем; без цифры это начало слова («Полы»), его не трогаем
+  const t = text.replace(/^\s*(БП|[А-ЯЁA-Z])\s?\d{1,2}\s?[-–—]?\s?\d{0,2}(?![а-яё])/, ' ');
   // «В11 п10. хитмастер…» — п10 = контрольная точка №10 (Ф-БиС-07)
   const pm = t.match(/(?:^|[^а-яёa-z0-9])[пП](?:ункт|\.)?\s?(\d{1,2})(?!\d)/);
   if (pm && CATEGORIES_REF[+pm[1]]) return String(+pm[1]);
@@ -5263,8 +5264,10 @@ function incubCatOf(e) {
   const [date, hall] = e.incKey.split('|');
   // акта за этот день и зал нет — точка из подписи на слайде презентации
   const hasNc = ((INCUB_FILE_NC && INCUB_FILE_NC[date]) || []).some((it) => incubHallOf(it.hall).key === hall);
-  if (!hasNc) { const pt = incPointOf(e.caption); return pt ? 'inc:' + pt : null; }
-  const cap = incWords(e.caption + ' ' + e.files.map((f) => f.filename).join(' '));
+  // поле «Контрольная точка» со слайда — как написано
+  const fieldPt = e.point && e.point.trim() ? e.point.trim().charAt(0).toUpperCase() + e.point.trim().slice(1) : null;
+  if (!hasNc) { const pt = fieldPt || incPointOf(e.caption); return pt ? 'inc:' + pt : null; }
+  const cap = incWords((e.point ? e.point + ' ' + e.point + ' ' : '') + e.caption + ' ' + e.files.map((f) => f.filename).join(' '));
   if (!cap.length) return null;
   const score = {};
   ((INCUB_FILE_NC && INCUB_FILE_NC[date]) || []).forEach((it) => {
@@ -5338,6 +5341,79 @@ function relsMap(xml, base) {
   return map;
 }
 const IMG_EXT_RE = /\.(png|jpe?g|gif|bmp|webp|tiff?)$/i;
+// Подписанные поля слайда: «Корпус: Г5-4», «Зал: вывода», «Контрольная точка: Система поения»,
+// «Несоответствие: остатки корма» — в надписи или в таблице (подпись в одной ячейке, значение в соседней / под ней).
+// Что написано в поле, то и берём — без угадывания по словам.
+const FIELD_LABELS = [
+  ['corpus', 'корпус[а-яё]*|площадк[а-яё]*|птичник[а-яё]*|участ(?:ок|ка)'],
+  ['hall', 'зал[а-яё]*|помещени[а-яё]*|цех[а-яё]*'],
+  ['point', 'контрольн[а-яё]*\\s+точк[а-яё]*|точк[а-яё]*\\s+контрол[а-яё]*|к\\.?\\s?т\\.?|объект[а-яё]*\\s+контрол[а-яё]*'],
+  ['nc', 'несоответстви[а-яё]*|замечани[а-яё]*|нарушени[а-яё]*|описани[а-яё]*(?:\\s+несоответстви[а-яё]*)?'],
+];
+const FIELD_ANY = FIELD_LABELS.map(([, re]) => re).join('|');
+const FIELD_RE = new RegExp('(?<![а-яёa-z0-9])(' + FIELD_ANY + ')(?:\\s*№)?\\s*[:\\-–—]\\s*', 'gi');
+const FIELD_ONLY_RE = new RegExp('^\\s*(' + FIELD_ANY + ')(?:\\s*№)?\\s*[:.]?\\s*$', 'i');
+const fieldKey = (label) => { const l = String(label).trim(); const hit = FIELD_LABELS.find(([, re]) => new RegExp('^(?:' + re + ')$', 'i').test(l)); return hit ? hit[0] : null; };
+const fieldVal = (v) => String(v || '').replace(/\s+/g, ' ').replace(/^[\s:\-–—.,;]+|[\s,;]+$/g, '').trim();
+function parseFields(text) {
+  const t = String(text || ''), f = {};
+  const ms = Array.from(t.matchAll(FIELD_RE));
+  ms.forEach((m, i) => {
+    const k = fieldKey(m[1]); if (!k || f[k]) return;
+    const v = fieldVal(t.slice(m.index + m[0].length, i + 1 < ms.length ? ms[i + 1].index : t.length));
+    if (v) f[k] = v.slice(0, 300);
+  });
+  return f;
+}
+// таблица слайда (<a:tbl>): ячейки с их местом на слайде и записи «поле → значение»
+function slideTables(xml, box, txt) {
+  const cells = [], recs = [];
+  for (const gm of xml.matchAll(/<p:graphicFrame\b[\s\S]*?<\/p:graphicFrame>/g)) {
+    const g = gm[0]; if (!/<a:tbl>/.test(g)) continue;
+    const fb = box(g) || { x: 0, y: 0, w: 0, h: 0 };
+    const cols = Array.from(g.matchAll(/<a:gridCol\b[^>]*\bw="(\d+)"/g), (m) => +m[1]);
+    const rows = [];
+    let y = fb.y;
+    for (const rm of g.matchAll(/<a:tr\b[^>]*?\bh="(\d+)"[^>]*>([\s\S]*?)<\/a:tr>/g)) {
+      const h = +rm[1], row = [];
+      let ci = 0;
+      for (const cm of rm[2].matchAll(/<a:tc\b([^>]*?)(?:\/>|>([\s\S]*?)<\/a:tc>)/g)) {
+        const span = +((cm[1].match(/gridSpan="(\d+)"/) || [])[1] || 1);
+        const merged = /\b[hv]Merge="(1|true)"/.test(cm[1]);
+        const x = fb.x + cols.slice(0, ci).reduce((a, w) => a + w, 0), w = cols.slice(ci, ci + span).reduce((a, w) => a + w, 0);
+        const tn = txt(cm[2] || '');
+        const c = { tn, t: tn.replace(/\s+/g, ' ').trim(), b: { x, y, w, h }, merged };
+        row[ci] = c;
+        if (c.t && !merged) cells.push(c);
+        ci += span;
+      }
+      rows.push({ cells: row, b: { x: fb.x, y, w: fb.w, h } });
+      y += h;
+    }
+    if (!rows.length) continue;
+    const keyOf = (c) => (c && FIELD_ONLY_RE.test(c.t) ? fieldKey(c.t.replace(/(?:\s*№)?\s*[:.]?\s*$/, '')) : null);
+    const head = rows[0].cells.map(keyOf);
+    if (head.filter(Boolean).length >= 2) {
+      // шапка «Корпус | Контрольная точка | Несоответствие», дальше — по записи в строке
+      rows.slice(1).forEach((r) => {
+        const f = {};
+        head.forEach((k, i) => { const c = r.cells[i]; if (k && c && c.t && !f[k]) f[k] = fieldVal(c.tn).slice(0, 300); });
+        if (Object.keys(f).length) recs.push({ f, b: r.b });
+      });
+    } else {
+      // «Корпус | Г5-4» построчно: подпись слева, значение в следующей ячейке
+      const f = {};
+      rows.forEach((r) => r.cells.forEach((c, i) => {
+        const k = keyOf(c); if (!k || f[k]) return;
+        const v = r.cells.slice(i + 1).find((x) => x && x.t && !keyOf(x));
+        if (v) f[k] = fieldVal(v.tn).slice(0, 300);
+      }));
+      rows.forEach((r) => r.cells.forEach((c) => { if (c && c.t) Object.entries(parseFields(c.tn)).forEach(([k, v]) => { if (!f[k]) f[k] = v; }); }));
+      if (Object.keys(f).length) recs.push({ f, b: fb });
+    }
+  }
+  return { cells, recs };
+}
 // opt.find — чем искать место в подписи (по умолчанию корпус), opt.fallback — место, если не нашлось,
 // opt.noCat — не угадывать контрольную точку Ф-БиС-07 (у Инкубатория свои элементы)
 async function parsePresentation(file, path, opt) {
@@ -5356,9 +5432,15 @@ async function parsePresentation(file, path, opt) {
     const xml = await read(sp); if (!xml) continue;
     const rels = relsMap(await read(sp.replace(/slides\/(slide\d+\.xml)$/, 'slides/_rels/$1.rels')), 'ppt/slides');
     const box = (x) => { const m = x.match(/<a:off x="(-?\d+)" y="(-?\d+)"\s*\/>\s*<a:ext cx="(\d+)" cy="(\d+)"/); return m ? { x: +m[1], y: +m[2], w: +m[3], h: +m[4] } : null; };
-    const spText = (x) => x.split('</a:p>').map((p) => Array.from(p.matchAll(/<a:t(?:\s[^>]*)?>([^<]*)<\/a:t>/g), (t) => xmlText(t[1])).join('')).filter((t) => t.trim()).join(' ').replace(/\s+/g, ' ').trim();
-    const tboxes = Array.from(xml.matchAll(/<p:sp(?:\s[^>]*)?>[\s\S]*?<\/p:sp>/g), (m) => ({ t: spText(m[0]), b: box(m[0]) })).filter((q) => q.t);
-    const texts = tboxes.map((q) => q.t);
+    // текст по абзацам (с переводом строки — чтобы поля «Корпус:», «Несоответствие:» не слипались)
+    const spTextNL = (x) => x.split('</a:p>').map((p) => Array.from(p.matchAll(/<a:t(?:\s[^>]*)?>([^<]*)<\/a:t>/g), (t) => xmlText(t[1])).join('')).filter((t) => t.trim()).join('\n');
+    const tboxes = Array.from(xml.matchAll(/<p:sp(?:\s[^>]*)?>[\s\S]*?<\/p:sp>/g), (m) => { const tn = spTextNL(m[0]); return { tn, t: tn.replace(/\s+/g, ' ').trim(), b: box(m[0]) }; }).filter((q) => q.t);
+    // таблицы на слайде: каждая ячейка — надпись на своём месте, записи таблицы — подписанные поля
+    const tbl = slideTables(xml, box, spTextNL);
+    tbl.cells.forEach((c) => tboxes.push({ tn: c.tn, t: c.t, b: c.b, cell: true }));
+    // источники полей: надписи с «Поле: значение» и записи таблиц
+    const fsrc = tboxes.map((q) => ({ f: parseFields(q.tn), b: q.b })).filter((x) => Object.keys(x.f).length).concat(tbl.recs);
+    const texts = tboxes.filter((q) => !q.cell || !FIELD_ONLY_RE.test(q.t)).map((q) => q.t);
     const items = [];
     for (const pm of xml.matchAll(/<p:pic(?:\s[^>]*)?>[\s\S]*?<\/p:pic>/g)) {
       const pic = pm[0];
@@ -5379,7 +5461,7 @@ async function parsePresentation(file, path, opt) {
     // в общей папке подпись с залом Инкубатория («Зал вывода, полки») — тоже подпись своего фото
     // подпись фото — любая надпись рядом с ним (корпус бывает только в заголовке слайда, а у фото — «поилки», «пол»…);
     // не подписи: «Качество мойки …» и одна дата
-    const capBoxes = tboxes.filter((q) => q.b && q.t.trim().length >= 3 && !/качество\s+мойки/i.test(q.t) && !/^[\d\s.,\/-]+(г\.?)?$/i.test(q.t.trim()));
+    const capBoxes = tboxes.filter((q) => q.b && q.t.trim().length >= 3 && !FIELD_ONLY_RE.test(q.t) && !/качество\s+мойки/i.test(q.t) && !/^[\d\s.,\/-]+(г\.?)?$/i.test(q.t.trim()));
     items.forEach((it) => {
       if (!it.b || !capBoxes.length) return;
       let best = null, bestD = Infinity;
@@ -5391,6 +5473,29 @@ async function parsePresentation(file, path, opt) {
         if (d < bestD) { bestD = d; best = q; }
       });
       if (best && (bestD < 0 || bestD < Math.max(it.b.w, it.b.h))) { it.cap = best.t; it.capB = best.b; }
+    });
+    // поля каждого фото: из его подписи, недостающие — из ближайшей надписи/строки таблицы с этим полем
+    // (корпус часто только в заголовке слайда, точка и несоответствие — у самого фото)
+    items.forEach((it) => {
+      const f = {};
+      const own = it.capB && fsrc.find((x) => x.b === it.capB);
+      if (own) Object.assign(f, own.f);
+      const at = it.b || it.capB;
+      ['corpus', 'hall', 'point', 'nc'].forEach((k) => {
+        if (f[k]) return;
+        let best = null, bestD = Infinity;
+        fsrc.forEach((x) => {
+          if (!x.f[k]) return;
+          if (!at || !x.b) { if (bestD === Infinity) { best = x; bestD = 1e15; } return; }
+          const cx = x.b.x + x.b.w / 2, cy = x.b.y + x.b.h / 2;
+          const inRow = cy >= at.y && cy <= at.y + at.h;
+          const dx = Math.max(0, at.x - cx, cx - (at.x + at.w)), dy = Math.max(0, at.y - cy, cy - (at.y + at.h));
+          const d = inRow ? dx : dx + dy * 2;
+          if (d < bestD) { bestD = d; best = x; }
+        });
+        if (best) f[k] = best.f[k];
+      });
+      it.fields = f;
     });
     // подпись без корпуса — корпус берём у соседней подписи с корпусом в том же ряду
     // (фото на слайде идут сеткой: соседи по ряду — тот же корпус, ряд выше — уже другой)
@@ -5404,7 +5509,7 @@ async function parsePresentation(file, path, opt) {
       });
       if (best) it.capCorpus = findPlace(best.t);
     });
-    slides.push({ texts, items });
+    slides.push({ texts, items, n: slides.length + 1 });
   }
   // картинки, которые стоят на многих слайдах, — логотипы/оформление, не фиксация
   // (одинаковая картинка на 3+ слайдах или совсем маленькая иконка)
@@ -5415,6 +5520,7 @@ async function parsePresentation(file, path, opt) {
   for (let i = segs.length - 1; i >= 0 && !curDate; i--) curDate = dateFromText(segs[i].replace(/\.[a-z]+$/i, ''), yearHint, true);
   const out = []; let skipped = 0, noDate = 0, noCorpus = 0;
   const corpSeen = {};
+  const slideInfo = [];   // разбор по слайдам — для «⚙ Настроек»: что где прочитано
   slides.forEach((sl) => {
     const all = sl.texts.join(' · ');
     // «06.10 Качество мойки» без года — только в заголовке (первый текст без корпуса), чтобы «1.5 м» в подписи не стало датой
@@ -5425,23 +5531,49 @@ async function parsePresentation(file, path, opt) {
     const items = sl.items.filter((it) => (it.video || !isDecor(it)) && (!anyCap || it.cap || it.video));
     if (!items.length) return;
     const slideCorpus = findPlace(all);
+    const info = { n: sl.n, date: curDate, rows: [] };
+    slideInfo.push(info);
     items.forEach((it) => {
-      let corpus = (it.cap && findPlace(it.cap)) || (!opt.find && it.cap && findIncubHall(it.cap)) || it.capCorpus || slideCorpus || opt.fallback;
+      const F = it.fields || {};
+      // подписанное поле «Корпус/Площадка» (Инкубатор — «Зал») важнее угаданного по подписи
+      const fPlace = opt.find
+        ? ((F.hall && findPlace('зал ' + F.hall)) || (F.hall && findPlace(F.hall)) || (F.corpus && findPlace(F.corpus)))
+        : ((F.corpus && findCorpus(F.corpus)) || (F.hall && findIncubHall('зал ' + F.hall)));
+      let corpus = fPlace || (it.cap && findPlace(it.cap)) || (!opt.find && it.cap && findIncubHall(it.cap)) || it.capCorpus || slideCorpus || opt.fallback;
       // общая папка: слайд без корпуса, но про Инкубаторий — в его залы (зал из подписи/слайда, иначе «прочее»)
       if (!corpus && !opt.find) corpus = findIncubHall(all) || (/инкуб/i.test(all + ' ' + path) ? INCUB_OTHER.key : null);
-      if (!curDate) { skipped++; noDate++; return; }
-      if (!corpus) { skipped++; noCorpus++; return; }
+      const row = { place: corpus || '', point: F.point || '', nc: F.nc || '', n: 1 };
+      const pushRow = (extra) => {
+        Object.assign(row, extra);
+        const same = info.rows.find((r) => r.place === row.place && r.point === row.point && r.nc === row.nc && r.why === row.why);
+        if (same) same.n++; else info.rows.push(row);
+      };
+      if (!curDate) { skipped++; noDate++; pushRow({ why: 'нет даты' }); return; }
+      if (!corpus) { skipped++; noCorpus++; pushRow({ why: 'не найден корпус' }); return; }
       corpSeen[curDate] = corpSeen[curDate] || {}; corpSeen[curDate][corpus] = 1;
-      const caption = (it.cap || sl.texts.find((t) => findPlace(t) === corpus) || all).slice(0, 300);
+      // подпись фото: «Точка — несоответствие» из полей слайда, иначе надпись у фото
+      const fromFields = [F.point, F.nc].filter(Boolean).join(' — ');
+      const caption = (fromFields || it.cap || sl.texts.find((t) => findPlace(t) === corpus) || all).slice(0, 300);
+      let cat = null;
+      if (!opt.noCat && !isIncubKey(corpus)) {
+        const num = F.point && F.point.match(/^(?:[ПпPp]\s?[-–—.№]?\s?)?(\d{1,2})(?!\d)/);
+        cat = (num && CATEGORIES_REF[+num[1]] ? String(+num[1]) : null) || (F.point && cpOfCaption(F.point)) || cpOfCaption(caption);
+      }
+      if (!row.point && cat) row.point = 'П-' + cat + ' ' + CATEGORIES_REF[cat];
+      if (!row.nc && !fromFields) row.nc = (it.cap || '').slice(0, 160);
+      pushRow({});
       const files = [];
       if (it.video) files.push({ kind: 'video', filename: it.video.split('/').pop(), pptx: path, zip: it.video });
       const ph = it.photo || it.poster;
       if (ph) files.push({ kind: 'photo', filename: ph.split('/').pop(), pptx: path, zip: ph, poster: !!it.video });
-      out.push({ key: curDate + '|' + corpus, entry: { caption, cat: opt.noCat || isIncubKey(corpus) ? null : cpOfCaption(caption), files } });
+      const entry = { caption, cat, files };
+      if (F.point) entry.point = F.point;
+      if (F.nc) entry.nc = F.nc;
+      out.push({ key: curDate + '|' + corpus, entry });
     });
   });
   const days = Object.keys(corpSeen).sort().map((d) => fmtDate(d) + ': ' + Object.keys(corpSeen[d]).join(', '));
-  return { entries: out, skipped, noDate, noCorpus, slides: slides.length, days };
+  return { entries: out, skipped, noDate, noCorpus, slides: slides.length, days, slideInfo };
 }
 async function collectPptx(dir, prefix, depth, list) {
   for await (const [name, h] of dir.entries()) {
@@ -5474,7 +5606,7 @@ async function scanPresentations(root, onProgress) {
       newCache[path] = res;
       res.entries.forEach(({ key, entry }) => { (PPTX_INDEX[key] = PPTX_INDEX[key] || []).push(entry); });
       PPTX_SKIPPED += res.skipped || 0;
-      PPTX_REPORT.push({ path, n: res.entries.length, noDate: res.noDate || 0, noCorpus: res.noCorpus || 0, slides: res.slides, days: res.days || [] });
+      PPTX_REPORT.push({ path, n: res.entries.length, noDate: res.noDate || 0, noCorpus: res.noCorpus || 0, slides: res.slides, days: res.days || [], slideInfo: res.slideInfo || [] });
     } catch (e) {
       console.warn('pptx', path, e);
       PPTX_REPORT.push({ path, err: /NotFound|NotReadable/i.test(e.name || '') ? 'файл не открылся (если он в OneDrive/облаке — сделайте «Всегда хранить на этом устройстве»)' : (/zip|central directory|signature/i.test(e.message || '') ? 'файл повреждён или защищён паролем — откройте в PowerPoint и сохраните заново как .pptx (без пароля)' : 'не удалось прочитать: ' + (e.message || e)) });
