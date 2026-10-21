@@ -291,7 +291,7 @@ function sourcesState() {
   return {
     files,
     folders: foldersConfig().mounts.map((m) => ({ name: m.name, path: m.path, role: roleOf(m), roleTitle: ROLE_TITLE[roleOf(m)], ok: fs.existsSync(m.path) })),
-    sharepoint: spConfig().links.map((l) => ({ name: spName(l), link: l.link, lastSync: l.lastSync || null })),
+    sharepoint: spConfig().links.map((l) => ({ name: spName(l), link: l.link, lastSync: l.lastSync || null, account: l.account || null, access: l.access || null, error: l.error || null })),
     lastRefresh,
   };
 }
@@ -333,6 +333,27 @@ async function handleCfg(cmd, q) {
     return sourcesState();
   }
   if (cmd === 'sharepoint') { syncSharePoint({ interactive: true, askLink: true }); return sourcesState(); }
+  if (cmd === 'sp-login') {
+    // вход рабочей учётной записью Microsoft: окно входа (если нужен), затем — под кем вошли и можно ли скачивать
+    const c = spConfig();
+    if (!c.links.length) c.links.push({ link: DEFAULT_SP_LINK });
+    for (const l of c.links) {
+      try {
+        Object.assign(l, await sp.resolveLink(l.link, win));
+        l.account = await sp.currentUser(l.site).catch(() => null);
+        l.access = await sp.checkAccess(l.site, l.folderPath);
+        delete l.error;
+      } catch (e) { l.error = e && e.message ? e.message : String(e); }
+    }
+    saveSpConfig(c);
+    if (c.links.some((l) => l.access && l.access.download)) syncSharePoint({ interactive: true });
+    return sourcesState();
+  }
+  if (cmd === 'sp-logout') {
+    await spLogout();
+    const c = spConfig(); c.links.forEach((l) => { delete l.account; delete l.access; }); saveSpConfig(c);
+    return sourcesState();
+  }
   if (cmd === 'refresh') {
     // «Обновить сейчас»: докачать SharePoint, затем перечитать всё во вкладках (даже если файлы не менялись)
     if (spConfig().links.length) await syncSharePoint({ interactive: true });
@@ -491,8 +512,13 @@ async function syncSharePoint({ interactive, askLink } = {}) {
         const r = await syncOne(l, interactive);
         files += r.downloaded; bytes += r.bytes;
         l.lastSync = new Date().toISOString();
+        if (!l.account) l.account = await sp.currentUser(l.site).catch(() => null);
+        l.access = { download: true };
+        delete l.error;
       } catch (e) {
         const msg = e && e.message ? e.message : String(e);
+        l.error = msg;
+        if (e instanceof sp.BlockedError) l.access = { download: false };
         errors.push(`«${spName(l)}»: ${/окно входа закрыто/.test(msg) ? 'вход не выполнен — F5, чтобы войти' : msg}`);
       }
       saveSpConfig(cfg);

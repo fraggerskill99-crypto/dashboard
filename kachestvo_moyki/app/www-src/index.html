@@ -390,8 +390,15 @@
         '<div class="cfg-sec">Презентации несоответствий — Инкубатор, Выращивание, ЗПП</div>' +
         (state.noSharePoint
           ? '<p class="cfg-hint">По ссылке SharePoint браузер читать не может (защита браузера). Синхронизируйте папку SharePoint через OneDrive («Добавить ярлык в Мои файлы» или «Синхронизировать») и выберите её кнопкой ниже — внутри папки «Инкубатор», «Выращивание», «ЗПП». По ссылке напрямую читает приложение для ПК.</p>'
-          : (state.sharepoint.length ? state.sharepoint.map((l) => `<div class="cfg-row"><span class="lbl">SharePoint: ${esc(l.name)}</span><span class="val"><small>${esc(l.link)}</small>${l.lastSync ? 'прочитано ' + when(Date.parse(l.lastSync)) : '<span class="auto">ещё не скачивалась — «Обновить сейчас»</span>'}</span></div>`).join('') : '') +
-            `<div class="cfg-add"><button type="button" data-cmd="sharepoint">${state.sharepoint.length ? 'Другая ссылка SharePoint…' : '+ Ссылка SharePoint на папку с презентациями'}</button></div>`) +
+          : (state.sharepoint.length ? state.sharepoint.map((l) => `<div class="cfg-row"><span class="lbl">SharePoint: ${esc(l.name)}</span><span class="val"><small>${esc(l.link)}</small>` +
+              (l.account ? `Вход: <b>${esc(l.account.email || l.account.name)}</b>` : '<span class="auto">Вход рабочей учётной записью не выполнен</span>') +
+              (l.access ? (l.access.download === false ? '<small class="bad">⛔ Только просмотр — владелец папки запретил скачивание. Нужно право на скачивание или редактирование.</small>'
+                : l.access.download ? '<small>✅ Скачивание разрешено' + (l.lastSync ? ' · прочитано ' + when(Date.parse(l.lastSync)) : '') + '</small>' : '<small>В папке пока нет файлов</small>') : '') +
+              (l.error && !(l.access && l.access.download === false) ? `<small class="bad">${esc(l.error)}</small>` : '') +
+              '</span></div>').join('') : '') +
+            `<div class="cfg-add"><button type="button" data-cmd="sp-login">🔑 Войти рабочей учётной записью Microsoft</button>` +
+            (state.sharepoint.some((l) => l.account) ? '<button type="button" data-cmd="sp-logout">Выйти</button>' : '') +
+            `<button type="button" data-cmd="sharepoint">${state.sharepoint.length ? 'Другая ссылка SharePoint…' : '+ Ссылка SharePoint на папку с презентациями'}</button></div>`) +
         state.folders.filter((m) => m.role === 'media').map((m) => folderRow(m)).join('') +
         `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="media">+ Папка с презентациями${state.noSharePoint ? ' (синхронизированная SharePoint)' : ''}</button></div>` +
         pptxReport() +

@@ -7,13 +7,17 @@ const fs = require('fs');
 const path = require('path');
 
 class AuthError extends Error {}
+// вход есть, но владелец папки запретил скачивание (доступ «только просмотр»)
+class BlockedError extends Error {}
+const BLOCKED_TEXT = 'у вашей учётной записи доступ к файлам только на просмотр — владелец папки запретил скачивание. Попросите у него право на скачивание или редактирование';
 const LOGIN_HOST_RE = /(^|\.)(login\.microsoftonline\.com|login\.live\.com|login\.windows\.net|microsoftonline\.com|adfs\.)/i;
 
 // ---------- HTTP с куками сессии приложения ----------
-function request(url, { accept, toFile, onBytes } = {}) {
+function request(url, { accept, toFile, onBytes, file, probe } = {}) {
   return new Promise((resolve, reject) => {
     const req = net.request({ url, method: 'GET', useSessionCookies: true, redirect: 'manual' });
     if (accept) req.setHeader('Accept', accept);
+    if (probe) req.setHeader('Range', 'bytes=0-0');   // проверка доступа: первый байт файла
     req.on('redirect', (status, method, redirectUrl) => {
       let host = '';
       try { host = new URL(redirectUrl).hostname; } catch (e) { /* относительный адрес */ }
@@ -23,7 +27,10 @@ function request(url, { accept, toFile, onBytes } = {}) {
       } else req.followRedirect();
     });
     req.on('response', (res) => {
+      // 403 на сам файл — запрет скачивания (вход при этом есть); остальное — нужен вход
+      if (file && res.statusCode === 403) { res.resume && res.resume(); reject(new BlockedError(BLOCKED_TEXT)); return; }
       if (res.statusCode === 401 || res.statusCode === 403) { res.resume && res.resume(); reject(new AuthError('нет доступа (' + res.statusCode + ')')); return; }
+      if (probe) { res.on('data', () => {}); res.on('end', () => resolve({ status: res.statusCode })); return; }
       if (res.statusCode >= 400) {
         const chunks = [];
         res.on('data', (c) => chunks.push(c));
@@ -143,7 +150,7 @@ async function syncFolder({ site, folderPath, localDir, onProgress }) {
   for (const f of todo) {
     report({ phase: 'download', done, total, file: f.name, bytes, totalBytes });
     await request(`${site}/_api/web/GetFileByServerRelativePath(decodedurl='${q(f.url)}')/$value`, {
-      toFile: f.dest,
+      toFile: f.dest, file: true,
       onBytes: (n) => { bytes += n; },
     });
     if (f.modified) { const t = new Date(f.modified); try { fs.utimesSync(f.dest, t, t); } catch (e) { /* не критично */ } }
@@ -153,4 +160,29 @@ async function syncFolder({ site, folderPath, localDir, onProgress }) {
   return { downloaded: total, bytes };
 }
 
-module.exports = { AuthError, resolveLink, syncFolder, splitFolderPath, listFolder };
+// под кем выполнен вход (рабочая учётная запись Microsoft)
+async function currentUser(site) {
+  const j = await getJSON(`${site}/_api/web/currentuser?$select=Email,Title,LoginName`);
+  return { email: j.Email || j.LoginName || '', name: j.Title || '' };
+}
+// можно ли скачивать: первый попавшийся файл в папке (и подпапках) — запросом первого байта
+async function checkAccess(site, folderPath) {
+  const queue = [folderPath];
+  for (let n = 0; queue.length && n < 15; n++) {
+    const { files, folders } = await listFolder(site, queue.shift());
+    const f = files.find((x) => !/^~\$/.test(x.name));
+    if (f) {
+      try {
+        await request(`${site}/_api/web/GetFileByServerRelativePath(decodedurl='${q(f.url)}')/$value`, { file: true, probe: true });
+        return { download: true, sample: f.name };
+      } catch (e) {
+        if (e instanceof BlockedError) return { download: false, sample: f.name };
+        throw e;
+      }
+    }
+    folders.forEach((d) => queue.push(d.url));
+  }
+  return { download: null };   // файлов пока нет
+}
+
+module.exports = { AuthError, BlockedError, resolveLink, syncFolder, splitFolderPath, listFolder, currentUser, checkAccess };
