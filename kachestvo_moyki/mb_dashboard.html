@@ -57,6 +57,14 @@ body{background:#f1f5f9;font-family:"Segoe UI",Arial,sans-serif;font-size:13px;c
 .mbph-st img,.mbph-st video{max-width:100%;max-height:100%;border-radius:8px;background:#000}
 .mbph-nv{position:absolute;top:50%;transform:translateY(-50%);border:none;background:rgba(255,255,255,.85);width:44px;height:44px;border-radius:50%;font-size:26px;cursor:pointer}
 .mbph-nv.p{left:10px}.mbph-nv.n{right:10px}
+.clph-box{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:9990;display:flex;align-items:center;justify-content:center;padding:3vh 3vw}
+.clph-box[hidden]{display:none}
+.clph-in{background:#fff;border-radius:12px;width:min(1100px,100%);max-height:100%;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.clph-hd{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border-bottom:1px solid #e2e8f0}
+.clph-hd b{font-size:15px;color:#1F3864}.clph-hd small{display:block;color:#64748b;font-size:12px;margin-top:3px;font-weight:400}
+.clph-hd button{margin-left:auto;border:none;background:#e2e8f0;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;flex:0 0 auto}
+.clph-body{overflow:auto;padding:6px 18px 16px}
+#cMain{cursor:pointer}
 .sec-hdr{display:flex;align-items:center;gap:10px;margin:6px 0 2px}
 .sec-hdr::after{content:"";flex:1;height:1px;background:#e2e8f0}
 .sec-hdr span{font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap}
@@ -317,6 +325,7 @@ body{background:#f1f5f9;font-family:"Segoe UI",Arial,sans-serif;font-size:13px;c
   <div style="position:relative;height:240px;margin-bottom:12px"><canvas id="mbphChart"></canvas></div>
   <div id="mbphLine"></div>
 </div>
+<div id="clphBox" class="clph-box" hidden><div class="clph-in"><div class="clph-hd"><div><b id="clphT"></b><small id="clphS"></small></div><button type="button" id="clphX" title="Закрыть (Esc)">×</button></div><div class="clph-body" id="clphB"></div></div></div>
 <div id="mbphBox" class="mbph-box" hidden><div class="mbph-in"><div class="mbph-hd"><b id="mbphBoxT"></b><span id="mbphBoxN"></span><button type="button" id="mbphBoxX" title="Закрыть (Esc)">×</button></div><div class="mbph-st" id="mbphBoxS"></div><button type="button" class="mbph-nv p" id="mbphBoxP">‹</button><button type="button" class="mbph-nv n" id="mbphBoxNx">›</button></div></div>
 
 <div class="sec-hdr"><span>📍 Точки отбора — динамика по неделям</span></div>
@@ -643,7 +652,7 @@ const CL_CHART = new Chart(cv, {
             return lines.length ? lines : null;
           },
           label: ctx => {
-            const c = CL[ctx[0].dataIndex];
+            const c = CL[ctx.dataIndex];
             if (ctx.dataset.yAxisID === 'yS')
               return ` Балл мойки: ${c.score ?? 'н/д'} (${c.score_date || ''})`;
             return ` Патоген: ${c.pathogen}`;
@@ -2456,7 +2465,7 @@ async function mbphShow(i){
   const api = mbphApi(); const n = MBPH.list.length; if (!api || !n) return;
   MBPH.i = (i + n) % n;
   const it = MBPH.list[MBPH.i], st = document.getElementById('mbphBoxS');
-  document.getElementById('mbphBoxT').textContent = `${MBPH.korp} — ${mbphFmt(Date.parse(it.date + 'T12:00:00Z'))}`;
+  document.getElementById('mbphBoxT').textContent = `${it.korp || MBPH.korp} — ${mbphFmt(Date.parse(it.date + 'T12:00:00Z'))}`;
   document.getElementById('mbphBoxN').textContent = [n > 1 ? `${MBPH.i + 1} / ${n}` : '', it.caption || ''].filter(Boolean).join(' · ');
   st.innerHTML = '<span style="color:#64748b">Загружаю…</span>';
   try {
@@ -2486,6 +2495,61 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('mbphBox').hidden) return;
   if (e.key === 'Escape') mbphClose(); else if (e.key === 'ArrowLeft') mbphShow(MBPH.i - 1); else if (e.key === 'ArrowRight') mbphShow(MBPH.i + 1);
 });
+// ===== График «Корпуса с обнаружениями NOK»: клик по обнаружению → фото/видео мойки этого корпуса =====
+// Сначала — дни около обнаружения (за 30 дней до и 7 после), ближайшие к дате обнаружения; остальные дни корпуса — ниже.
+function clphOpen(c){
+  const api = mbphApi(), box = document.getElementById('clphBox'), body = document.getElementById('clphB');
+  const tp = EVENT_TOCHKA[`${c.korp}|${c.nok_date}|${c.pathogen}`] || [];
+  document.getElementById('clphT').textContent = `${c.korp} · обнаружение NOK ${c.nok_date} · ${c.pathogen}${c.mult > 1 ? ' ×' + c.mult : ''}`;
+  document.getElementById('clphS').textContent = [c.score != null ? `балл мойки перед обнаружением: ${c.score}${c.score_date ? ' (' + c.score_date + ')' : ''}` : '', tp.length ? '📍 ' + tp.join(', ') : ''].filter(Boolean).join(' · ');
+  box.hidden = false;
+  if (!api){ body.innerHTML = '<p style="color:#64748b;font-size:13px">Фото/видео мойки подтягиваются из вкладки «Качество мойки» (папки с фото и презентации несоответствий).</p>'; return; }
+  const t0 = mbphDT(c.nok_date);
+  const days = api.mediaDays(c.korp).map(m => ({...m, t: Date.parse(m.date + 'T12:00:00Z')}));
+  if (!days.length){
+    body.innerHTML = `<p style="color:#64748b;font-size:13px">По корпусу ${mbphEsc(c.korp)} фото/видео фиксации мойки нет${api.ready() ? '' : ' — во вкладке «Качество мойки» ещё не подключена папка с фото/презентациями («⚙ Настройки»)'}.</p>`;
+    return;
+  }
+  const near = d => t0 != null && d.t >= t0 - 30 * 864e5 && d.t <= t0 + 7 * 864e5;
+  const dist = d => (t0 == null ? 0 : Math.abs(d.t - t0) + (d.t > t0 ? 1 : 0));
+  const a = days.filter(near).sort((x, y) => dist(x) - dist(y)), b = days.filter(d => !near(d)).sort((x, y) => y.t - x.t);
+  const washes = {}; api.washes(c.korp).forEach(w => { (washes[w.date] = washes[w.date] || []).push(w.score); });
+  const rel = d => { if (t0 == null) return ''; const n = Math.round((d.t - t0) / 864e5); return n === 0 ? 'в день обнаружения' : n < 0 ? `за ${-n} дн. до обнаружения` : `через ${n} дн. после`; };
+  const row = d => `<div class="mbph-row${d.t <= t0 && near(d) ? ' pre' : ''}"><div class="mbph-date">${mbphFmt(d.t)}<small>${rel(d)}</small></div><div class="mbph-body">` +
+    (washes[d.date] ? `<span class="mbph-tag mbph-wash">🧽 Мойка · балл ${mbphEsc(washes[d.date].join(', '))}</span>` : '') +
+    `<div class="mbph-thumbs" data-date="${d.date}" data-corpus="${mbphEsc(d.corpus)}"><span style="color:#94a3b8;font-size:11.5px">📷 ${d.count} фото/видео — загружаю…</span></div></div></div>`;
+  body.innerHTML = (a.length ? a.map(row).join('') : `<p style="color:#b45309;font-size:12.5px">За 30 дней до обнаружения фото/видео мойки по ${mbphEsc(c.korp)} нет — ниже все дни корпуса с фото.</p>`) +
+    (b.length ? `<div style="margin:12px 0 4px;font-size:12px;font-weight:700;color:#475569">${a.length ? 'Другие дни корпуса с фото/видео' : ''}</div>` + b.map(row).join('') : '');
+  const korp = c.korp;
+  body.querySelectorAll('.mbph-thumbs').forEach(async el => {
+    let th = [];
+    try { th = await api.thumbs(el.dataset.date, el.dataset.corpus); } catch (e) {}
+    if (box.hidden || document.getElementById('clphT').textContent.indexOf(korp) !== 0) return;
+    el.innerHTML = th.length ? th.map(x => `<button type="button" data-idx="${x.idx}" title="${mbphEsc(x.caption || '')}"><img src="${x.url}" alt="">${x.video ? '<span class="pl">▶</span>' : ''}</button>`).join('')
+      : `<span style="color:#94a3b8;font-size:11.5px">📷 не удалось прочитать файлы${api.ready() ? '' : ' — откройте доступ к папке во вкладке «Качество мойки»'}</span>`;
+  });
+  body.dataset.korp = korp;
+}
+function clphClose(){ document.getElementById('clphBox').hidden = true; }
+CL_CHART.options.onClick = (e, els) => {
+  const pts = CL_CHART.getElementsAtEventForMode(e, 'index', {intersect: false}, false);
+  const i = (els && els.length ? els : pts)[0];
+  if (i == null || !CL[i.index]) return;
+  clphOpen(CL[i.index]);
+};
+CL_CHART.options.plugins.tooltip.callbacks.footer = () => '🖱 Клик — фото/видео мойки этого корпуса';
+CL_CHART.update('none');
+document.getElementById('clphX').addEventListener('click', clphClose);
+document.getElementById('clphBox').addEventListener('click', e => { if (e.target.id === 'clphBox') clphClose(); });
+document.getElementById('clphB').addEventListener('click', e => {
+  const b = e.target.closest('.mbph-thumbs button'); if (!b) return;
+  const all = [...document.querySelectorAll('#clphB .mbph-thumbs button')], korp = document.getElementById('clphB').dataset.korp;
+  MBPH.list = all.map(x => ({korp, date: x.parentNode.dataset.date, corpus: x.parentNode.dataset.corpus, idx: +x.dataset.idx, caption: x.title}));
+  document.getElementById('mbphBox').hidden = false;
+  mbphShow(all.indexOf(b));
+});
+// Esc: сначала закрывается просмотр фото, следующим нажатием — окно корпуса (слушаем раньше просмотра — capture)
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('mbphBox').hidden && !document.getElementById('clphBox').hidden) clphClose(); }, true);
 // обновить при открытии вкладки (приложение присылает «app:shown») и после нового журнала МБ
 window.addEventListener('message', e => { if (e.data === 'app:shown' || e.data === 'app:media') mbphRender(); });
 const _mbphRefresh = mbRefreshNokViews;
