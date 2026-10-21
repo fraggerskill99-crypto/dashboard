@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-20",
+  "updatedAt": "2026-10-21",
   "episodes": [
     {
       "id": "w-2026-10-07-spain-valencia-nd",
@@ -1051,6 +1051,27 @@
       ],
       "addedBy": "claude",
       "keyword": "bird flu Barron County Wisconsin October 2026"
+    },
+    {
+      "id": "w-2026-10-19-uk-northumberland",
+      "scope": "world",
+      "topic": "hpai",
+      "date": "2026-10-19",
+      "status": "confirmed",
+      "place": "Великобритания, Англия, Нортумберленд, у Белфорда",
+      "country": "Великобритания",
+      "birds": null,
+      "title": "Англия: H5N1 на ферме кур-несушек свободного выгула в Нортумберленде",
+      "summary": "19 октября подтверждён H5N1 в коммерческом стаде кур-несушек свободного выгула у Белфорда (Нортумберленд). Вокруг объявлены зоны 3 км (защиты) и 10 км (наблюдения). Первый очаг H5N1 у птицы в Великобритании в этом сезоне.",
+      "sources": [
+        {
+          "name": "poultrynews.co.uk",
+          "url": "https://www.poultrynews.co.uk/health-welfare/bird-flu-confirmed-in-commercial-laying-flock-in-northumberland.html",
+          "kind": "media"
+        }
+      ],
+      "addedBy": "claude",
+      "keyword": "bird flu Northumberland October 2026"
     }
   ]
 }
