@@ -288,7 +288,6 @@ body{background:#f1f5f9;font-family:"Segoe UI",Arial,sans-serif;font-size:13px;c
     <button class="main" id="clSlide1">⬇ Слайд: график</button>
     <button class="main" id="clSlide2">⬇ Слайд: где обнаружено</button>
     <button class="main" id="clSlide3">⬇ Слайд: динамика</button>
-    <span class="note">Картинка 1920×1080 (16:9) в оформлении презентации — вставляется как слайд</span>
   </div>
   <div class="clw-bar">
     <span>Недели:</span>
@@ -2546,7 +2545,7 @@ function clphOpen(c){
   document.getElementById('clphT').textContent = `${c.korp} · обнаружение NOK ${c.nok_date} · ${c.pathogen}${c.mult > 1 ? ' ×' + c.mult : ''}`;
   document.getElementById('clphS').textContent = [c.score != null ? `балл мойки перед обнаружением: ${c.score}${c.score_date ? ' (' + c.score_date + ')' : ''}` : '', tp.length ? '📍 ' + tp.join(', ') : ''].filter(Boolean).join(' · ');
   box.hidden = false;
-  if (!api){ body.innerHTML = '<p style="color:#64748b;font-size:13px">Фото/видео мойки подтягиваются из вкладки «Качество мойки» (папки с фото и презентации несоответствий).</p>'; return; }
+  if (!api){ body.innerHTML = '<p style="color:#64748b;font-size:13px">Фото/видео мойки нет.</p>'; return; }
   const t0 = mbphDT(c.nok_date);
   const days = api.mediaDays(c.korp).map(m => ({...m, t: Date.parse(m.date + 'T12:00:00Z')}));
   if (!days.length){

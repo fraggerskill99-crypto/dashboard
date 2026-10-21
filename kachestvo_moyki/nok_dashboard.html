@@ -1600,7 +1600,6 @@ function panel(basis){
     <div class="oc-legend"><span><i class="oc-ok"></i>OK — в норме</span><span><i class="oc-nok"></i>NOK — обнаружено</span><span><i class="oc-pend"></i>ждут результата</span><span style="color:var(--muted)">длина полосы — число смывов</span></div>
     ${cats.length ? cats.map(([n, c]) => row(n, c)).join('') : '<div class="oc-empty">Смывов за неделю нет.</div>'}
     ${row('Итого за неделю', {total: o.total || 0, ok: o.ok || 0, nok: o.nok || 0, pending: o.pending}, 'oc-total')}
-    <div class="oc-sub" style="margin:8px 0 0">«Итого» — все пробы недели; один смыв может входить в несколько объектов (например, «Транспорт» и «БП»), поэтому сумма по строкам бывает больше итога. Проценты — от числа смывов за неделю.</div>
     </div><div class="oc-right">${weekSummary(o)}${weekBlock(basis)}${monthBlock(basis)}</div></div>
   </div>`;
 }
@@ -1653,7 +1652,6 @@ function weekBlock(basis){
   if (!cur) return '';
   if (!prev) return `<div class="oc-side"><h3>Неделя к прошлой неделе</h3><div class="oc-empty">Нет данных за прошлую неделю — сравнить не с чем.</div></div>`;
   return `<div class="oc-side"><h3>Неделя ${wNum(st.week)} к неделе ${wNum(pk)} — улучшения и ухудшения</h3>
-    <div class="oc-sub">По числу NOK: меньше обнаружений — улучшение, больше — ухудшение.</div>
     ${compareTable('нед. ' + wNum(pk), 'нед. ' + wNum(st.week), catsOf(prev), catsOf(cur), prev.overall, cur.overall)}</div>`;
 }
 // ---------- за месяц: улучшения / ухудшения ----------
@@ -1714,7 +1712,6 @@ function confirmBlock(){
       <td>${fmt(o.nok)}<span class="oc-small">${pct(o.nok, res)}</span></td><td>${fmt(pend)}</td><td>${has ? `${fmt(rt)} · NOK ${fmt(rn)}` : '—'}</td><td>${status}</td></tr>`;
   }).join('');
   return `<div class="oc-panel"><h2>Подтверждение результатов — ${esc(st.facility)}</h2>
-    <div class="oc-sub">По неделе отбора проб: сколько результатов уже выдано и подтверждено. «Подтверждено» — пробы этой недели нашлись в журнале по дате выдачи результата с тем же числом OK и NOK.</div>
     <table class="oc-mtab"><thead><tr><th>Неделя отбора</th><th>Отобрано</th><th>Результат выдан</th><th>OK</th><th>NOK</th><th>Ждут</th><th>По дате выдачи</th><th>Подтверждение</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 // ---------- динамика по неделям: графики (SVG, без библиотек — работает и офлайн) ----------
@@ -1787,8 +1784,7 @@ function dynBlock(){
     return `<tr class="${cls || ''}"><th>${esc(nm)}</th>${ks.map(k => { const c = get(k), td = cellObj(c, pc); const v = nokOf(c); if (v != null) pc = v; return td; }).join('')}</tr>`;
   };
   const objTable = `<div class="dg-tw"><table class="dg-tab"><thead><tr><th>Объект</th>${ks.map(k => `<th${k === st.week ? ' class="dg-curc"' : ''}>нед. ${wNum(k)}</th>`).join('')}</tr></thead><tbody>
-    ${objs.map(nm => objRow(nm, k => (all[k].categories || {})[nm])).join('')}${objRow('Всего', k => all[k].overall, 'dg-tot')}</tbody></table></div>
-    <div class="oc-sub" style="margin-top:4px">В ячейке — число NOK за неделю; ниже — изменение к предыдущей неделе: <b class="oc-better">▼ меньше NOK (улучшение)</b>, <b class="oc-worse">▲ больше NOK (ухудшение)</b>, «=» — без изменений.</div>`;
+    ${objs.map(nm => objRow(nm, k => (all[k].categories || {})[nm])).join('')}${objRow('Всего', k => all[k].overall, 'dg-tot')}</tbody></table></div>`;
   const legend2 = objs.map((nm, oi) => `<button class="dg-lg${DYN_HIDE[nm] ? ' off' : ''}" data-obj="${esc(nm)}"><i style="background:${PALETTE[oi % PALETTE.length]}"></i>${esc(nm)}</button>`).join('');
   const ranges = [[8, '8 недель'], [12, '12 недель'], [26, 'полгода'], [0, 'все']].map(([v, t]) => `<button class="dg-rg${DYN_N === v ? ' on' : ''}" data-n="${v}">${t}</button>`).join('');
   return `<div class="oc-panel"><h2>Динамика по неделям — ${esc(st.facility)}</h2>
@@ -1842,8 +1838,7 @@ function placeBlock(){
   return `<div class="oc-panel">${head}
     <div class="oc-sub">${basis === 'result' ? 'по дате обнаружения (выдачи результата)' : 'по дате отбора проб'} · все корпуса участка, где хоть раз отбирали пробы, — по каждой неделе, были пробы или нет</div>
     <div class="dg-bar"><label class="dg-uchsel">Участок: <select id="plUch">${opts}</select></label></div>
-    <div class="dg-tw"><table class="dg-tab dg-fac"><thead><tr><th>Корпус</th>${ks.map(k => `<th${k === st.week ? ' class="dg-curc"' : ''}>нед. ${wNum(k)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
-    <div class="oc-sub" style="margin-top:4px">В ячейке — число смывов; ниже: <b style="color:#166534">OK</b> — всё в норме, <b class="oc-worse">NOK n</b> — обнаружено; ▲/▼ — изменение NOK к прошлой неделе с пробами; «ждут» — результатов ещё нет; «—» — проб не было.</div></div>`;
+    <div class="dg-tw"><table class="dg-tab dg-fac"><thead><tr><th>Корпус</th>${ks.map(k => `<th${k === st.week ? ' class="dg-curc"' : ''}>нед. ${wNum(k)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div></div>`;
 }
 box.addEventListener('change', e => { if (e.target.id === 'plUch') { PL_UCH = e.target.value; try { localStorage.setItem('nokUch', PL_UCH); } catch (err) {} draw(); } });
 box.addEventListener('click', e => {

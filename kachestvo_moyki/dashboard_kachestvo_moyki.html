@@ -269,19 +269,16 @@ footer.foot img { height:36px; width:auto; display:block; }
     <div class="grid2">
       <div class="card">
         <h2>Динамика среднего балла по месяцам</h2>
-        <p class="note">Простое среднее по всем оценкам корпусов за месяц. Норма &mdash; 8 баллов.</p>
         <div class="chart-box" style="height:300px"><canvas id="chartMonthly"></canvas></div>
       </div>
       <div class="card">
         <h2>Средний балл по зонам (весь период)</h2>
-        <p class="note">Отсортировано от худшей зоны к лучшей.</p>
         <div class="chart-box" style="height:300px"><canvas id="chartZones"></canvas></div>
       </div>
     </div>
     <div class="grid2">
       <div class="card">
         <h2>Топ-5 категорий несоответствий</h2>
-        <p class="note">По количеству упоминаний в примечаниях к оценкам.</p>
         <div class="chart-box" style="height:260px"><canvas id="chartTopCats"></canvas></div>
       </div>
       <div class="card">
@@ -294,7 +291,6 @@ footer.foot img { height:36px; width:auto; display:block; }
   <div class="panel" id="panel-dynamics">
     <div class="card">
       <h2>Сравнение по турам &mdash; полная история мойки по каждой площадке</h2>
-      <p class="note">Выберите площадку (вкладка), затем туры для сравнения (можно несколько сразу) &mdash; столбцы сравнивают выбранные туры бок о бок по каждому корпусу. Пунктир &mdash; норма (8 баллов).</p>
       <div class="wash-wrap">
         <div class="tabs" id="w-tabs"></div>
         <div class="kpi-row" id="w-kpi-row"></div>
@@ -314,7 +310,6 @@ footer.foot img { height:36px; width:auto; display:block; }
   <div class="panel" id="panel-categories">
     <div class="card">
       <h2>Частота категорий несоответствий</h2>
-      <p class="note">Если в акте для записи заполнен столбец «Контрольные точки» &mdash; категории берутся строго оттуда (сейчас это записи с 30.04.2026), без каких-либо предположений по тексту примечания. Для более старых записей, где эта колонка ещё не заполнена, категория определяется по ключевым словам в примечании. Служебные пометки («с первого раза», «нет данных» и т.п.) исключены. По умолчанию &mdash; все корпуса; можно сузить до зоны или одного корпуса.</p>
       <div class="nav-chips" id="catFreqZoneNav"></div>
       <div style="margin-bottom:10px">
         <select id="catFreqCorpusSel" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--navy);font-weight:600;background:#fff"></select>
@@ -323,7 +318,6 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Категории по месяцам</h2>
-      <p class="note">То же самое (отдельные несоответствия, а не записи), в разбивке по месяцам. По умолчанию &mdash; все корпуса; можно сузить до одной зоны или до одного конкретного корпуса.</p>
       <div class="nav-chips" id="catMonthZoneNav"></div>
       <div style="margin-bottom:10px">
         <select id="catMonthCorpusSel" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--navy);font-weight:600;background:#fff"></select>
@@ -332,7 +326,7 @@ footer.foot img { height:36px; width:auto; display:block; }
         <div class="scroll-area" style="flex:1;min-width:400px"><div id="catMonthChartInner" style="height:340px;min-width:900px;position:relative;"><canvas id="chartCatMonth"></canvas></div></div>
         <div style="width:480px;flex-shrink:0">
           <div style="display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap">
-            <p class="note" style="margin:0">Период (та же выборка по зоне/корпусу):</p>
+            <span class="note" style="margin:0">Период:</span>
             <select id="catMonthPieSel" style="border:1px solid var(--border);border-radius:8px;padding:5px 9px;font-size:12px;color:var(--navy);font-weight:600;background:#fff"></select>
           </div>
           <div style="height:460px;position:relative"><canvas id="chartCatMonthPie"></canvas></div>
@@ -341,26 +335,18 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Категории по зонам (тепловая карта)</h2>
-      <p class="note">Количество отдельных несоответствий этой категории (по точкам/запятым в примечании) по каждой зоне.</p>
       <div id="catZoneTableWrap"></div>
     </div>
     <div class="card">
-      <h2>Средний балл при упоминании категории</h2>
-      <p class="note">Средний балл записей, где встречается несоответствие данной категории &mdash; помогает понять, какие категории чаще всего сопровождают низкие оценки.</p>
-      <div id="catScoreTableWrap"></div>
-    </div>
-    <div class="card">
       <h2>Категории по корпусам</h2>
-      <p class="note">Выберите зону/участок: категории по каждому корпусу этой зоны.</p>
       <div class="nav-chips" id="catCorpZoneNav"></div>
       <h3>Категории по корпусам &mdash; <span id="catCorpZoneLabel"></span></h3>
       <div class="scroll-area"><div id="catCorpTableWrap"></div></div>
     </div>
     <div class="card">
       <h2>Несоответствия по корпусам &mdash; по дням</h2>
-      <p class="note">Круговая диаграмма: сколько отдельных несоответствий по контрольным точкам пришлось на каждый корпус в выбранный день приёмки.</p>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-        <p class="note" style="margin:0">День:</p>
+        <span class="note" style="margin:0">День:</span>
         <button id="catDayPiePrev" title="Предыдущий день" style="border:1px solid var(--border);background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--navy);font-weight:700">&larr;</button>
         <select id="catDayPieSel" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--navy);font-weight:600;background:#fff"></select>
         <button id="catDayPieNext" title="Следующий день" style="border:1px solid var(--border);background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--navy);font-weight:700">&rarr;</button>
@@ -381,7 +367,6 @@ footer.foot img { height:36px; width:auto; display:block; }
           <button class="upload-btn" id="incubMediaUnpinBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px;background:#fff;color:var(--red);border:1px solid var(--red)">Отвязать</button>
           <span class="upload-status" id="incubMediaStatus" style="text-align:left;max-width:none">Папка с фото/видео Инкубатория не привязана.</span>
         </div>
-        <p class="note" style="margin:-4px 0 10px">В папке &mdash; подпапки по дням и залам, например <b>2026-07-15 / Зал вывода / фото.jpg</b> (можно и наоборот: <b>Зал вывода / 15.07.2026 / &hellip;</b>). Дату можно не выносить в папку, если она есть в имени файла (IMG_20260715_&hellip;). Зал &mdash; по словам «вывод», «перевод», «сортир» в пути, остальное попадёт в «Инкубатор: прочее». Презентации <b>.pptx</b> читаются как у выращивания: дата &mdash; из имени файла или заголовка слайда, зал &mdash; из подписи к фото («зал вывода, полки шкафа»), иначе из имени файла/папки. <b>Если презентации Инкубатория лежат в общей папке выращивания</b> (кнопка на вкладке «Чек-лист по турам») &mdash; отдельно привязывать не нужно: слайды с залом или со словом «Инкубатор» попадут сюда сами.</p>
         <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
           <div style="width:260px;height:260px;position:relative;flex-shrink:0"><canvas id="chartIncDayPie"></canvas></div>
           <div style="flex:1;min-width:280px">
@@ -401,7 +386,6 @@ footer.foot img { height:36px; width:auto; display:block; }
       </div>
       <div style="display:none">
       <h3 style="margin-top:16px">Баллы по корпусам за выбранный день</h3>
-      <p class="note" style="margin:2px 0 10px">Балл приёмки мойки (0&ndash;10) по каждому принятому в этот день корпусу &mdash; включая корпуса без замечаний.</p>
       <div id="catDayPieScores"></div>
       <h3 style="margin-top:16px">Инкубатор и ЗПП &mdash; баллы за выбранный день</h3>
       <div id="manualZoneScores" style="display:flex;gap:12px;flex-wrap:wrap"></div>
@@ -409,7 +393,6 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Категории по неделям</h2>
-      <p class="note">Столбцы &mdash; количество отдельных несоответствий этой категории по неделям (ISO). По умолчанию &mdash; все корпуса; можно сузить до зоны или одного корпуса, как в разбивке по месяцам.</p>
       <div class="nav-chips" id="catWeekZoneNav"></div>
       <div style="margin-bottom:10px">
         <select id="catWeekCorpusSel" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--navy);font-weight:600;background:#fff"></select>
@@ -427,7 +410,6 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>История &mdash; по выбранной неделе</h2>
-      <p class="note">Выберите неделю (или тур приёмки, если цикл не совпадает с календарной неделей) &mdash; ниже развернётся история по дням, свежие сверху: строки &mdash; даты приёмки, столбцы &mdash; корпуса Выращивания, последние два столбца &mdash; Инкубаторий и ЗПП. В ячейке &mdash; балл приёмки мойки (ЗПП &mdash; по 5-балльной шкале). &laquo;&ndash;&raquo; &mdash; в этот день приёмки не было. Показаны все 7 дней недели, поэтому баллы Инкубатория и ЗПП видны и в дни без приёмок по Выращиванию &mdash; их можно вписать прямо в ячейку.</p>
       <div class="nav-chips" id="catHistZoneNav"></div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <select id="catHistPeriodSel" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--navy);font-weight:600;background:#fff">
@@ -457,7 +439,6 @@ footer.foot img { height:36px; width:auto; display:block; }
         <label class="chip" style="cursor:pointer;margin:0">&#8679; Загрузить баллы (.json)<input type="file" id="catHistImport" accept=".json" style="display:none"></label>
         <span class="note" id="catHistSyncMsg" style="margin:0;font-weight:600"></span>
       </div>
-      <p class="note" style="margin-top:-4px">Баллы Инкубатория и ЗПП хранятся в этом браузере. Чтобы они не терялись на другом компьютере &mdash; нажмите &laquo;Сохранить файл с баллами&raquo;: скачается этот же дашборд, но с уже вшитыми внутрь баллами, и дальше работайте с ним (можно положить в общую папку). Либо переносите только баллы файлом .json.</p>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
         <label class="upload-btn" style="font-size:12.5px;padding:7px 14px">
           <span>&#8635; Акт Инкубатория (.xlsx)</span>
@@ -476,7 +457,6 @@ footer.foot img { height:36px; width:auto; display:block; }
         <button class="upload-btn" id="unpinZppBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px;background:#fff;color:#991b1b;border-color:#fca5a5">&#10005; Отвязать</button>
         <span class="upload-status" id="zppUploadStatus" style="text-align:left;max-width:none">Акт ЗПП не прикреплён &mdash; баллы вводятся вручную.</span>
       </div>
-      <p class="note" style="margin-top:-2px">Из акта Инкубатория берётся только балл по дням (с 01.04.2026, раньше акт не вёлся) и только для этой истории &mdash; в КПЭ, категории несоответствий, сравнение по турам и график ПР/Р он не попадает. Балл из файла подставляется в столбец ИНКУБАТОРИЯ; акт ЗПП подключается так же и заполняет столбец ЗПП (своя 5-балльная шкала): балл берётся из 14-й колонки листа («Средний балл по ЗПП»); если она пустая — по заголовку со словами «средний балл». Если вы вписали в ячейку своё значение вручную, оно остаётся главнее файла.</p>
       <div class="hist-legend" id="catHistLegend"></div>
       <div class="hist-title" style="display:flex;align-items:center;gap:10px;justify-content:space-between">
         <span id="catHistTitle"></span>
@@ -489,7 +469,6 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Еженедельный средний балл &mdash; Инкубаторий, ЗПП, Выращивание &mdash; УКПФ</h2>
-      <p class="note">Последние 14 недель &middot; пунктир цвета объекта &mdash; линия тренда &middot; норма &ge; 8 (пунктир) &middot; ЗПП коридор 3&ndash;5 &middot; план 10 (серый). Выращивание &mdash; средний балл акта приёма мойки; Инкубатор и ЗПП &mdash; средний из дневных баллов (акт/ручной ввод в «Истории»).</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 4px;font-size:12px;color:#6b7a99">
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block"></span>Выращивание факт</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#7c3aed;display:inline-block"></span>Инкубатор факт</span>
@@ -509,7 +488,6 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Месячный средний балл &mdash; Инкубаторий, ЗПП, Выращивание &mdash; УКПФ</h2>
-      <p class="note">Текущий месяц &mdash; средний балл с 1-го числа по сегодня (светлая точка, под месяцем — «1–21 (текущий)») &middot; пунктир цвета объекта &mdash; линия тренда &middot; норма &ge; 8 (пунктир) &middot; ЗПП коридор 3&ndash;5 &middot; план 10 (серый). Выращивание &mdash; средний балл акта приёма мойки; Инкубатор и ЗПП &mdash; средний из дневных баллов (акт/ручной ввод в «Истории»).</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 4px;font-size:12px;color:#6b7a99">
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block"></span>Выращивание факт</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#7c3aed;display:inline-block"></span>Инкубатор факт</span>
@@ -529,7 +507,6 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Слайд для презентации &mdash; «Качество мойки»</h2>
-      <p class="note">Всё на одной картинке, как на слайде: слева вверху &mdash; История по выбранной неделе, справа вверху &mdash; Несоответствия по корпусам за выбранный день, внизу &mdash; еженедельный и месячный средний балл. Неделя и день берутся из того, что выбрано в карточках выше. Нажмите «Копировать слайд» и вставьте в PowerPoint через Ctrl+V на пустой слайд шаблона.</p>
       <div class="action-bar" style="margin-bottom:10px">
         <button id="slidePptx" class="chip" style="cursor:pointer;font-weight:800;background:#16A9B4;color:#fff;border-color:#16A9B4">&#128202; Скачать PowerPoint (.pptx)</button>
         <button id="slideShowBtn" class="chip" style="cursor:pointer;font-weight:800;background:#DC2626;color:#fff;border-color:#DC2626" title="Слайд на весь экран; клик по контрольной точке открывает фото/видео — для оперативки">&#128250; Показ слайда (для оперативки)</button>
@@ -549,7 +526,6 @@ footer.foot img { height:36px; width:auto; display:block; }
   <div class="panel" id="panel-schedule">
     <div class="card">
       <h2>График санитарного разрыва &mdash; привязка к Акт приёма мойки</h2>
-      <p class="note">Код «ПР/Р» в графике санитарного разрыва отмечает дату приёмки мойки по корпусу. Ниже &mdash; сверка этой даты с фактической записью в Акт приёма мойки (&plusmn;4 дня).</p>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
         <label class="upload-btn" style="font-size:12.5px;padding:7px 14px">
           <span>&#8635; Прикрепить график ПР/Р на новый месяц (.xlsx)</span>
@@ -559,18 +535,15 @@ footer.foot img { height:36px; width:auto; display:block; }
         <button class="upload-btn" id="unpinSchedBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px;background:#fff;color:#991b1b;border-color:#fca5a5">&#10005; Отвязать</button>
         <span class="upload-status" id="scheduleUploadStatus">Загружен график: Июль_26.xlsx</span>
       </div>
-      <p class="note" style="margin-top:0">Ожидается тот же формат, что и в Июль_26.xlsx: один лист, колонки «Цех»/«Этаж», код «ПР/Р» в ячейках по датам в строке 7. Загруженный график добавляется к уже имеющимся датам (старые не стираются).</p>
       <div class="kpi-row" id="schedKpiRow"></div>
     </div>
     <div class="grid2">
       <div class="card">
         <h2>Ближайшие плановые приёмки мойки</h2>
-        <p class="note">Даты &laquo;ПР/Р&raquo; из графика на июль 2026, которые ещё не наступили (после 02.08.2026).</p>
         <div id="upcomingTableWrap"></div>
       </div>
       <div class="card">
         <h2>Последние сверки план/факт</h2>
-        <p class="note">Плановая дата &laquo;ПР/Р&raquo; против фактической записи в Акт приёма мойки.</p>
         <div id="matchedTableWrap"></div>
       </div>
     </div>
@@ -579,20 +552,17 @@ footer.foot img { height:36px; width:auto; display:block; }
   <div class="panel" id="panel-sources">
     <div class="card">
       <h2>Закреплённые акты</h2>
-      <p class="note">Закрепите три акта один раз. При каждом входе в дашборд они перечитываются сами, а пока дашборд открыт — проверяются каждые 30 секунд: сохранили акт в Excel — данные обновились без кнопок. Файлы остаются у вас на компьютере, дашборд только читает их.</p>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px">
         <button class="upload-btn" data-pickall="1" style="cursor:pointer;background:#166534;font-size:14px;padding:11px 20px">&#128206; Закрепить акты — выбрать все 3 файла сразу</button>
         <span class="note" style="margin:0">В окне выбора выделите три файла (Ctrl + клик). Какой акт какой — определяется по названию: «Инкуб…» — Инкубаторий, «ЗПП» — ЗПП, остальной — Выращивание.</span>
       </div>
       <div class="src-grid" id="srcGrid"></div>
-      <p class="note" style="margin-top:12px">Если при входе появилась кнопка <b>«Подтянуть закреплённые акты»</b> — нажмите её: так браузер просит подтвердить доступ к файлам. В окне Chrome можно выбрать «Разрешать при каждом посещении», тогда спрашивать больше не будет.</p>
     </div>
   </div>
 
   <div class="panel" id="panel-checklist">
     <div class="card">
       <h2>Чек-лист по турам &mdash; вид как в Оценка_мойки_Цеха_СТО.xlsx (лист «Айыртау»)</h2>
-      <p class="note">Корпуса &mdash; колонки, контрольные точки (Ф-БиС-07) &mdash; строки. Значение &mdash; 1 (красный, есть несоответствие по этой точке в примечании к оценке) или 0 (зелёный, замечаний нет). Выберите зону/участок и тур.</p>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
         <button class="upload-btn" id="pinMediaBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px">&#128279; Привязать папку с фото/видео</button>
         <button class="upload-btn" id="unpinMediaBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px;background:#fff;color:var(--red);border:1px solid var(--red)">Отвязать</button>
@@ -3175,6 +3145,7 @@ function renderCatZoneTable() {
 }
 
 function renderCatScoreTable() {
+  if (!document.getElementById('catScoreTableWrap')) return;
   const { freq } = computeCategories(RECORDS);
   const overall = round2(avg(RECORDS.map((r) => r.score)));
   let html = '<table class="dt"><thead><tr><th>Категория</th><th>Несоответствий</th><th>Записей с этой категорией</th><th>Ср. балл при упоминании</th><th>Отличие от общего среднего</th></tr></thead><tbody>';

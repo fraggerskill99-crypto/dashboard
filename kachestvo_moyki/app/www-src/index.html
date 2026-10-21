@@ -65,11 +65,11 @@
 <body>
 <div id="strip" aria-hidden="true"></div>
 <nav id="tabs">
-  <button data-tab="moika" class="on" title="Баллы приёмки мойки, несоответствия по контрольным точкам, слайд — Ctrl+1">🧽 Качество мойки</button>
-  <button data-tab="nok" title="Обнаружения NOK по Своду микробиологии по неделям — Ctrl+2">🧫 NOK-дашборд</button>
-  <button data-tab="mb" title="Балл мойки перед обнаружением МБ, фото мойки по корпусу — Ctrl+3">🔬 Мойка и МБ</button>
-  <button data-tab="week" title="Фото/видео несоответствий по неделям — Ctrl+4">📷 Фотофиксация по неделям</button>
-  <button data-tab="nc" title="Несоответствия из ваших презентаций — по датам — Ctrl+5">📍 Несоответствие по площадкам</button>
+  <button data-tab="moika" class="on" title="Ctrl+1">🧽 Качество мойки</button>
+  <button data-tab="nok" title="Ctrl+2">🧫 NOK-дашборд</button>
+  <button data-tab="mb" title="Ctrl+3">🔬 Мойка и МБ</button>
+  <button data-tab="week" title="Ctrl+4">🎬 Качество мойки видео отчёт</button>
+  <button data-tab="nc" title="Ctrl+5">📍 Несоответствие по площадкам</button>
   <span class="sp"></span>
   <img class="brand" alt="aitas ukpf — усть-каменогорская птицефабрика" src="{{LOGO}}">
 </nav>
@@ -77,14 +77,14 @@
   <iframe id="f-moika" src="moika.html" title="Качество мойки"></iframe>
   <iframe id="f-nok" data-src="nok.html" title="NOK-дашборд" hidden></iframe>
   <iframe id="f-mb" data-src="mb.html" title="Мойка и МБ" hidden></iframe>
-  <iframe id="f-week" data-src="week.html" title="Фотофиксация по неделям" hidden></iframe>
+  <iframe id="f-week" data-src="week.html" title="Качество мойки видео отчёт" hidden></iframe>
   <iframe id="f-nc" data-src="nc.html" title="Несоответствие по площадкам" hidden></iframe>
 </main>
 <footer class="app-ft">
   <span class="sp"></span>
-  <span class="hint" id="dataHint"></span>
-  <span class="hint" id="autoSt" title="Данные обновляются сами: файлы и папки проверяются каждую минуту и при возврате на вкладку"></span>
-  <span class="hint" title="Номер версии — по нему видно, что открыта свежая сборка">версия {{VERSION}}</span>
+  <span class="hint" id="dataHint" hidden></span>
+  <span class="hint" id="autoSt"></span>
+  <span class="hint">версия {{VERSION}}</span>
   <img alt="aitas" src="{{LOGO_SMALL}}">
 </footer>
 <div id="toast" hidden></div>
@@ -494,7 +494,6 @@
         pptxReport() +
         // отдельная вкладка «Несоответствие по площадкам» — свои папки с презентациями
         '<div class="cfg-sec">Несоответствие по площадкам — папки с презентациями</div>' +
-        '<p class="cfg-hint">Папки с презентациями (.pptx). Вид определяется по тексту слайда: «Несоответствие» — во вкладку «📍 Несоответствие по площадкам», «Качество мойки» — в «Качество мойки», «Мойку и МБ» и «Фотофиксацию». Оба вида могут лежать в одной папке. Подпапки тоже читаются; новые и изменённые презентации подтягиваются сами.</p>' +
         state.folders.filter((m) => m.role === 'nc').map((m) => folderRow(m)).join('') +
         `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="nc">+ Папка с презентациями несоответствий</button></div>` +
         pptxReport('nc') +

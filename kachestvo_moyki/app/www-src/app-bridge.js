@@ -31,17 +31,8 @@
   }[page];
   if (HIDE) {
     const st = document.createElement('style');
-    st.textContent = HIDE.join(',\n') + ' { display: none !important; }\n' +
-      '.app-what { margin: 4px 0 0; font-size: 14.5px; line-height: 1.5; color: #3f3a2c; max-width: 900px; }';
+    st.textContent = HIDE.join(',\n') + ' { display: none !important; }';
     document.documentElement.appendChild(st);
-    // короткая подсказка «что на этой вкладке» вместо служебных пояснений
-    const WHAT = {
-      'moika.html': 'Баллы приёмки мойки по корпусам и несоответствия по контрольным точкам. Разделы — ниже: Обзор · Сравнение по турам · Категории несоответствий · График СР · Чек-лист.',
-    }[page];
-    if (WHAT) document.addEventListener('DOMContentLoaded', () => {
-      const h = document.querySelector('header.top h1'); if (!h) return;
-      const d = document.createElement('p'); d.className = 'app-what'; d.textContent = WHAT; h.after(d);
-    });
   }
 
   // ---------- оформление: фон, орнамент и логотипы — у оболочки приложения (шаблон презентации УКПФ),

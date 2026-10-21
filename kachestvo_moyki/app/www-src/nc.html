@@ -76,14 +76,13 @@
 <body>
 <div class="wrap">
   <h1>📍 Несоответствие по площадкам — по датам</h1>
-  <p class="sub">Несоответствия из ваших презентаций — по датам, отдельно Выращивание, Инкубатор и ЗПП. Сверху — 5 самых частых контрольных точек. Нажмите на фото, чтобы открыть его крупно.</p>
   <div class="bar">
     <span style="font-size:13px;color:var(--muted)">Период:</span>
     <select id="psel" title="Период или отдельная дата"></select>
     <button id="reload" title="Перечитать">⟳ Обновить</button>
   </div>
   <div class="chips" id="chips"></div>
-  <div class="crit" id="crit"></div>
+  <div class="crit" id="crit" style="display:none"></div>
   <div id="list"></div>
 </div>
 <div class="box" id="box" hidden><div class="in"><div class="hd"><b id="boxT"></b><span id="boxN"></span><button type="button" id="boxX" title="Закрыть (Esc)">×</button></div><div class="st" id="boxS"></div><button type="button" class="nv p" id="boxP">‹</button><button type="button" class="nv n" id="boxNx">›</button></div></div>
@@ -144,8 +143,8 @@
     if (!S.items.length) {
       $('chips').innerHTML = ''; $('crit').innerHTML = '';
       $('list').innerHTML = `<div class="empty">${a ? (a.ready()
-        ? 'В указанных папках пока нет презентаций (.pptx) с несоответствиями. Они появятся сами, как только окажутся в папках.'
-        : 'Укажите папки с презентациями: «⚙ Настройки» внизу слева → раздел «Несоответствие по площадкам» → «+ Папка с презентациями». Дальше данные подтягиваются сами.')
+        ? 'Несоответствий пока нет.'
+        : 'Папки с презентациями не выбраны (⚙ Настройки).')
         : 'Вкладка работает внутри дашборда УКПФ.'}</div>`;
       return;
     }
