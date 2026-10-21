@@ -36,10 +36,11 @@ const demoState = {
   },
   folders: [
     { name: 'УКПФ (OneDrive)', path: 'OneDrive…\\Служба Ветеринарной Санитарии и БиБ\\УКПФ', roleTitle: 'акты', ok: true },
-    { name: 'Несоответствия (OneDrive)', path: 'OneDrive…\\Рабочий стол\\Несоответствие еженедельно', roleTitle: 'фото/видео и презентации', ok: true },
+    { name: 'Несоответствия (OneDrive)', path: 'OneDrive…\\Рабочий стол\\Несоответствие еженедельно', role: 'media', roleTitle: 'фото/видео и презентации', ok: true },
     { name: 'СВОД МБ (OneDrive)', path: 'OneDrive…\\Рабочий стол\\BI_Business-Local Labs - СВОД', roleTitle: 'Свод МБ', ok: true },
   ],
-  sharepoint: [{ name: 'Папка УКПФ в Teams', link: 'https://aitas.sharepoint.com/:f:/s/msteams_6c8e7e/…', lastSync: null }],
+  sharepoint: [{ name: 'Несоответствия (Инкубатор, Выращивание, ЗПП)', link: 'https://aitas.sharepoint.com/:f:/s/msteams_6c8e7e/…', lastSync: new Date().toISOString(),
+    account: { email: 'рабочая.учётка@aitas.kz' }, access: { download: true } }],
   lastRefresh: null,
 };
 const banner = `<script>window.__APP_PREVIEW = ${JSON.stringify(demoState)};</script>
