@@ -489,11 +489,12 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Еженедельный средний балл &mdash; Инкубаторий, ЗПП, Выращивание &mdash; УКПФ</h2>
-      <p class="note">Один график &middot; норма &ge; 8 (пунктир) &middot; ЗПП коридор 3&ndash;5 &middot; план 10 (серый). Выращивание &mdash; средний балл акта приёма мойки; Инкубатор и ЗПП &mdash; средний из дневных баллов (акт/ручной ввод в «Истории»).</p>
+      <p class="note">Последние 14 недель &middot; пунктир цвета объекта &mdash; линия тренда &middot; норма &ge; 8 (пунктир) &middot; ЗПП коридор 3&ndash;5 &middot; план 10 (серый). Выращивание &mdash; средний балл акта приёма мойки; Инкубатор и ЗПП &mdash; средний из дневных баллов (акт/ручной ввод в «Истории»).</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 4px;font-size:12px;color:#6b7a99">
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block"></span>Выращивание факт</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#7c3aed;display:inline-block"></span>Инкубатор факт</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#0891b2;display:inline-block"></span>ЗПП факт</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;border-top:2px dashed #dc2626;display:inline-block"></span><span style="width:22px;border-top:2px dashed #7c3aed;display:inline-block"></span><span style="width:22px;border-top:2px dashed #0891b2;display:inline-block"></span>Тренд (по каждому объекту)</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;border-top:2px dashed rgba(220,38,38,0.5);display:inline-block"></span>Норма 8</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;border-top:2px dashed rgba(34,197,94,0.6);display:inline-block"></span>ЗПП коридор 5</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;border-top:2px dashed rgba(34,197,94,0.35);display:inline-block"></span>ЗПП коридор 3</span>
@@ -2522,6 +2523,11 @@ function buildQualitySlide(pptx, D) {
           { name: 'ЗПП 5', labels, values: band(5) }, { name: 'ЗПП 3', labels, values: band(3) }],
         options: { chartColors: ['94A3B8', 'E88A8A', '6CC08A', '9ED3AF'], lineSize: 1, lineDash: 'dash', lineDataSymbol: 'none', showValue: false } },
       // каждая линия — отдельная группа, чтобы у подписей был свой цвет (как на дашборде)
+      // линии тренда (только недели) — пунктиром цвета объекта, без подписей
+      ...(S.trend ? [['Тренд Выращивание', S.trend.vyr, RED], ['Тренд Инкубаторий', S.trend.ink, PUR], ['Тренд ЗПП', S.trend.zpp, TEAL]]
+        .filter(([, v]) => v.some((x) => x != null)).map(([name, vals, col]) => ({
+          type: pptx.ChartType.line, data: [{ name, labels, values: clean(vals) }],
+          options: { chartColors: [col], lineSize: 1.5, lineDash: 'dash', lineDataSymbol: 'none', showValue: false } })) : []),
       ...[['Выращивание', S.vyr, RED], ['Инкубаторий', S.ink, PUR], ['ЗПП', S.zpp, TEAL]].map(([name, vals, col]) => ({
         type: pptx.ChartType.line, data: [{ name, labels, values: clean(vals) }],
         options: { chartColors: [col], lineSize: 2.25, lineDataSymbol: 'circle', lineDataSymbolSize: isWeek ? 6 : 8,
@@ -2540,7 +2546,7 @@ function buildQualitySlide(pptx, D) {
   };
   const W = D.week, M = D.month;
   if (W) tripleChart(W, x1, yBot, colW, botH, 'Еженедельный средний балл — Инкубаторий, ЗПП, Выращивание — УКПФ',
-    'Средний балл приёмки мойки по неделям · норма ≥ 8 · ЗПП коридор 3–5 · план 10', true);
+    'Средний балл приёмки мойки за 14 недель · пунктир — тренд объекта · норма ≥ 8 · ЗПП 3–5 · план 10', true);
   if (M) tripleChart(M, x2, yBot, colW, botH, 'Месячный средний балл — Инкубаторий, ЗПП, Выращивание — УКПФ',
     'Средний балл приёмки мойки по месяцам · норма ≥ 8 · ЗПП коридор 3–5 · план 10', false);
   return pptx;
@@ -2552,8 +2558,8 @@ function buildQualitySlide(pptx, D) {
 // поэтому «таблетки» лежат так же, как на картинке дашборда, и не налезают.
 const C15 = 'http://schemas.microsoft.com/office/drawing/2012/chart';
 function applyLabelPlacement(x, place) {
-  const pts = Math.max(0, ...Array.from(x.matchAll(/<c:ptCount val="(\d+)"/g), (m) => +m[1]));
-  const P = place ? (pts > 14 ? place.week : place.month) : null;
+  // недельный график — подписи категорий «Н41»; месячный — «янв»…
+  const P = place ? (/<c:v>Н\d+<\/c:v>/.test(x) ? place.week : place.month) : null;
   let serIdx = 0;
   return x.replace(/<c:dLbls>([\s\S]*?)<\/c:dLbls>/g, (blk, inner) => {
     if (!/<c:spPr><a:solidFill><a:srgbClr val="FFFFFF"\/><\/a:solidFill><a:ln/.test(inner)) return blk;
@@ -3342,16 +3348,28 @@ const tripleValLabelPlugin = {
   },
 };
 
-// period: 'week' | 'month'. Берём текущий год (как в трекерах — нед.6… / янв…).
+// period: 'week' | 'month'. Недели — последние 14 завершённых, месяцы — текущий год с января.
+const WEEKS_SHOWN = 14;
+const dstr = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+// линия тренда (наименьшие квадраты) по неделям, где есть значение; меньше 2 точек — тренда нет
+function trendLine(vals) {
+  const pts = vals.map((v, i) => [i, v]).filter((p) => p[1] != null);
+  if (pts.length < 2) return vals.map(() => null);
+  const n = pts.length, sx = pts.reduce((a, p) => a + p[0], 0), sy = pts.reduce((a, p) => a + p[1], 0);
+  const sxx = pts.reduce((a, p) => a + p[0] * p[0], 0), sxy = pts.reduce((a, p) => a + p[0] * p[1], 0);
+  const k = (n * sxy - sx * sy) / (n * sxx - sx * sx), b = (sy - k * sx) / n;
+  const first = pts[0][0], last = pts[n - 1][0];
+  return vals.map((_, i) => (i >= first && i <= last ? round2(Math.min(10.5, Math.max(0, k * i + b))) : null));
+}
 function computeTripleSeries(period) {
   const year = String(TODAY.getFullYear());
   const keyOf = (d) => (period === 'week' ? isoWeekKey(d) : d.slice(0, 7));
   const buckets = {};
   const add = (d, zone, v) => {
     if (v === null || v === undefined || isNaN(v)) return;
-    if (d.slice(0, 4) !== year && !(period === 'week' && isoWeekKey(d).slice(0, 4) === year)) return;
+    // недели — последние 14 (могут переходить через Новый год), месяцы — текущий год
+    if (period !== 'week' && d.slice(0, 4) !== year) return;
     const k = keyOf(d);
-    if (period === 'week' && k.slice(0, 4) !== year) return;
     const b = buckets[k] || (buckets[k] = { vyr: [], ink: [], zpp: [] });
     b[zone].push(Number(v));
   };
@@ -3371,8 +3389,15 @@ function computeTripleSeries(period) {
   let keys = [];
   const lastData = Object.keys(buckets).sort().pop();
   if (period === 'week') {
-    const lastWk = lastData ? parseInt(lastData.split('-W')[1], 10) : 5;
-    for (let w = 6; w <= lastWk; w++) keys.push(`${year}-W${String(w).padStart(2, '0')}`);
+    // 14 завершённых недель подряд; последняя — последняя неделя с данными
+    if (lastData) {
+      const set = new Set();
+      const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+      for (let i = 0; i < 400 && isoWeekKey(dstr(t)) > lastData; i++) t.setDate(t.getDate() - 7);
+      for (let i = 0; set.size < WEEKS_SHOWN && i < 60; i++) { set.add(isoWeekKey(dstr(t))); t.setDate(t.getDate() - 7); }
+      keys = [...set].sort();
+    }
+    Object.keys(buckets).forEach((k) => { if (!keys.includes(k)) delete buckets[k]; });
   } else {
     const lastMo = lastData ? parseInt(lastData.slice(5, 7), 10) : 0;
     for (let m = 1; m <= lastMo; m++) keys.push(`${year}-${String(m).padStart(2, '0')}`);
@@ -3382,12 +3407,14 @@ function computeTripleSeries(period) {
   const labels = keys.map((k) => period === 'week'
     ? 'Н' + parseInt(k.split('-W')[1], 10)
     : MONTHS_RU[parseInt(k.slice(5, 7), 10) - 1]);
-  return {
+  const S = {
     keys, labels,
     vyr: keys.map((k) => mean(buckets[k].vyr)),
     ink: keys.map((k) => mean(buckets[k].ink)),
     zpp: keys.map((k) => mean(buckets[k].zpp)),
   };
+  if (period === 'week') S.trend = { vyr: trendLine(S.vyr), ink: trendLine(S.ink), zpp: trendLine(S.zpp) };
+  return S;
 }
 
 // big=true — версия для слайда: крупные шрифты/точки, фон слайда.
@@ -3420,6 +3447,11 @@ function tripleChartConfig(S, big) {
         factDs('Выращивание факт', S.vyr, TRIPLE_COLORS.vyr),
         factDs('Инкубатор факт', S.ink, TRIPLE_COLORS.ink),
         factDs('ЗПП факт', S.zpp, TRIPLE_COLORS.zpp),
+        // линии тренда — по одной на объект, пунктиром цвета объекта
+        ...(S.trend ? [['Выращивание', 'vyr'], ['Инкубатор', 'ink'], ['ЗПП', 'zpp']].map(([nm, z]) => ({
+          label: 'Тренд ' + nm, data: S.trend[z], _trend: true, borderColor: TRIPLE_COLORS[z].line, borderWidth: 1.6 * k,
+          borderDash: [7 * k, 4 * k], pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0, spanGaps: true, datalabels: { display: false },
+        })) : []),
       ],
     },
     options: {
@@ -3432,7 +3464,7 @@ function tripleChartConfig(S, big) {
         datalabels: { display: false },
         tooltip: big ? { enabled: false } : {
           backgroundColor: '#1c2333',
-          filter: (i) => i.datasetIndex >= 4 && i.raw != null,
+          filter: (i) => i.datasetIndex >= 4 && i.raw != null && !i.dataset._trend,
           callbacks: { label: (i) => ` ${i.dataset.label}: ${Number(i.raw).toFixed(2)}` },
         },
       },
@@ -3481,8 +3513,8 @@ const TRIPLE_LEGEND = [
 ];
 CHART_EXPORT_HEADERS.catweekscore = {
   title: 'Еженедельный средний балл — Инкубаторий, ЗПП, Выращивание — УКПФ',
-  sub: 'Средний балл приёмки мойки по неделям · норма ≥ 8 (пунктир) · ЗПП коридор 3–5 · план 10 (серый)',
-  legend: TRIPLE_LEGEND,
+  sub: 'Средний балл приёмки мойки за 14 недель · тренд по каждому объекту · норма ≥ 8 · ЗПП коридор 3–5 · план 10',
+  legend: TRIPLE_LEGEND.slice(0, 3).concat([{ dot: false, color: '#475569', label: 'Тренд (пунктир цвета объекта)' }], TRIPLE_LEGEND.slice(3)),
 };
 CHART_EXPORT_HEADERS.catmonthscore = {
   title: 'Месячный средний балл — Инкубаторий, ЗПП, Выращивание — УКПФ',
