@@ -2254,8 +2254,10 @@ setupFileLink({
 // ===================== ПРИВЯЗКА ПАПКИ (Свод МБ + Акт приёмки мойки) =====================
 const DIR = {handle: null, seen: {}, busy: false};
 // «свод» — отдельным словом («Свод МБ»), а не «Сводная таблица»
-const dirIsMb = n => /(^|[^а-яё])свод(?![а-яё])|журнал|(^|[^а-яё])мб(?![а-яё])|микроб/i.test(n) || (location.protocol !== 'app:' && /\.csv$/i.test(n));
-const dirIsAkt = n => /акт|мойк/i.test(n) && !dirIsMb(n);
+// ППР (планово-предупредительный ремонт) — не наши данные
+const dirIsPpr = n => /(^|[^а-яёa-z])ппр([^а-яёa-z]|$)/i.test(n);
+const dirIsMb = n => !dirIsPpr(n) && (/(^|[^а-яё])свод(?![а-яё])|журнал|(^|[^а-яё])мб(?![а-яё])|микроб/i.test(n) || (location.protocol !== 'app:' && /\.csv$/i.test(n)));
+const dirIsAkt = n => /акт|мойк/i.test(n) && !dirIsMb(n) && !dirIsPpr(n);
 async function dirPick(handle){
   const files = [];
   // свод и акт ищем и в подпапках (папка SharePoint обычно разложена по папкам)
@@ -2264,6 +2266,7 @@ async function dirPick(handle){
   const maxDepth = location.protocol === 'app:' ? 1 : 5;
   async function walk(dir, depth, inSvod){
     for await (const h of dir.values()){
+      if (dirIsPpr(h.name)) continue;   // папки и файлы ППР не берём
       if (h.kind === 'directory'){ if (depth < maxDepth && !h.name.startsWith('.')) await walk(h, depth + 1, inSvod || (DIR.svodNames || []).includes(h.name) || /(^|[^а-яё])свод(?![а-яё])/i.test(h.name)); continue; }
       if (h.kind !== 'file' || h.name.startsWith('~$') || !/\.(xlsx|csv)$/i.test(h.name)) continue;
       const f = await h.getFile();

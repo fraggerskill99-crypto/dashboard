@@ -253,6 +253,7 @@
     // как «Качество мойки» разбирает акты по имени файла
     function actKind(name) {
       const n = name.toLowerCase().replace(/ё/g, 'е');
+      if (/(^|[^а-яёa-z])ппр([^а-яёa-z]|$)/i.test(n)) return null;   // ППР — не наши данные
       if (/(^|[^а-я])свод(?![а-я])|журнал|микроб|(^|[^а-я])мб([^а-я]|$)|nok/.test(n)) return null;
       if (/инкуб/.test(n)) return 'incub';
       if (/зпп/.test(n)) return 'zpp';

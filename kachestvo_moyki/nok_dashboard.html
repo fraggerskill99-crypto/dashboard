@@ -1443,7 +1443,8 @@ let DIR_HANDLE = null;
 async function latestInDir(dir){
   let best = null;
   for await (const h of dir.values()){
-    if(h.kind !== 'file' || !/\.xlsx$/i.test(h.name) || h.name.startsWith('~$')) continue;
+    // ППР (планово-предупредительный ремонт) — не Свод
+    if(h.kind !== 'file' || !/\.xlsx$/i.test(h.name) || h.name.startsWith('~$') || /(^|[^а-яёa-z])ппр([^а-яёa-z]|$)/i.test(h.name)) continue;
     const f = await h.getFile();
     if(!best || f.lastModified > best.lastModified) best = f;
   }

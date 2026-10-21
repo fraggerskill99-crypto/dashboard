@@ -196,7 +196,7 @@ function listDir(abs) {
 function xlsxIn(abs, rel) {
   let items = [];
   try { items = fs.readdirSync(abs, { withFileTypes: true }); } catch (e) { return []; }
-  return items.filter((d) => d.isFile() && !SKIP_RE.test(d.name) && /\.xlsx$/i.test(d.name)).map((d) => {
+  return items.filter((d) => d.isFile() && !SKIP_RE.test(d.name) && !PPR_RE.test(d.name) && /\.xlsx$/i.test(d.name)).map((d) => {
     const st = fs.statSync(path.join(abs, d.name));
     return { name: d.name, path: rel + '/' + d.name, mtime: Math.round(st.mtimeMs), size: st.size };
   });
@@ -593,8 +593,11 @@ function frameJs(page, code) {
   return f ? f.executeJavaScript(code).catch((e) => 'ошибка: ' + e.message) : Promise.resolve('вкладка ещё не открывалась');
 }
 // так же, как «Качество мойки» разбирает акты по имени файла
+// файлы и папки ППР (планово-предупредительный ремонт) — не наши данные: не берём нигде
+const PPR_RE = /(^|[^а-яёa-z])ппр([^а-яёa-z]|$)/i;
 function actKind(name) {
   const n = name.toLowerCase().replace(/ё/g, 'е');
+  if (PPR_RE.test(n)) return null;
   if (/(^|[^а-я])свод(?![а-я])|журнал|микроб|(^|[^а-я])мб([^а-я]|$)|nok/.test(n)) return 'Свод/журнал МБ';
   if (/инкуб/.test(n)) return 'акт Инкубатория';
   if (/зпп/.test(n)) return 'акт ЗПП';
