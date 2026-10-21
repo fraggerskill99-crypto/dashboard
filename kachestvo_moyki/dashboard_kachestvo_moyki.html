@@ -33,6 +33,9 @@ header.top p.sub { margin:0; color:var(--gray); font-size:13px; max-width:760px;
 .media-item img, .media-item video { max-width:100%; max-height:60vh; border-radius:8px; display:block; background:#000; }
 .media-item-caption { font-size:12.5px; color:var(--gray); margin-top:6px; }
 .cp-thumbs { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 2px; }
+.cp-pts { display:flex; flex-wrap:wrap; gap:4px 16px; }
+.cp-pt { display:flex; flex-direction:column; margin:4px 0 2px; }
+.cp-pt-name { font-size:11.5px; font-weight:600; color:#475569; }
 .cp-thumb { position:relative; height:66px; min-width:50px; max-width:118px; border-radius:7px; overflow:hidden; border:1px solid var(--border); background:#e2e8f0; cursor:zoom-in; padding:0; flex:0 0 auto; }
 .cp-thumb img { height:100%; width:auto; max-width:118px; object-fit:cover; display:block; }
 .cp-thumb .pl { position:absolute; left:4px; bottom:4px; width:18px; height:18px; border-radius:50%; background:rgba(15,23,42,.72); color:#fff; font-size:9px; display:flex; align-items:center; justify-content:center; }
@@ -5140,9 +5143,12 @@ function paintCatDayThumbs() {
     }
     if (!thumbs) { slot.innerHTML = '<span class="cp-thumbs-loading">&#128247; загружаю фото…</span>'; return; }
     if (!thumbs.length) { slot.innerHTML = '<span class="cp-thumbs-note">&#128247; фото/видео не удалось прочитать</span>'; return; }
-    slot.innerHTML = '<span class="cp-thumbs">' + thumbs.map((t) =>
-      `<button type="button" class="cp-thumb" data-date="${date}" data-corpus="${corpus}" data-idx="${t.idx}" title="${(t.caption || corpus).replace(/"/g, '&quot;')}"><img src="${t.url}" alt="">${t.video ? '<span class="pl">&#9654;</span>' : ''}</button>`
-    ).join('') + '</span>';
+    // у каждой контрольной точки — свои фото/видео; фото, точку которых по подписи не определить, — отдельно
+    const btn = (t) => `<button type="button" class="cp-thumb" data-date="${date}" data-corpus="${corpus}" data-idx="${t.idx}" title="${(t.caption || corpus).replace(/"/g, '&quot;')}"><img src="${t.url}" alt="">${t.video ? '<span class="pl">&#9654;</span>' : ''}</button>`;
+    const groups = {};
+    thumbs.forEach((t) => { const c = entryCat(entries[t.idx]) || ''; (groups[c] = groups[c] || []).push(t); });
+    const order = Object.keys(groups).sort((a, b) => (a === '' ? 1 : b === '' ? -1 : cpCatName(a).localeCompare(cpCatName(b), 'ru')));
+    slot.innerHTML = '<span class="cp-pts">' + order.map((c) => `<span class="cp-pt"><span class="cp-pt-name">${c ? cpCatName(c) : 'Точка не указана на слайде'}</span><span class="cp-thumbs">${groups[c].map(btn).join('')}</span></span>`).join('') + '</span>';
   });
 }
 let _thumbRefreshTimer = null;
@@ -5172,7 +5178,7 @@ function refreshCatDayThumbs() {
 var PPTX_INDEX = {};   // "дата|корпус" -> [{caption, cat, files:[{kind, filename, pptx, zip, poster}]}]
 var PPTX_FILES = {};   // путь в папке -> FileSystemFileHandle
 var PPTX_SKIPPED = 0;
-const PPTX_CACHE_KEY = 'pptxMediaIndex:v8';   // v8: точка — словарём актов   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
+const PPTX_CACHE_KEY = 'pptxMediaIndex:v10';   // v9: своя подпись у каждого фото   // v8: точка — словарём актов   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
 // v5: слайды Инкубатория (залы) из общей папки
 // Папка SharePoint с презентациями несоответствий разложена по участкам: «Инкубатор», «Выращивание», «ЗПП».
 // Участок берём из пути к презентации: в «Инкубаторе» корпусов нет — только залы, в «ЗПП» — своя площадка.
@@ -5215,17 +5221,19 @@ function cpOfCaption(text) {
   // «В11 п10. хитмастер…» — п10 = контрольная точка №10 (Ф-БиС-07)
   const pm = t.match(/(?:^|[^а-яёa-z0-9])[пП](?:ункт|\.)?\s?(\d{1,2})(?!\d)/);
   if (pm && CATEGORIES_REF[+pm[1]]) return String(+pm[1]);
-  // точное название контрольной точки Ф-БиС-07 в подписи («Система поения: …»)
+  // точка — та, о которой подпись говорит первой: «пол у стены» → Полы, «стена у пола» → Стены.
+  // Слова — из названий точек Ф-БиС-07 и того же словаря, что разбирает примечания актов.
   const low = t.toLowerCase().replace(/ё/g, 'е');
+  let best = null, bestAt = Infinity;
+  const consider = (cat, at) => { if (at >= 0 && at < bestAt) { best = String(cat); bestAt = at; } };
   for (const [n, name] of Object.entries(CATEGORIES_REF)) {
     const head = name.toLowerCase().replace(/ё/g, 'е').split(/[,./]/)[0].trim();
-    if (head.length > 4 && low.includes(head)) return String(n);
+    if (head.length > 4) consider(n, low.indexOf(head));
   }
-  // тем же словарём, что и примечания актов, — точка у фото совпадает с точкой несоответствия в акте
-  for (const part of splitIncidents(t)) {
-    const hit = classifyNote(part).find((c) => c !== '__admin__');
-    if (hit) return String(hit);
+  for (const [cat, kws] of Object.entries(KEYWORDS)) {
+    for (const kw of kws) { const m = new RegExp(kw).exec(low); if (m) consider(cat, m.index); }
   }
+  if (best) return best;
   for (const [cat, re] of CP_RULES) if (re.test(t)) return cat;
   return null;
 }
@@ -5369,7 +5377,9 @@ async function parsePresentation(file, path, opt) {
     // подписи — тексты с корпусом или с номером точки «П-N» (подпись «П-1 .Остаток органики…» без корпуса
     // тоже подпись своего фото: раньше её пропускали, и фото уходило к соседней чужой подписи)
     // в общей папке подпись с залом Инкубатория («Зал вывода, полки») — тоже подпись своего фото
-    const capBoxes = tboxes.filter((q) => q.b && (findPlace(q.t) || CP_P_RE.test(q.t) || (!opt.find && findIncubHall(q.t))) && !/качество\s+мойки/i.test(q.t));
+    // подпись фото — любая надпись рядом с ним (корпус бывает только в заголовке слайда, а у фото — «поилки», «пол»…);
+    // не подписи: «Качество мойки …» и одна дата
+    const capBoxes = tboxes.filter((q) => q.b && q.t.trim().length >= 3 && !/качество\s+мойки/i.test(q.t) && !/^[\d\s.,\/-]+(г\.?)?$/i.test(q.t.trim()));
     items.forEach((it) => {
       if (!it.b || !capBoxes.length) return;
       let best = null, bestD = Infinity;
@@ -5567,10 +5577,14 @@ async function openCpViewer(date, corpus, opt) {
   let list = entries, note = '';
   if (opt.cat) {
     // сначала — фото этой точки, потом неподписанные; чужие точки не подмешиваем
+    // строго фото этой точки; фото других точек и без точки сюда не подмешиваем
     const m = entries.filter((x) => entryCat(x.e) === String(opt.cat));
-    const u = entries.filter((x) => !entryCat(x.e));
-    if (m.length || u.length) list = m.concat(u);
-    else if (entries.length) note = 'по этой точке фото нет — показаны другие фото ' + (isIncubKey(corpus) ? 'зала' : 'корпуса');
+    if (m.length) list = m;
+    else {
+      list = [];
+      const other = [...new Set(entries.map((x) => entryCat(x.e)).filter(Boolean))].map(cpCatName);
+      note = 'По точке «' + cpCatName(opt.cat) + '» фото/видео нет.' + (other.length ? ' Есть по точкам: ' + other.join(', ') + '.' : '');
+    }
   }
   Object.assign(CPV, { list, date, corpus, cat: opt.cat || null, note, catCount: opt.cat ? entries.filter((x) => entryCat(x.e) === String(opt.cat)).length : 0 });
   el.hidden = false;
@@ -5587,7 +5601,7 @@ async function openCpViewer(date, corpus, opt) {
     el.querySelector('.cpv-title').textContent = corpus + (opt.cat ? ' — ' + cpvCatTitle(opt.cat) : '');
     el.querySelector('.cpv-sub').textContent = fmtDate(date);
     el.querySelector('.cpv-count').textContent = '';
-    el.querySelector('.cpv-stage').innerHTML = `<div class="msg">${isIncubKey(corpus)
+    el.querySelector('.cpv-stage').innerHTML = note && entries.length ? `<div class="msg">${note.replace(/</g, '&lt;')}</div>` : `<div class="msg">${isIncubKey(corpus)
       ? (INCUB_MEDIA_DIR
         ? 'В папке Инкубатория нет фото/видео по залу «' + corpus.replace(INCUB_PIE_KEY + ': ', '') + '» за ' + fmtDate(date) + '.<br>Проверьте, что в пути к файлам есть дата и зал (например «' + date + ' / Зал вывода»).'
         : 'Папка с фото/видео Инкубатория не привязана.<br>Нажмите «&#128279; Привязать папку с фото/видео Инкубатория» над диаграммой Инкубатория.')
