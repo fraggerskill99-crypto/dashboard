@@ -23,25 +23,36 @@
       'label.upload-btn:has(#zppFileInput)', '#pinZppBtn', '#unpinZppBtn',
       'label:has(#scheduleFileInput)', '#scheduleFileInput', '#pinSchedBtn', '#unpinSchedBtn',
       // служебные строки ручной привязки папки Инкубатория — всё прочитанное видно в «⚙ Настройках»
-      'div:has(> #incubMediaPinBtn)', 'div:has(> #incubMediaPinBtn) + p.note', '#incubPptxReport'],
-    'mb.html': ['#dirLinkBtn', '#dirAllowBtn', '#dirCheckBtn', '#dirUnlinkBtn', '#dirBox + div'],
-    'nok.html': ['#uploadBtn', '#fileInput', '#nokPinBtn', '#nokAllowBtn', '#nokChooseBtn', '#nokCheckBtn', '#nokImportBtn'],
+      'div:has(> #incubMediaPinBtn)', 'div:has(> #incubMediaPinBtn) + p.note', '#incubPptxReport',
+      // понятнее: служебный блок загрузки и длинное техническое описание — данные приходят сами (видно в «⚙ Настройках»)
+      'header.top .upload-box', 'header.top p.sub'],
+    'mb.html': ['#dirLinkBtn', '#dirAllowBtn', '#dirCheckBtn', '#dirUnlinkBtn', '#dirBox + div', '.card:has(> #dirBox)'],
+    'nok.html': ['#uploadBtn', '#fileInput', '#nokPinBtn', '#nokAllowBtn', '#nokChooseBtn', '#nokCheckBtn', '#nokImportBtn', '#nokBar .nok-actions'],
   }[page];
   if (HIDE) {
     const st = document.createElement('style');
     st.textContent = HIDE.join(',\n') + ' { display: none !important; }\n' +
-      '.app-auto { margin: 0 0 8px; padding: 7px 12px; border-radius: 8px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font: 600 12.5px/1.45 -apple-system, "Segoe UI", Arial, sans-serif; }';
+      '.app-what { margin: 4px 0 0; font-size: 14.5px; line-height: 1.5; color: #3f3a2c; max-width: 900px; }';
     document.documentElement.appendChild(st);
-    const note = APP
-      ? '🔄 Данные обновляются автоматически — из папок OneDrive и SharePoint и файлов, выбранных в «⚙ Настройках» (внизу слева).'
-      : '🔄 Данные — из файлов и папок, выбранных в «⚙ Настройках» (внизу слева). Обновляются сами; «Обновить сейчас» — там же.';
-    document.addEventListener('DOMContentLoaded', () => {
-      const at = page === 'moika.html' ? document.querySelector('.upload-box') : page === 'mb.html' ? document.getElementById('dirBox') : document.getElementById('nokBar');
-      if (!at) return;
-      const d = document.createElement('div'); d.className = 'app-auto'; d.textContent = note;
-      at.insertBefore(d, at.firstChild);
+    // короткая подсказка «что на этой вкладке» вместо служебных пояснений
+    const WHAT = {
+      'moika.html': 'Баллы приёмки мойки по корпусам и несоответствия по контрольным точкам. Разделы — ниже: Обзор · Сравнение по турам · Категории несоответствий · График СР · Чек-лист.',
+    }[page];
+    if (WHAT) document.addEventListener('DOMContentLoaded', () => {
+      const h = document.querySelector('header.top h1'); if (!h) return;
+      const d = document.createElement('p'); d.className = 'app-what'; d.textContent = WHAT; h.after(d);
     });
   }
+
+  // ---------- оформление: фон, орнамент и логотипы — у оболочки приложения (шаблон презентации УКПФ),
+  // поэтому вкладка прозрачная и без своих логотипов; тёмные шапки NOK и «Мойки и МБ» — в цветах шаблона,
+  // серый текст — темнее, чтобы легче читалось ----------
+  const BRAND_CSS = {
+    'moika.html': 'html,body{background:transparent!important} body::before{display:none!important} .wrap{padding-left:24px!important} .brand-bar .brand-logo,footer.foot img{display:none!important} :root{--gray:#475569}',
+    'nok.html': 'html,body{background:transparent!important} :root{--muted:#4b5563;--paper:transparent} header{background:transparent!important;color:#2b2618!important;padding:18px 28px 30px!important;border-bottom:1px solid rgba(60,50,30,.25)} header h1{color:#16A9B4!important;font-size:30px!important;font-weight:600!important} header .sub,header .author{color:#5b5445!important;font-size:13.5px!important}',
+    'mb.html': 'html,body{background:transparent!important} body{font-size:14px!important} :root{--color-text-secondary:#475569} .hdr{background:transparent!important;border-bottom:1px solid rgba(60,50,30,.3)!important;padding:16px 28px!important} .hdr-t1{color:#16A9B4!important;font-size:26px!important;font-weight:600!important} .hdr-t2{color:#5b5445!important;font-size:13px!important}',
+  }[page];
+  if (BRAND_CSS) { const bs = document.createElement('style'); bs.textContent = BRAND_CSS; document.documentElement.appendChild(bs); }
 
   const granted = async () => 'granted';
   const changed = [];

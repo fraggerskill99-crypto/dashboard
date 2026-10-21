@@ -5,25 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Качество мойки — УКПФ</title>
 <style>
-  :root { --navy: #1F3864; --blue: #2E5395; --bar: #ffffff; --line: #e2e8f0; --muted: #64748b; --bg: #f4f6fa; }
+  /* оформление по шаблону презентации УКПФ: фон #E5DBC0, орнамент слева, логотип справа сверху, линия и малый логотип снизу */
+  :root { --navy: #1F3864; --blue: #2E5395; --teal: #16A9B4; --ink: #2b2618; --line: rgba(60,50,30,.28); --muted: #5b5445; --bg: #E5DBC0; --strip: 52px; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
-  body { display: flex; flex-direction: column; }
-  nav { flex: 0 0 auto; display: flex; gap: 4px; align-items: flex-end; padding: 6px 10px 0; background: var(--bar); border-bottom: 1px solid var(--line); overflow-x: auto; }
-  nav button { border: 1px solid transparent; border-bottom: none; background: none; padding: 8px 16px 9px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; border-radius: 9px 9px 0 0; white-space: nowrap; }
-  nav button:hover { color: var(--navy); background: #f1f5f9; }
-  nav button.on { color: var(--navy); background: var(--bg); border-color: var(--line); position: relative; top: 1px; }
+  html, body { margin: 0; height: 100%; background: var(--bg); font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--ink); }
+  body { display: flex; flex-direction: column; padding-left: var(--strip); }
+  #strip { position: fixed; left: 0; top: 0; bottom: 0; width: var(--strip); background: var(--bg) url("{{STRIP}}") repeat-y 0 0 / var(--strip) auto; z-index: 1; }
+  nav { flex: 0 0 auto; display: flex; gap: 4px; align-items: flex-end; padding: 8px 14px 0 12px; background: transparent; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  nav button { border: 1px solid transparent; border-bottom: none; background: none; padding: 10px 18px 11px; font-size: 15px; font-weight: 700; color: var(--muted); cursor: pointer; border-radius: 10px 10px 0 0; white-space: nowrap; }
+  nav button:hover { color: var(--navy); background: rgba(255,255,255,.35); }
+  nav button.on { color: var(--navy); background: rgba(255,255,255,.55); border-color: var(--line); position: relative; top: 1px; }
   nav .sp { flex: 1; }
-  nav .hint { font-size: 11.5px; color: var(--muted); padding: 0 6px 9px; white-space: nowrap; }
+  nav .brand { align-self: center; height: 54px; width: auto; margin: 0 0 6px 10px; flex: 0 0 auto; }
   main { flex: 1; min-height: 0; position: relative; }
-  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--bg); }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+  footer.app-ft { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; min-height: 36px; padding: 3px 14px 3px 260px; border-top: 1px solid rgba(60,50,30,.35); }
+  footer.app-ft .hint { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  footer.app-ft .sp { flex: 1; }
+  footer.app-ft img { height: 26px; width: auto; display: block; flex: 0 0 auto; }
   iframe[hidden] { display: none; }
-  #toast { position: fixed; right: 18px; bottom: 18px; z-index: 10; max-width: 460px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #fff; background: var(--navy); box-shadow: 0 6px 24px rgba(0,0,0,.18); cursor: pointer; }
+  #toast { position: fixed; right: 18px; bottom: 52px; z-index: 10; max-width: 460px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #fff; background: var(--navy); box-shadow: 0 6px 24px rgba(0,0,0,.18); cursor: pointer; }
   #toast[hidden] { display: none; }
   /* неприметная кнопка настроек — левый нижний угол */
-  #cfgBtn { position: fixed; left: max(10px, env(safe-area-inset-left, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); z-index: 9; border: 1px solid var(--line); background: rgba(255,255,255,.75); color: var(--muted); font-size: 11.5px; padding: 4px 9px; border-radius: 7px; cursor: pointer; opacity: .55; }
+  #cfgBtn { position: fixed; left: calc(var(--strip) + max(10px, env(safe-area-inset-left, 0px))); bottom: max(5px, env(safe-area-inset-bottom, 0px)); z-index: 9; border: 1px solid var(--line); background: rgba(255,255,255,.6); color: var(--muted); font-size: 12px; padding: 4px 10px; border-radius: 7px; cursor: pointer; opacity: .75; }
   #cfgBtn:hover, #cfgBtn:focus-visible { opacity: 1; color: var(--navy); }
-  #permBtn { position: fixed; left: max(110px, calc(env(safe-area-inset-left, 0px) + 100px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); z-index: 9; border: none; background: #b45309; color: #fff; font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  #permBtn { position: fixed; left: calc(var(--strip) + 160px); bottom: max(5px, env(safe-area-inset-bottom, 0px)); z-index: 9; border: none; background: #b45309; color: #fff; font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
   #permBtn[hidden] { display: none; }
   #cfg { position: fixed; inset: 0; z-index: 20; background: rgba(15,23,42,.45); display: flex; align-items: flex-end; justify-content: flex-start; padding: 16px; }
   #cfg[hidden] { display: none; }
@@ -52,20 +58,19 @@
   .cfg-main { border: none; background: var(--navy); color: #fff; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
   .cfg-main:disabled { opacity: .6; cursor: default; }
   @media (max-width: 600px) { .cfg-row .lbl { flex: 1 1 100%; } }
-  @media (max-width: 600px) { nav button { padding: 8px 10px 9px; font-size: 12.5px; } nav .hint { display: none; } }
+  @media (max-width: 600px) { :root { --strip: 26px; } nav button { padding: 8px 10px 9px; font-size: 13px; } nav .brand { height: 30px; } footer.app-ft .hint { display: none; } }
 </style>
 </head>
 <body>
+<div id="strip" aria-hidden="true"></div>
 <nav id="tabs">
-  <button data-tab="moika" class="on" title="Ctrl+1">🧽 Качество мойки</button>
-  <button data-tab="nok" title="Ctrl+2">🧫 NOK-дашборд</button>
-  <button data-tab="mb" title="Ctrl+3">🔬 Мойка и МБ</button>
-  <button data-tab="week" title="Ctrl+4">📷 Фотофиксация по неделям</button>
-  <button data-tab="nc" title="Ctrl+5">📍 Несоответствие по площадкам</button>
+  <button data-tab="moika" class="on" title="Баллы приёмки мойки, несоответствия по контрольным точкам, слайд — Ctrl+1">🧽 Качество мойки</button>
+  <button data-tab="nok" title="Обнаружения NOK по Своду микробиологии по неделям — Ctrl+2">🧫 NOK-дашборд</button>
+  <button data-tab="mb" title="Балл мойки перед обнаружением МБ, фото мойки по корпусу — Ctrl+3">🔬 Мойка и МБ</button>
+  <button data-tab="week" title="Фото/видео несоответствий по неделям — Ctrl+4">📷 Фотофиксация по неделям</button>
+  <button data-tab="nc" title="Несоответствия из ваших презентаций — по датам — Ctrl+5">📍 Несоответствие по площадкам</button>
   <span class="sp"></span>
-  <span class="hint" id="dataHint"></span>
-  <span class="hint" id="autoSt" title="Данные обновляются сами: файлы и папки проверяются каждую минуту и при возврате на вкладку"></span>
-  <span class="hint" title="Номер версии — по нему видно, что открыта свежая сборка">версия {{VERSION}}</span>
+  <img class="brand" alt="aitas ukpf — усть-каменогорская птицефабрика" src="{{LOGO}}">
 </nav>
 <main>
   <iframe id="f-moika" src="moika.html" title="Качество мойки"></iframe>
@@ -74,6 +79,13 @@
   <iframe id="f-week" data-src="week.html" title="Фотофиксация по неделям" hidden></iframe>
   <iframe id="f-nc" data-src="nc.html" title="Несоответствие по площадкам" hidden></iframe>
 </main>
+<footer class="app-ft">
+  <span class="sp"></span>
+  <span class="hint" id="dataHint"></span>
+  <span class="hint" id="autoSt" title="Данные обновляются сами: файлы и папки проверяются каждую минуту и при возврате на вкладку"></span>
+  <span class="hint" title="Номер версии — по нему видно, что открыта свежая сборка">версия {{VERSION}}</span>
+  <img alt="aitas" src="{{LOGO_SMALL}}">
+</footer>
 <div id="toast" hidden></div>
 <button type="button" id="permBtn" hidden title="Браузер спрашивает разрешение на выбранные файлы один раз за запуск">🔓 Разрешить доступ к файлам</button>
 <button type="button" id="cfgBtn" hidden title="Откуда брать акты, Свод, фото и презентации">⚙ Настройки</button>

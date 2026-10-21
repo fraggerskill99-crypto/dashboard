@@ -48,5 +48,15 @@ fs.copyFileSync(path.join(SRC, 'week.html'), path.join(OUT, 'week.html'));
 fs.copyFileSync(path.join(SRC, 'nc.html'), path.join(OUT, 'nc.html'));
 // номер версии в строке вкладок: APP_VERSION (сборка Android) или версия из package.json
 const version = process.env.APP_VERSION || JSON.parse(read(path.join(ROOT, 'package.json'))).version;
-fs.writeFileSync(path.join(OUT, 'index.html'), read(path.join(SRC, 'index.html')).replace('{{VERSION}}', version));
+// оформление оболочки (орнамент слева, логотипы) — те же картинки, что в шапке/подвале «Качества мойки»
+const moikaSrc = read(path.join(ROOT, '../dashboard_kachestvo_moyki.html'));
+const pick = (re, what) => { const m = moikaSrc.match(re); if (!m) throw new Error('нет картинки оформления: ' + what); return m[1]; };
+const BRAND = {
+  '{{STRIP}}': pick(/body::before \{[^}]*?url\("(data:image\/[^"]+)"\)/, 'орнамент'),
+  '{{LOGO}}': pick(/<img class="brand-logo"[^>]*?src="(data:image\/[^"]+)"/, 'логотип'),
+  '{{LOGO_SMALL}}': pick(/<footer class="foot">[\s\S]*?<img[^>]*?src="(data:image\/[^"]+)"/, 'малый логотип'),
+};
+let shell = read(path.join(SRC, 'index.html')).replace('{{VERSION}}', version);
+for (const [k, v] of Object.entries(BRAND)) shell = shell.split(k).join(v);
+fs.writeFileSync(path.join(OUT, 'index.html'), shell);
 console.log('www собран' + (android ? ' (Android)' : '') + ':', path.relative(process.cwd(), OUT) || '.');
