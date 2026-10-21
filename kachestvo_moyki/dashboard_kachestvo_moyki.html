@@ -509,7 +509,7 @@ footer.foot img { height:36px; width:auto; display:block; }
     </div>
     <div class="card">
       <h2>Месячный средний балл &mdash; Инкубаторий, ЗПП, Выращивание &mdash; УКПФ</h2>
-      <p class="note">Текущий месяц &mdash; средний балл с 1-го числа по сегодня (в подписи, например, «Октябрь (1–21)») &middot; пунктир цвета объекта &mdash; линия тренда &middot; норма &ge; 8 (пунктир) &middot; ЗПП коридор 3&ndash;5 &middot; план 10 (серый). Выращивание &mdash; средний балл акта приёма мойки; Инкубатор и ЗПП &mdash; средний из дневных баллов (акт/ручной ввод в «Истории»).</p>
+      <p class="note">Текущий месяц &mdash; средний балл с 1-го числа по сегодня (светлая точка, под месяцем — «1–21 (текущий)») &middot; пунктир цвета объекта &mdash; линия тренда &middot; норма &ge; 8 (пунктир) &middot; ЗПП коридор 3&ndash;5 &middot; план 10 (серый). Выращивание &mdash; средний балл акта приёма мойки; Инкубатор и ЗПП &mdash; средний из дневных баллов (акт/ручной ввод в «Истории»).</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 4px;font-size:12px;color:#6b7a99">
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block"></span>Выращивание факт</span>
         <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#7c3aed;display:inline-block"></span>Инкубатор факт</span>
@@ -2508,7 +2508,7 @@ function buildQualitySlide(pptx, D) {
     s.addText(leg.flatMap(([m, c, t]) => [
       { text: m, options: { color: c, bold: true } }, { text: t + '    ', options: { color: '374151' } }]),
     { x, y: y + 0.42, w, h: 0.22, fontFace: FONT, fontSize: 8.5, margin: 0, isTextBox: true });
-    const labels = S.labels;
+    const labels = S.labels.map((l, i) => (i === S.partial ? l + ' ' + S.partialSub.replace(' (текущий)', '') : l));
     const N = labels.length;
     const cy = y + 0.64, chH = h - 0.64;
     // PowerPoint: пустые недели — пропуск линии (null → пустая ячейка)
@@ -3280,6 +3280,18 @@ const tripleCorridorPlugin = {
     c.fillRect(ca.left, y5, ca.right - ca.left, y3 - y5);
     c.restore();
   },
+  beforeDatasetsDraw(chart) {
+    const { ctx: c, chartArea: ca, scales } = chart;
+    if (!ca) return;
+    chart.data.datasets.forEach((ds) => {
+      if (ds._refVal == null || ds.data.some((v) => v != null)) return;
+      const y = scales.y.getPixelForValue(ds._refVal);
+      c.save();
+      c.strokeStyle = ds.borderColor; c.lineWidth = ds.borderWidth || 1; c.setLineDash(ds.borderDash || []);
+      c.beginPath(); c.moveTo(ca.left, y); c.lineTo(ca.right, y); c.stroke();
+      c.restore();
+    });
+  },
 };
 
 const tripleValLabelPlugin = {
@@ -3408,7 +3420,7 @@ function computeTripleSeries(period) {
   const mean = (a) => (a.length ? round2(avg(a)) : null);
   const labels = keys.map((k) => period === 'week'
     ? 'Н' + parseInt(k.split('-W')[1], 10)
-    : MONTHS_RU[parseInt(k.slice(5, 7), 10) - 1] + (k === curKey ? ` (1–${now.getDate()})` : ''));
+    : MONTHS_RU[parseInt(k.slice(5, 7), 10) - 1]);
   const S = {
     keys, labels,
     vyr: keys.map((k) => mean(buckets[k].vyr)),
@@ -3416,6 +3428,9 @@ function computeTripleSeries(period) {
     zpp: keys.map((k) => mean(buckets[k].zpp)),
   };
   S.trend = { vyr: trendLine(S.vyr), ink: trendLine(S.ink), zpp: trendLine(S.zpp) };
+  // текущий (неполный) месяц: подпись второй строкой «1–21 (текущий)», точка — светлая
+  S.partial = period === 'week' ? -1 : keys.indexOf(curKey);
+  S.partialSub = `1–${now.getDate()} (текущий)`;
   return S;
 }
 
@@ -3428,11 +3443,12 @@ function tripleChartConfig(S, big) {
   const factDs = (label, data, col) => ({
     label, data, borderColor: col.line, borderWidth: 2 * k, _showLabels: true,
     pointRadius: data.map((v) => (v != null ? 6 * k : 0)), pointHoverRadius: 7 * k,
-    pointBackgroundColor: col.line, pointBorderColor: col.border, pointBorderWidth: 2 * k,
+    pointBackgroundColor: data.map((v, i) => (i === S.partial ? '#ffffff' : col.line)), pointBorderColor: col.border, pointBorderWidth: 2 * k,
     fill: false, tension: 0.15, spanGaps: false, datalabels: { display: false },
   });
+  // месяцы (ось с отступами): пунктиры норм рисует плагин на всю ширину — линия набора кончалась бы на крайних точках
   const refDs = (label, n, color, dash) => ({
-    label, data: constN(n), borderColor: color, borderWidth: 1.2 * k, borderDash: dash.map((d) => d * k),
+    label, data: isWeekS ? constN(n) : constN(null), _refVal: n, borderColor: color, borderWidth: 1.2 * k, borderDash: dash.map((d) => d * k),
     pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0, datalabels: { display: false },
   });
   const gridCol = big ? 'rgba(28,35,51,0.08)' : '#f1f3f9';
@@ -3440,7 +3456,7 @@ function tripleChartConfig(S, big) {
     type: 'line',
     plugins: [tripleCorridorPlugin, tripleValLabelPlugin],
     data: {
-      labels: S.labels,
+      labels: S.labels.map((l, i) => (i === S.partial ? [l, S.partialSub] : l)),
       datasets: [
         refDs('План (10)', 10, big ? 'rgba(100,116,139,0.6)' : 'rgba(148,163,184,0.5)', [6, 4]),
         refDs('Норма 8', 8, big ? 'rgba(220,38,38,0.6)' : 'rgba(220,38,38,0.45)', [4, 3]),
@@ -3473,7 +3489,8 @@ function tripleChartConfig(S, big) {
       scales: {
         y: { min: 0, max: 10.5, grid: { color: gridCol }, border: { color: gridCol },
              ticks: { stepSize: 1, font: { size: 11 * (big ? 1.5 : 1), family: '"IBM Plex Mono", Consolas, monospace', weight: '600' }, color: '#1c2333' } },
-        x: { grid: { color: gridCol }, border: { color: gridCol },
+        // месяцы — по центру своих ячеек: январь и текущий месяц не прижаты к краям
+        x: { offset: !isWeekS, grid: { color: gridCol, offset: false }, border: { color: gridCol },
              ticks: { font: { size: 11 * (big ? 1.45 : 1), weight: '700' }, maxRotation: isWeekS ? 45 : 0, minRotation: isWeekS ? 45 : 0, autoSkip: false, color: '#1c2333' } },
       },
       layout: { padding: { top: 28 * k, left: 6 * k, right: 14 * k, bottom: 4 * k } },
