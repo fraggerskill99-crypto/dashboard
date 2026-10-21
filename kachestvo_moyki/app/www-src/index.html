@@ -181,9 +181,13 @@
       const all = roles.acts.concat(roles.media, roles.svod, roles.nc || []);
       document.getElementById('dataHint').textContent = all.length || Object.keys(chosen).length ? '📁 ' + all.concat(Object.values(chosen).map((f) => f.name)).join(' · ') : '';
       w.__APP_ACTS_SEPARATE = true;   // акты не ищем в папках с фото
-      if (roles.media.length && (force || opts.media !== false || !mediaDone)) {
+      // в одних и тех же папках лежат оба вида презентаций — вид определяется по тексту слайда
+      // («Качество мойки» / «Несоответствие»), поэтому обе вкладки смотрят все папки с презентациями
+      const pptxDirs = roles.media.concat((roles.nc || []).filter((n) => !roles.media.includes(n)));
+      w.__NC_DIRS = (roles.nc || []).slice();
+      if (pptxDirs.length && (force || opts.media !== false || !mediaDone)) {
         mediaDone = true;
-        const media = w.APP_FS.group(roles.media, 'Фото/видео');
+        const media = w.APP_FS.group(pptxDirs, 'Фото/видео');
         try { if (w.__useMediaHandle) await w.__useMediaHandle(media, false); } catch (e) { console.warn('moika media', e); }
         try { if (w.useIncubMediaHandle) await w.useIncubMediaHandle(media, false); } catch (e) { console.warn('moika incub', e); }
       }
@@ -221,10 +225,10 @@
       const wk = frame('week');
       if (started(wk)) try { wk.contentWindow.postMessage('app:media', '*'); } catch (e) {}
       // «Несоответствие по площадкам» — свои папки (роль nc), читаются отдельно от «Качества мойки»
-      const ncKey = (roles.nc || []).join('|');
+      const ncKey = pptxDirs.join('|');
       if (w.MOIKA_API && w.MOIKA_API.nc && (force || opts.media !== false || ncKey !== ncDone)) {
         ncDone = ncKey;
-        try { await w.MOIKA_API.nc.scan(roles.nc && roles.nc.length ? w.APP_FS.group(roles.nc, 'Несоответствие по площадкам') : null); } catch (e) { console.warn('nc', e); }
+        try { await w.MOIKA_API.nc.scan(pptxDirs.length ? w.APP_FS.group(pptxDirs, 'Несоответствие по площадкам') : null); } catch (e) { console.warn('nc', e); }
         const ncf = frame('nc');
         if (started(ncf)) try { ncf.contentWindow.postMessage('app:nc', '*'); } catch (e) {}
       }
@@ -490,7 +494,7 @@
         pptxReport() +
         // отдельная вкладка «Несоответствие по площадкам» — свои папки с презентациями
         '<div class="cfg-sec">Несоответствие по площадкам — папки с презентациями</div>' +
-        '<p class="cfg-hint">Папки с презентациями (.pptx), где на слайдах прописаны несоответствие и дата (а также площадка/корпус или зал, контрольная точка). Читаются только для вкладки «📍 Несоответствие по площадкам», включая подпапки; новые и изменённые презентации подтягиваются сами.</p>' +
+        '<p class="cfg-hint">Папки с презентациями (.pptx). Вид определяется по тексту слайда: «Несоответствие» — во вкладку «📍 Несоответствие по площадкам», «Качество мойки» — в «Качество мойки», «Мойку и МБ» и «Фотофиксацию». Оба вида могут лежать в одной папке. Подпапки тоже читаются; новые и изменённые презентации подтягиваются сами.</p>' +
         state.folders.filter((m) => m.role === 'nc').map((m) => folderRow(m)).join('') +
         `<div class="cfg-add"><button type="button" data-cmd="add-folder" data-role="nc">+ Папка с презентациями несоответствий</button></div>` +
         pptxReport('nc') +

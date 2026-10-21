@@ -5204,7 +5204,8 @@ function refreshCatDayThumbs() {
 var PPTX_INDEX = {};   // "дата|корпус" -> [{caption, cat, files:[{kind, filename, pptx, zip, poster}]}]
 var PPTX_FILES = {};   // путь в папке -> FileSystemFileHandle
 var PPTX_SKIPPED = 0;
-const PPTX_CACHE_KEY = 'pptxMediaIndex:v15';   // v15: поле «Дата» у несоответствия
+const PPTX_CACHE_KEY = 'pptxMediaIndex:v16';   // v16: только слайды «Качество мойки»
+// v15:   // v15: поле «Дата» у несоответствия
 // v14:   // v14: зал Инкубатория — из заголовка слайда, если в подписи его нет
 // v13:   // v13: заголовок слайда — не подпись фото
 // v12:   // v12: дата — с самого слайда (у фото — ближайшая)
@@ -5465,6 +5466,20 @@ function slideTables(xml, box, txt) {
 }
 // opt.find — чем искать место в подписи (по умолчанию корпус), opt.fallback — место, если не нашлось,
 // opt.noCat — не угадывать контрольную точку Ф-БиС-07 (у Инкубатория свои элементы)
+// Вид слайда — по тексту внутри PowerPoint: «Качество мойки» — для «Качества мойки», «Мойки и МБ», «Фотофиксации»;
+// «Несоответствие» — для вкладки «Несоответствие по площадкам». «Качество мойки» важнее (там тоже бывает слово «несоответствия»).
+function isNcPath(path) {
+  const dirs = typeof window !== 'undefined' && window.__NC_DIRS;
+  if (!Array.isArray(dirs)) return null;   // роли папок не заданы (дашборд открыт сам по себе)
+  return dirs.includes(String(path || '').split('/')[0]);
+}
+function slideKind(text) {
+  const t = String(text || '').toLowerCase().replace(/ё/g, 'е');
+  if (/качеств[а-я]*\s+мойк/.test(t)) return 'wash';
+  if (/несоответстви/.test(t)) return 'nc';
+  return null;
+}
+// opt.kind — 'wash' или 'nc': брать только слайды этого вида (слайд без пометки — как предыдущий; презентация без пометок — целиком)
 async function parsePresentation(file, path, opt) {
   opt = opt || {};
   const findPlace = opt.find || findCorpus;
@@ -5596,10 +5611,22 @@ async function parsePresentation(file, path, opt) {
   const out = []; let skipped = 0, noDate = 0, noCorpus = 0;
   const corpSeen = {};
   const slideInfo = [];   // разбор по слайдам — для «⚙ Настроек»: что где прочитано
+  // вид слайда: «Качество мойки» → мойка, «Несоответствие» → площадки. В папке «Несоответствие…» (роль nc)
+  // лежат оба вида: в мойку идут только слайды с «Качество мойки»; в папках с фото мойки
+  // презентация без пометки «Качество мойки» — тоже мойка (там «несоответствие» — это несоответствие мойки)
+  const fromNc = isNcPath(path);
+  const hasWash = slides.some((sl) => slideKind(sl.texts.join(' · ')) === 'wash') || slideKind(path.split('/').pop()) === 'wash';
+  if (opt.kind === 'wash' && fromNc === true && !hasWash) return { entries: [], skipped: 0, noDate: 0, noCorpus: 0, slides: slides.length, days: [], slideInfo: [], kindSkipped: true };
+  if (opt.kind === 'nc' && fromNc === false) return { entries: [], skipped: 0, noDate: 0, noCorpus: 0, slides: slides.length, days: [], slideInfo: [], kindSkipped: true };
+  const anyKind = hasWash;
+  let curKind = slideKind(path.split('/').pop());
   slides.forEach((sl) => {
     const all = sl.texts.join(' · ');
-    // «06.10 Качество мойки» без года — только в заголовке (первый текст без корпуса), чтобы «1.5 м» в подписи не стало датой
     if (sl.date) curDate = sl.date;
+    const k = slideKind(all);
+    if (k) curKind = k;
+    if (opt.kind && anyKind && curKind && curKind !== opt.kind) return;   // слайд другого вида — не сюда
+    // «06.10 Качество мойки» без года — только в заголовке (первый текст без корпуса), чтобы «1.5 м» в подписи не стало датой
     // если на слайде у фото есть свои подписи — картинки без подписи (логотип, уголок) не берём
     const anyCap = sl.items.some((it) => it.cap);
     const items = sl.items.filter((it) => (it.video || !isDecor(it)) && (!anyCap || it.cap || it.video));
@@ -5688,11 +5715,11 @@ async function scanPresentations(root, onProgress) {
     if (list[i].old) { report.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
     files[path] = handle;
     try {
-      const ps = await pptxSig(handle), sig = ps.sig;
+      const ps = await pptxSig(handle), sig = ps.sig + (isNcPath(path) ? '|nc' : '');
       let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
       if (!res) {
         onProgress && onProgress(i + 1, list.length, path);
-        res = Object.assign({ sig }, await parsePresentation(ps.file || await handle.getFile(), path, pptxAreaOpt(path)));
+        res = Object.assign({ sig }, await parsePresentation(ps.file || await handle.getFile(), path, Object.assign({ kind: 'wash' }, pptxAreaOpt(path))));
       }
       newCache[path] = res;
       res.entries.forEach(({ key, entry }) => { (index[key] = index[key] || []).push(entry); });
@@ -6161,7 +6188,7 @@ async function scanIncubMediaFolder(root, onProgress) {
 }
 // Презентации Инкубатория — тот же разбор, что у выращивания, но место на слайде — зал
 // («зал вывода», «выводной зал», «сортировка»…); не нашёлся — зал из пути к файлу, иначе «прочее».
-const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v5';   // v3: дата — с самого слайда   // v2: без зала — только из папки Инкубатория
+const INCUB_PPTX_CACHE_KEY = 'incubPptxMediaIndex:v6';   // v3: дата — с самого слайда   // v2: без зала — только из папки Инкубатория
 var INCUB_PPTX_REPORT = [];
 function findIncubHall(text) {
   const h = INCUB_HALLS.find((x) => x.re.test(String(text || '')));
@@ -6183,14 +6210,14 @@ async function scanIncubPresentations(root, onProgress) {
     if (list[i].old) { report.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
     files[path] = handle;
     try {
-      const ps = await pptxSig(handle), sig = ps.sig;
+      const ps = await pptxSig(handle), sig = ps.sig + (isNcPath(path) ? '|nc' : '');
       let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
       if (!res) {
         onProgress && onProgress(i + 1, list.length, path);
         const f = ps.file || await handle.getFile();
         // слайд без зала — в «прочее», только если презентация из папки Инкубатория
         const fallback = findIncubHall(path) || (/инкуб/i.test(root.name + '/' + path) ? INCUB_OTHER.key : undefined);
-        res = Object.assign({ sig }, await parsePresentation(f, path, { find: findIncubHall, fallback, noCat: true }));
+        res = Object.assign({ sig }, await parsePresentation(f, path, { find: findIncubHall, fallback, noCat: true, kind: 'wash' }));
       }
       newCache[path] = res;
       res.entries.forEach(({ key, entry }) => { entry.files.forEach((f) => { f.incubDir = true; }); (index[key] = index[key] || []).push(entry); items++; });
@@ -6402,7 +6429,7 @@ window.__keepOnlyAkt = (name) => {
 // Данные хранятся отдельно — на «Качество мойки» и другие вкладки не влияют.
 // ============================================================
 var NC_INDEX = {}, NC_PPTX_FILES = {}, NC_REPORT = [], NC_THUMBS = {}, NC_ROOT = null;
-const NC_CACHE_KEY = 'ncPptxIndex:v1';
+const NC_CACHE_KEY = 'ncPptxIndex:v2';   // v2: только слайды «Несоответствие»
 async function scanNcFolder(root, onProgress) {
   const index = {}, files = {}, report = [];
   let cache = {};
@@ -6416,9 +6443,9 @@ async function scanNcFolder(root, onProgress) {
     if (list[i].old) { report.push({ path, err: 'старый формат .ppt — откройте в PowerPoint и сохраните как .pptx' }); continue; }
     files[path] = handle;
     try {
-      const ps = await pptxSig(handle), sig = ps.sig;
+      const ps = await pptxSig(handle), sig = ps.sig + (isNcPath(path) ? '|nc' : '');
       let res = cache[path] && cache[path].sig === sig ? cache[path] : null;
-      if (!res) { onProgress && onProgress(i + 1, list.length, path); res = Object.assign({ sig }, await parsePresentation(ps.file || await handle.getFile(), path, pptxAreaOpt(path))); }
+      if (!res) { onProgress && onProgress(i + 1, list.length, path); res = Object.assign({ sig }, await parsePresentation(ps.file || await handle.getFile(), path, Object.assign({ kind: 'nc' }, pptxAreaOpt(path)))); }
       newCache[path] = res;
       res.entries.forEach(({ key, entry }) => {
         const e = Object.assign({}, entry, { files: entry.files.map((x) => Object.assign({}, x, { nc: true })) });
