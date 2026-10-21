@@ -372,7 +372,7 @@ footer.foot img { height:36px; width:auto; display:block; }
       </div>
       <div id="incDayPieWrap" style="display:none;margin-top:18px;padding-top:14px;border-top:1px dashed var(--border)">
         <h3 style="margin:0 0 4px">Инкубаторий &mdash; несоответствия по залам &middot; <span id="incDayPieDay"></span></h3>
-        <p class="note" style="margin:0 0 10px">Из журнала-архива акта Инкубатория: каждый элемент с баллом ниже 10 &mdash; одно несоответствие. День &mdash; тот же, что выбран выше.</p>
+        <p class="note" id="incDayPieNote" style="margin:0 0 10px">Из журнала-архива акта Инкубатория: каждый элемент с баллом ниже 10 &mdash; одно несоответствие. День &mdash; тот же, что выбран выше.</p>
         <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap">
           <button class="upload-btn" id="incubMediaPinBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px">&#128279; Привязать папку с фото/видео Инкубатория</button>
           <button class="upload-btn" id="incubMediaUnpinBtn" style="display:none;cursor:pointer;font-size:12.5px;padding:7px 14px;background:#fff;color:var(--red);border:1px solid var(--red)">Отвязать</button>
@@ -1874,9 +1874,19 @@ function renderCatDayPie() {
       const k = 'inc:' + [block, it.elem].filter(Boolean).join(': ');
       cc[k] = (cc[k] || 0) + 1;
     });
-    // залы Инкубатория — после корпусов, в порядке вывод → перевод → сортировка
-    INCUB_HALLS.concat([INCUB_OTHER]).forEach((h) => { if (corpTotals[h.key]) corpsSorted.push(h.key); });
   }
+  // залы без акта за этот день — несоответствия из презентации: каждое фото/видео — одно, точка — из подписи
+  const incFromPptx = [];
+  ((catDayState.day && incPhotos[catDayState.day]) || []).forEach((hk) => {
+    if (corpTotals[hk]) return;   // по залу есть акт — считаем по акту
+    const es = mediaEntriesFor(mediaKey(catDayState.day, hk)) || [];
+    if (!es.length) return;
+    incFromPptx.push(hk);
+    const cc = corpCatCounts[hk] || (corpCatCounts[hk] = {});
+    es.forEach((e) => { const k = entryCat(e) || 'inc:фото без подписи'; cc[k] = (cc[k] || 0) + 1; corpTotals[hk] = (corpTotals[hk] || 0) + 1; });
+  });
+  // залы Инкубатория — после корпусов, в порядке вывод → перевод → сортировка
+  INCUB_HALLS.concat([INCUB_OTHER]).forEach((h) => { if (corpTotals[h.key] && !corpsSorted.includes(h.key)) corpsSorted.push(h.key); });
   const dayPalette = ['#2563eb','#dc2626','#16a34a','#d97706','#7c3aed','#0891b2','#db2777','#65a30d','#ea580c','#4f46e5','#0d9488','#be123c'];
   const colorOf = (c, i) => (isIncubKey(c) ? incubColor(c) : dayPalette[i % dayPalette.length]);
   CATDAY_EXPORT = { day: catDayState.day, corps: corpsSorted, totals: corpTotals, cats: corpCatCounts, palette: dayPalette,
@@ -1896,20 +1906,10 @@ function renderCatDayPie() {
     if (incDayLbl) incDayLbl.textContent = catDayState.day ? fmtDate(catDayState.day) : '';
     drawDayPieBlock({ chartKey: 'incdaypie', canvasId: 'chartIncDayPie', emptyId: 'incDayPieEmpty', breakdownId: 'incDayPieBreakdown',
       corps: incCorps, totals: corpTotals, cats: corpCatCounts, color: (c) => incubColor(c), day: catDayState.day });
-    const photoHalls = ((catDayState.day && incPhotos[catDayState.day]) || []).filter((h) => !incCorps.includes(h));
-    const emptyEl = document.getElementById('incDayPieEmpty');
-    if (emptyEl) emptyEl.textContent = photoHalls.length
-      ? (hasIncAct ? 'По акту Инкубатория несоответствий в этот день нет — фото/видео из презентаций по залам:' : 'Акт Инкубатория не загружен — фото/видео из презентаций по залам:')
-      : 'В этот день в Инкубатории несоответствий нет (или акт за этот день не заполнен).';
-    if (photoHalls.length && !incCorps.length) {
-      const day = catDayState.day;
-      document.getElementById('incDayPieBreakdown').innerHTML = INCUB_HALLS.concat([INCUB_OTHER]).map((h) => h.key).filter((k) => photoHalls.includes(k)).map((k) =>
-        `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;line-height:1.7">
-          <span style="flex-shrink:0;width:10px;height:10px;border-radius:50%;background:${incubColor(k)};margin-top:6px"></span>
-          <span style="flex-shrink:0;white-space:nowrap"><b>${k}</b></span>
-          <span style="display:flex;flex-direction:column;min-width:0"><span class="cp-thumbs-slot" data-date="${day}" data-corpus="${k}"></span></span></div>`).join('');
-      Promise.all(photoHalls.map((k) => loadThumbsFor(day, k))).then(() => { if (catDayState.day === day) paintCatDayThumbs(); });
-    }
+    const note = document.getElementById('incDayPieNote');
+    if (note) note.textContent = incFromPptx.length
+      ? 'Залы ' + incFromPptx.map((k) => k.replace(/^Инкубатор:\s*/, '')).join(', ') + ' — несоответствия из презентации (акта Инкубатория за этот день нет): каждое фото — одно, контрольная точка — из подписи на слайде.'
+      : 'Из журнала-архива акта Инкубатория: каждый элемент с баллом ниже 10 — одно несоответствие. День — тот же, что выбран выше.';
   }
   wireCatDayPieButtons();
   refreshCatDayThumbs();
@@ -2265,7 +2265,7 @@ function composeSlidePieCanvas() {
         if (ctx.roundRect) ctx.roundRect(bx, cy, ch.w, CHIP_H, 6); else ctx.rect(bx, cy, ch.w, CHIP_H);
         ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#334155'; ctx.fillText(ch.t, bx + 11, cy + CHIP_H / 2 + 1);
-        if (P.part === 'vyr') hot.push({ x: bx, y: cy, w: ch.w, h: CHIP_H, corpus: r.c, cat: ch.cat, tip: ch.t });
+        hot.push({ x: bx, y: cy, w: ch.w, h: CHIP_H, corpus: r.c, cat: ch.cat, tip: ch.t });   // и Выращивание, и Инкубаторий
       });
     });
   });
@@ -5172,7 +5172,7 @@ function refreshCatDayThumbs() {
 var PPTX_INDEX = {};   // "дата|корпус" -> [{caption, cat, files:[{kind, filename, pptx, zip, poster}]}]
 var PPTX_FILES = {};   // путь в папке -> FileSystemFileHandle
 var PPTX_SKIPPED = 0;
-const PPTX_CACHE_KEY = 'pptxMediaIndex:v7';   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
+const PPTX_CACHE_KEY = 'pptxMediaIndex:v8';   // v8: точка — словарём актов   // v6: участок — по папке (Инкубатор / Выращивание / ЗПП)
 // v5: слайды Инкубатория (залы) из общей папки
 // Папка SharePoint с презентациями несоответствий разложена по участкам: «Инкубатор», «Выращивание», «ЗПП».
 // Участок берём из пути к презентации: в «Инкубаторе» корпусов нет — только залы, в «ЗПП» — своя площадка.
@@ -5215,6 +5215,17 @@ function cpOfCaption(text) {
   // «В11 п10. хитмастер…» — п10 = контрольная точка №10 (Ф-БиС-07)
   const pm = t.match(/(?:^|[^а-яёa-z0-9])[пП](?:ункт|\.)?\s?(\d{1,2})(?!\d)/);
   if (pm && CATEGORIES_REF[+pm[1]]) return String(+pm[1]);
+  // точное название контрольной точки Ф-БиС-07 в подписи («Система поения: …»)
+  const low = t.toLowerCase().replace(/ё/g, 'е');
+  for (const [n, name] of Object.entries(CATEGORIES_REF)) {
+    const head = name.toLowerCase().replace(/ё/g, 'е').split(/[,./]/)[0].trim();
+    if (head.length > 4 && low.includes(head)) return String(n);
+  }
+  // тем же словарём, что и примечания актов, — точка у фото совпадает с точкой несоответствия в акте
+  for (const part of splitIncidents(t)) {
+    const hit = classifyNote(part).find((c) => c !== '__admin__');
+    if (hit) return String(hit);
+  }
   for (const [cat, re] of CP_RULES) if (re.test(t)) return cat;
   return null;
 }
@@ -5232,8 +5243,19 @@ function incSameWord(a, b) {
   while (i < a.length && i < b.length && a[i] === b[i]) i++;
   return i >= 4 && i >= Math.min(a.length, b.length) - 2;
 }
+// «Зал вывода, полки шкафа — остатки пуха» → «Полки шкафа»: зал убираем, точка — первая часть подписи
+function incPointOf(caption) {
+  let t = String(caption || '').replace(/\s+/g, ' ').trim();
+  t = t.replace(/^(инкубатор[а-яё]*[\s:,.-]*)/i, '').replace(/^((выводн[а-яё]*|сортир[а-яё]*|перевод[а-яё]*)\s+зал[а-яё]*|зал[а-яё]*\s+(вывода|перевода|сортировки))[\s:,.;—-]*/i, '');
+  const head = (t.split(/[,;:—–]|\s-\s/)[0] || '').trim();
+  if (!head || head.length < 3) return null;
+  return head.charAt(0).toUpperCase() + head.slice(1);
+}
 function incubCatOf(e) {
   const [date, hall] = e.incKey.split('|');
+  // акта за этот день и зал нет — точка из подписи на слайде презентации
+  const hasNc = ((INCUB_FILE_NC && INCUB_FILE_NC[date]) || []).some((it) => incubHallOf(it.hall).key === hall);
+  if (!hasNc) { const pt = incPointOf(e.caption); return pt ? 'inc:' + pt : null; }
   const cap = incWords(e.caption + ' ' + e.files.map((f) => f.filename).join(' '));
   if (!cap.length) return null;
   const score = {};
