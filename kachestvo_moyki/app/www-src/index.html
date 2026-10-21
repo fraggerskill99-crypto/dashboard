@@ -63,6 +63,7 @@
   <button data-tab="week" title="Ctrl+4">📷 Фотофиксация по неделям</button>
   <span class="sp"></span>
   <span class="hint" id="dataHint"></span>
+  <span class="hint" id="autoSt" title="Данные обновляются сами: файлы и папки проверяются каждую минуту и при возврате на вкладку"></span>
   <span class="hint" title="Номер версии — по нему видно, что открыта свежая сборка">версия {{VERSION}}</span>
 </nav>
 <main>
@@ -292,6 +293,7 @@
       return ok;
     }
     async function run(cmd, p) {
+      mediaSig = null;   // папки/файлы поменялись — новая точка отсчёта для автообновления
       try {
         if (cmd === 'pick-file') {
           const [h] = await window.showOpenFilePicker({ id: 'ukpf-' + p.kind, types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx', '.xlsm'], 'text/csv': ['.csv'] } }] });
@@ -330,14 +332,57 @@
     function permBtn(need) { pb.hidden = !need; }
     pb.onclick = async () => { if (await requestAll()) { toast('Доступ разрешён — данные подтягиваются.', 'ok'); attachData(true); } };
     async function start() {
+      autoLoop();
       const hs = await allHandles();
       if (!hs.length) { setTimeout(() => toast('Откройте «⚙ Настройки» внизу слева и выберите акты, Свод и папки с фото — дальше всё подтягивается само.'), 2500); return; }
       let need = false;
       for (const h of hs) if (!(await can(h))) need = true;
       permBtn(need);
       if (need) toast('Нажмите «🔓 Разрешить доступ» внизу слева — браузер спрашивает один раз за запуск.');
-      // выбранные файлы проверяются раз в 2 минуты: пересохранили — данные обновятся сами
-      setInterval(() => { if (!document.hidden) attachData(false, { media: false }); }, 120000);
+    }
+    // ---------- автообновление ----------
+    // Раз в минуту и при возврате на вкладку: акты/Свод перечитываются, если файл пересохранили;
+    // папки с фото и презентациями — если в них появились/изменились файлы (новый день, новая презентация).
+    let mediaSig = null, lastCheck = 0, checking = false;
+    const hhmm = (d) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const autoSt = (t) => { document.getElementById('autoSt').textContent = t; };
+    async function folderSig() {
+      const folders = ((await kvGet('folders')) || []).filter((f) => f.role === 'media');
+      const parts = [];
+      let n = 0;
+      async function walk(dir, pre, depth) {
+        for await (const [name, h] of dir.entries()) {
+          if (++n > 30000) return;
+          if (h.kind === 'directory') { if (depth < 8 && !name.startsWith('.')) { parts.push(pre + name + '/'); await walk(h, pre + name + '/', depth + 1); } }
+          else if (/\.(pptx|pptm|ppsx|ppsm)$/i.test(name) && !name.startsWith('~$')) { try { const f = await h.getFile(); parts.push(pre + name + '|' + f.size + '|' + f.lastModified); } catch (e) { parts.push(pre + name); } }
+          else parts.push(pre + name);
+        }
+      }
+      for (const f of folders) { try { await walk(f.handle, f.name + '/', 0); } catch (e) { parts.push(f.name + '!'); } }
+      return parts.sort().join('\n');
+    }
+    async function autoCheck(reason) {
+      if (checking || Date.now() - lastCheck < 20000) return;
+      const hs = await allHandles();
+      if (!hs.length) return;
+      for (const h of hs) if (!(await can(h))) { permBtn(true); autoSt('⏸ автообновление ждёт «Разрешить доступ»'); return; }
+      checking = true; lastCheck = Date.now();
+      try {
+        const sig = await folderSig();
+        const mediaChanged = mediaSig !== null && sig !== mediaSig;
+        mediaSig = sig;
+        await attachData(false, { media: mediaChanged });
+        if (mediaChanged) toast('В папках появились новые фото/презентации — данные обновлены.', 'ok');
+        autoSt('🔄 авто · проверено в ' + hhmm(new Date()));
+      } catch (e) { console.warn('auto', e); autoSt('🔄 авто · ошибка проверки: ' + e.message); }
+      finally { checking = false; }
+    }
+    function autoLoop() {
+      autoSt('🔄 автообновление включено');
+      setTimeout(() => autoCheck('start'), 15000);
+      setInterval(() => { if (!document.hidden) autoCheck('timer'); }, 60000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) autoCheck('visible'); });
+      window.addEventListener('focus', () => autoCheck('focus'));
     }
     return { run, start };
   })() : null;
