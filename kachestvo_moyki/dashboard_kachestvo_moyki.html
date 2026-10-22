@@ -2176,7 +2176,7 @@ function composeSlidePieCanvas() {
   if (!hasV || !hasI) return composeCatDayPieCanvas(hasV ? 'vyr' : 'inc');
   const S = 3, W = 1600, PAD = 24, GAP = 40, FONT = '"IBM Plex Sans", "Segoe UI", Arial, sans-serif';
   const panelW = (W - PAD * 2 - GAP) / 2, PIE = 250, LW = panelW - PIE - 22;
-  const CHIP_F = 17, CHIP_H = 30, CHIP_GAP = 6, HEAD_F = 19, HEAD_H = 28, ROW_GAP = 12, PH_H = 40;
+  const CHIP_F = 24, CHIP_H = 40, CHIP_GAP = 8, HEAD_F = 26, HEAD_H = 38, ROW_GAP = 14, PH_H = 40;   // точки крупно и жирно — читаются на слайде
   const mctx = document.createElement('canvas').getContext('2d');
   const colorAt = (c) => { const i = E0.corps.indexOf(c); return E0.colors ? E0.colors[i] : E0.palette[i % E0.palette.length]; };
   const fit = (t, maxW) => {   // слишком длинную плашку укорачиваем с многоточием
@@ -2191,7 +2191,7 @@ function composeSlidePieCanvas() {
     const rows = corps.map((c) => {
       const cats = E0.cats[c] || {};
       const ids = Object.keys(cats).sort((a, b) => cats[b] - cats[a]);
-      mctx.font = `500 ${CHIP_F}px ${FONT}`;
+      mctx.font = `700 ${CHIP_F}px ${FONT}`;
       const chips = []; let x = 0, line = 0;
       ids.forEach((n) => {
         const name = cpCatName(n);
@@ -2250,14 +2250,14 @@ function composeSlidePieCanvas() {
       ctx.fillStyle = r.color; ctx.beginPath(); ctx.arc(lx + 7, y0 + HEAD_H / 2, 7, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#1c2333'; ctx.font = `700 ${HEAD_F}px ${FONT}`;
       ctx.fillText(r.head, lx + 20, y0 + HEAD_H / 2);
-      ctx.font = `500 ${CHIP_F}px ${FONT}`;
+      ctx.font = `700 ${CHIP_F}px ${FONT}`;   // контрольные точки — жирным, чтобы на слайде читались
       r.chips.forEach((ch) => {
         const bx = lx + ch.x, cy = y0 + HEAD_H + ch.line * (CHIP_H + CHIP_GAP);
-        ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(60,50,30,.25)'; ctx.lineWidth = 1;
+        ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(31,56,100,.45)'; ctx.lineWidth = 1.5;
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(bx, cy, ch.w, CHIP_H, 6); else ctx.rect(bx, cy, ch.w, CHIP_H);
         ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#334155'; ctx.fillText(ch.t, bx + 11, cy + CHIP_H / 2 + 1);
+        ctx.fillStyle = '#0f172a'; ctx.fillText(ch.t, bx + 11, cy + CHIP_H / 2 + 1);
         hot.push({ x: bx, y: cy, w: ch.w, h: CHIP_H, corpus: r.c, cat: ch.cat, tip: ch.t });   // и Выращивание, и Инкубаторий
       });
     });
@@ -2742,7 +2742,7 @@ function composeCatDayPieCanvas(part) {
   const E = Object.assign({}, E0, { corps: idx.map((i) => E0.corps[i]), colors: idx.map((i) => (E0.colors ? E0.colors[i] : E0.palette[i % E0.palette.length])) });
   const S = 3, W = 1600, PAD = 32, FONT = '"IBM Plex Sans", "Segoe UI", Arial, sans-serif';
   const PIE = 540, LIST_X = PAD + PIE + 40, LIST_W = W - LIST_X - PAD;
-  const CHIP_F = 20, CHIP_H = 36, CHIP_GAP = 8, ROW_GAP = 18;
+  const CHIP_F = 28, CHIP_H = 48, CHIP_GAP = 10, ROW_GAP = 20;   // точки крупно и жирно — читаются на слайде
   const mctx = document.createElement('canvas').getContext('2d');
   const rows = E.corps.map((c, i) => {
     const cats = E.cats[c] || {};
@@ -2754,7 +2754,7 @@ function composeCatDayPieCanvas(part) {
     mctx.font = `700 ${CHIP_F + 2}px ${FONT}`;
     const head = `${part === 'inc' ? c.replace(/^Инкубатор:\s*з/, 'З') : c} — ${E.totals[c]}:`;
     const headW = mctx.measureText(head).width + 40;
-    mctx.font = `500 ${CHIP_F}px ${FONT}`;
+    mctx.font = `700 ${CHIP_F}px ${FONT}`;
     const chips = []; let x = headW, line = 0;
     labels.forEach((t, li) => {
       const w = mctx.measureText(t).width + 26;
@@ -2822,14 +2822,14 @@ function composeCatDayPieCanvas(part) {
     ctx.fillStyle = r.color; ctx.beginPath(); ctx.arc(LIST_X + 10, cy, 9, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#1c2333'; ctx.font = `700 ${CHIP_F + 2}px ${FONT}`;
     ctx.fillText(r.head, LIST_X + 28, cy);
-    ctx.font = `500 ${CHIP_F}px ${FONT}`;
+    ctx.font = `700 ${CHIP_F}px ${FONT}`;   // контрольные точки — жирным
     r.chips.forEach((ch) => {
       const bx = LIST_X + ch.x, by = y + ch.line * (CHIP_H + CHIP_GAP);
-      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(60,50,30,.25)'; ctx.lineWidth = 1.2;
+      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(31,56,100,.45)'; ctx.lineWidth = 1.6;
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(bx, by, ch.w, CHIP_H, 7); else ctx.rect(bx, by, ch.w, CHIP_H);
       ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#334155'; ctx.fillText(ch.t, bx + 13, by + CHIP_H / 2 + 1);
+      ctx.fillStyle = '#0f172a'; ctx.fillText(ch.t, bx + 13, by + CHIP_H / 2 + 1);
       hot.push({ x: bx, y: by, w: ch.w, h: CHIP_H, corpus: r.c, cat: ch.cat, tip: ch.t });
     });
     y += r.lines * (CHIP_H + CHIP_GAP);
