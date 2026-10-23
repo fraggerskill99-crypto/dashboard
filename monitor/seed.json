@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-23",
   "episodes": [
     {
       "id": "w-2026-10-07-spain-valencia-nd",
@@ -1072,6 +1072,53 @@
       ],
       "addedBy": "claude",
       "keyword": "bird flu Northumberland October 2026"
+    },
+    {
+      "id": "w-2026-10-22-wisconsin-barron-2",
+      "scope": "world",
+      "topic": "hpai",
+      "date": "2026-10-22",
+      "status": "confirmed",
+      "place": "США, штат Висконсин, округ Баррон",
+      "country": "США",
+      "birds": null,
+      "title": "Висконсин: ещё одна коммерческая птицеферма с гриппом птиц в округе Баррон",
+      "summary": "22 октября DATCP подтвердило высокопатогенный грипп птиц ещё в одном коммерческом стаде округа Баррон — восьмой случай у птицы в Висконсине за год и третий в округе с сентября. Ферма на карантине, птица уничтожена.",
+      "sources": [
+        {
+          "name": "weau.com",
+          "url": "https://www.weau.com/2026/10/22/additional-case-bird-flu-confirmed-commercial-poultry-flock-barron-county/",
+          "kind": "media"
+        },
+        {
+          "name": "fox11online.com",
+          "url": "https://fox11online.com/news/state/bird-flu-detected-in-barron-county-flock-wisconsins-eighth-hpai-poultry-case-this-year",
+          "kind": "media"
+        }
+      ],
+      "addedBy": "claude",
+      "keyword": "bird flu Barron County October 22 2026"
+    },
+    {
+      "id": "w-2026-10-14-brazil-nd",
+      "scope": "world",
+      "topic": "nd",
+      "date": "2026-10-14",
+      "status": "confirmed",
+      "place": "Бразилия, птицеферма у границы с аргентинской провинцией Мисьонес",
+      "country": "Бразилия",
+      "birds": null,
+      "title": "Бразилия: болезнь Ньюкасла на птицеферме у границы с Аргентиной",
+      "summary": "Пробы, взятые 21 сентября у птицы без клинических признаков, 14 октября дали положительный результат; секвенирование показало вирулентный вирус болезни Ньюкасла. Случай ударил по экспорту бразильской птицы.",
+      "sources": [
+        {
+          "name": "bichosdecampo.com",
+          "url": "https://bichosdecampo.com/brasil-padece-un-brote-de-newcastle-en-una-granja-avicola-cercana-a-misiones-y-sufre-un-traspie-en-sus-exportaciones/",
+          "kind": "media"
+        }
+      ],
+      "addedBy": "claude",
+      "keyword": "Newcastle Brasil Misiones octubre 2026"
     }
   ]
 }
