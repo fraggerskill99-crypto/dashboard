@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-24",
   "episodes": [
     {
       "id": "w-2026-10-07-spain-valencia-nd",
@@ -1103,14 +1103,19 @@
       "id": "w-2026-10-14-brazil-nd",
       "scope": "world",
       "topic": "nd",
-      "date": "2026-10-14",
+      "date": "2026-10-19",
       "status": "confirmed",
-      "place": "Бразилия, птицеферма у границы с аргентинской провинцией Мисьонес",
+      "place": "Бразилия, штат Санта-Катарина (у границы с аргентинской провинцией Мисьонес)",
       "country": "Бразилия",
-      "birds": null,
-      "title": "Бразилия: болезнь Ньюкасла на птицеферме у границы с Аргентиной",
-      "summary": "Пробы, взятые 21 сентября у птицы без клинических признаков, 14 октября дали положительный результат; секвенирование показало вирулентный вирус болезни Ньюкасла. Случай ударил по экспорту бразильской птицы.",
+      "birds": 6000,
+      "title": "Бразилия: болезнь Ньюкасла на ферме индеек в Санта-Катарине",
+      "summary": "19 октября министр сельского хозяйства Бразилии объявил о вспышке болезни Ньюкасла на коммерческой ферме индеек (около 6 тыс. голов) в штате Санта-Катарина. Пробы взяты с 21 сентября по 14 октября, секвенирование показало вирулентный вирус. Перемещение птицы остановлено, под наблюдением около 133 соседних хозяйств; случай ударил по экспорту.",
       "sources": [
+        {
+          "name": "agriland.ie",
+          "url": "https://www.agriland.ie/farming-news/brazil-confirms-outbreak-of-newcastle-disease-on-turkey-farm/",
+          "kind": "media"
+        },
         {
           "name": "bichosdecampo.com",
           "url": "https://bichosdecampo.com/brasil-padece-un-brote-de-newcastle-en-una-granja-avicola-cercana-a-misiones-y-sufre-un-traspie-en-sus-exportaciones/",
@@ -1119,6 +1124,27 @@
       ],
       "addedBy": "claude",
       "keyword": "Newcastle Brasil Misiones octubre 2026"
+    },
+    {
+      "id": "w-2026-10-16-manitoba-hanover",
+      "scope": "world",
+      "topic": "hpai",
+      "date": "2026-10-16",
+      "status": "confirmed",
+      "place": "Канада, Манитоба, муниципалитет Ганновер",
+      "country": "Канада",
+      "birds": null,
+      "title": "Манитоба: грипп птиц на 11-й коммерческой ферме за 2026 год",
+      "summary": "16 октября CFIA подтвердило высокопатогенный грипп птиц на коммерческой птицеферме в сельском муниципалитете Ганновер (Манитоба) — 11-е поражённое коммерческое стадо провинции в 2026 году.",
+      "sources": [
+        {
+          "name": "wattagnet.com",
+          "url": "https://www.wattagnet.com/poultry-meat/diseases-health/avian-influenza/news/15837996/manitoba-has-11th-poultry-flock-hit-by-avian-flu-in-2026",
+          "kind": "media"
+        }
+      ],
+      "addedBy": "claude",
+      "keyword": "Manitoba avian flu Hanover October 2026"
     }
   ]
 }
